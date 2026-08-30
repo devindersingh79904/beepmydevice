@@ -101,7 +101,17 @@ never collide with a library's.
 ## 6. Styling
 
 Import `theme` from `styles/theme.ts`. No component contains a hex value or a
-raw pixel number — spacing comes from the 4pt scale, colour from the palette.
+raw pixel number — spacing, sizes, borders and type all come from named tokens.
+
+The tokens are a translation of the design canvas in `frontend/docs/design/`,
+which is the authority for what the UI looks like. Read it before changing a
+screen; when it and the token files disagree, the canvas is right.
+
+The system is "Modernist": one neutral ramp plus **one** accent, zero corner
+radius, and two border weights that mean different things — 2pt separates
+sections, 1pt separates rows. Spacing is named by value (`spacing.s12` is 12pt)
+because the canvas is not on a strict 4pt grid; a t-shirt scale would have to
+lie about which value it maps to.
 
 Status is never conveyed by colour alone. `StatusBadge` pairs its colour with a
 text label, so the dashboard stays readable for colour-blind users.

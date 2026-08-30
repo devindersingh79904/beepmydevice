@@ -7,12 +7,35 @@
  */
 
 import React from 'react';
+import {StyleSheet, Text} from 'react-native';
+
+import {borderWidth, colors, radius, spacing, typography} from '@styles/theme';
 
 interface GuestBadgeProps {
   /** Renders nothing when false, so callers can pass `device.is_guest` directly. */
   isGuest: boolean;
 }
 
-export function GuestBadge({isGuest}: GuestBadgeProps): React.JSX.Element | null {
-  throw new Error('Not implemented');
+export function GuestBadge({
+  isGuest,
+}: GuestBadgeProps): React.JSX.Element | null {
+  if (!isGuest) {
+    return null;
+  }
+
+  return <Text style={styles.badge}>GUEST</Text>;
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    ...typography.badge,
+    color: colors.guestText,
+    backgroundColor: colors.guestBackground,
+    borderWidth: borderWidth.hairline,
+    borderColor: colors.guestBorder,
+    borderRadius: radius.none,
+    paddingHorizontal: spacing.s8,
+    paddingVertical: spacing.s2,
+    overflow: 'hidden',
+  },
+});

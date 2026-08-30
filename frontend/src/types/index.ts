@@ -2,4 +2,5 @@
 
 export * from './api';
 export * from './device';
+export * from './ui';
 export * from './user';

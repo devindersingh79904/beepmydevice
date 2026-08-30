@@ -56,3 +56,29 @@ export const API_ROUTES = {
   ALERT_LOGS: '/alerts/logs',
   WS_STATUS: '/ws/status',
 } as const;
+
+// --- UI timings (presentation only) -----------------------------------------
+/** How long a toast stays up before it removes itself. */
+export const TOAST_DURATION_MS = 3_000;
+/** Modal slide-up. */
+export const MODAL_ANIMATION_MS = 300;
+/** Error banner slide-down and toast slide-up. */
+export const BANNER_ANIMATION_MS = 200;
+/** Settings toggle knob travel. */
+export const TOGGLE_ANIMATION_MS = 150;
+
+// --- Password strength meter ------------------------------------------------
+/** At or above this length a password reads "Strong"; MIN_PASSWORD_LENGTH is "Medium". */
+export const STRONG_PASSWORD_LENGTH = 12;
+/** Bars in the strength meter, and therefore the maximum strength score. */
+export const PASSWORD_STRENGTH_LEVELS = 3;
+
+// --- Relative time formatting -----------------------------------------------
+export const SECONDS_PER_MINUTE = 60;
+export const MINUTES_PER_HOUR = 60;
+export const HOURS_PER_DAY = 24;
+export const MS_PER_SECOND = 1_000;
+
+// --- App metadata -----------------------------------------------------------
+/** Shown on the settings "Version" row. Keep in step with package.json. */
+export const APP_VERSION = '1.0.0';
