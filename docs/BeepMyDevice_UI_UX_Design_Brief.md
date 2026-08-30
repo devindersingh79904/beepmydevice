@@ -31,8 +31,12 @@
 **Semantic Colors:**
 - **Online:** `#10B981` (green badge)
 - **Offline:** `#9CA3AF` (gray badge)
+- **Unknown:** `#F59E0B` (amber badge - device left the network)
 - **Charging:** `#3B82F6` (blue icon)
 - **Low Battery:** `#F59E0B` (amber warning)
+- **Guest:** `#64748B` on `#F1F5F9` (slate pill)
+  - Neutral by design. A guest is a normal participant, not a warning, so it
+    must not borrow the amber or red used for problems.
 
 ### Typography
 
@@ -312,12 +316,22 @@
 - Shadow: Subtle (`0px 1px 3px rgba(0,0,0,0.1)`)
 
 **Card Layout:**
-- Row 1: Device info (left), Status badge (right)
+- Row 1: Device info (left), Badges (right)
   - Device name (16pt, bold, black)
   - Device type (14pt, gray) - e.g., "iPhone 17 Pro"
-  - Status badge (right side):
-    - Online: Green badge with "●" + "Online" (12pt, green)
-    - Offline: Gray badge with "●" + "Offline" (12pt, gray)
+  - Badges (right side, horizontal, 6px gap):
+    - Status badge:
+      - Online: Green badge with "●" + "Online" (12pt, green)
+      - Offline: Gray badge with "●" + "Offline" (12pt, gray)
+      - Unknown: Amber badge with "●" + "Unknown" (12pt, amber)
+    - Guest badge (only when `is_guest`):
+      - Text: "Guest" (11pt, medium)
+      - Color: Slate `#64748B` on `#F1F5F9`
+      - Radius: pill, padding 2px 8px
+      - Deliberately neutral, not a warning color - a guest is a normal
+        participant, not a problem
+    - Both badges appear together. Guest-ness and reachability are independent:
+      a guest is still online, offline or unknown like any other device.
 
 - Row 2: Battery level (left)
   - Battery icon + percentage (14pt, dark gray)
@@ -335,9 +349,16 @@
 
 - Row 5: Send Alert Button (full width)
   - Button: "Send Alert" (14pt, bold, white)
-  - Background: Brand blue (when online), gray (when offline)
+  - Background: Brand blue (when enabled), gray (when disabled)
   - Height: 40px
   - Radius: 6px
+  - Disabled when the device is OFFLINE, UNKNOWN, **or a guest**
+  - Guest devices: button reads "Send Alert" but greyed, with helper text
+    below it (11pt, gray): "Guests receive alerts but cannot send them"
+    - The helper text matters. A greyed button with no explanation reads as a
+      bug; the label turns it into an understood rule.
+  - Offline/unknown devices: greyed with no helper text - the status badge
+    directly above already explains it
   - Border: None
   - Disabled: True when device offline
   - Press state: Darker blue with animation (scale down 0.98)
@@ -470,9 +491,13 @@
 - Device OS: "Android 14" (14pt, gray)
 
 - Status Section:
-  - Row 1: Status (Online/Offline with colored badge)
+  - Row 1: Status (Online/Offline/Unknown with colored badge)
+    - Guest badge sits beside it when `is_guest` - same slate pill as the card
   - Row 2: "Connected at: Home-WiFi" (14pt, gray)
   - Row 3: "Last seen: 2 minutes ago" (14pt, gray)
+  - Row 4 (guests only): Access line (14pt, gray)
+    - "Access: Guest - receives alerts, cannot send them"
+    - Explains the greyed button below before the user reaches it
 
 - Battery Section:
   - Battery icon (animated, based on level)
@@ -483,6 +508,10 @@
 - Device Registration:
   - "Registered: Aug 30, 2024" (12pt, gray)
   - "Device ID: abc123xyz789" (12pt, gray) - copyable
+  - Owned devices: "Owner: dev@example.com" (12pt, gray)
+  - Guest devices: "Owner: none (guest device)" (12pt, gray)
+    - Never leave the owner row blank for a guest. An empty field reads as
+      missing data; the explicit "none" reads as a fact.
 
 **Alert History Section:**
 - Title: "Alert History" (18pt, bold)
@@ -505,12 +534,19 @@
 - Position: Fixed at bottom (above safe area)
 - Margin: 16px
 - Tap feedback: Haptic
+- Disabled for guests, and for OFFLINE/UNKNOWN devices
+  - Guests: greyed, with helper text above (12pt, gray):
+    "Guests receive alerts but cannot send them"
+  - Never hide the button entirely. A missing control is confusing; a disabled
+    control with a reason teaches the rule.
 
 **Remove Device Button:**
 - Text only: "Remove Device" (14pt, red)
 - Alignment: Center
 - Margin top: 32px
 - Margin bottom: 24px (above safe area)
+- Available for guests too - removing an unrecognised guest is the admin's
+  control over open registration, so it must be easy to reach
 - Tap target: 44px height
 
 **Remove Confirmation:**
@@ -758,10 +794,18 @@
 - Accessible: Full keyboard support
 
 **Badge:**
-- Variants: Success (green), Warning (amber), Error (red), Info (blue)
+- Variants: Success (green), Warning (amber), Error (red), Info (blue),
+  Neutral (slate - used for Guest)
 - Sizes: Small (14pt), Medium (16pt)
 - Optional icon + text
 - Optional close button
+
+**GuestBadge:**
+- Text: "Guest" (11pt, medium)
+- Color: `#64748B` on `#F1F5F9`, pill radius, 2px 8px padding
+- Renders nothing when the device is not a guest
+- Sits beside StatusBadge, never replacing it - a guest is still online,
+  offline or unknown, so the card shows both facts
 
 **Card:**
 - Padding: 16px (customizable)
@@ -862,6 +906,11 @@
 
 - Don't rely on color alone (red = error)
 - Use icons, text, patterns too
+- Guest badge carries the word "Guest", never colour alone - the slate pill is
+  close enough to the offline grey that colour by itself would not distinguish
+  "not signed in" from "not reachable", which are unrelated facts
+- A disabled alert button always pairs with a reason: helper text for guests,
+  the status badge for offline and unknown devices
 - Example: Red icon + "✗" symbol + "Error" text
 
 ### Dark Mode Support (Future)
@@ -1071,6 +1120,50 @@ After design implementation:
 ✅ Interaction patterns documented  
 ✅ Design tokens created  
 ✅ Asset list prepared  
+
+---
+
+## Guest Devices
+
+A guest is someone who opened BeepMyDevice on the network without signing in.
+They auto-register: no login, no approval, no setup. They appear in the admin's
+list straight away and can be alerted like anyone else. What they cannot do is
+send alerts.
+
+### What the user sees
+
+| Surface | Owned device | Guest device |
+|---|---|---|
+| Card badges | Status only | Status + "Guest" pill |
+| Card alert button | Enabled when online | Always greyed, with helper text |
+| Detail owner row | "Owner: dev@example.com" | "Owner: none (guest device)" |
+| Detail access row | not shown | "Access: Guest - receives alerts, cannot send them" |
+| Detail alert button | Enabled when online | Greyed, helper text above |
+| Remove device | Available | Available |
+
+### Design rules
+
+**Never hide the disabled button.** A missing control confuses; a disabled
+control with a stated reason teaches the rule. Every greyed alert button on a
+guest card carries "Guests receive alerts but cannot send them".
+
+**Guest is not a warning.** The slate palette is deliberate. Amber and red mean
+something needs attention; a guest is a normal, expected participant. Styling it
+as a problem would push admins toward removing devices that belong there.
+
+**Both badges, always.** Guest-ness and reachability are independent. A guest
+can be online, offline or unknown, and the card must show both - one badge
+replacing the other loses real information.
+
+**Explicit "none", never blank.** A guest has no owner. An empty owner field
+reads as missing data; "none (guest device)" reads as a fact.
+
+### The admin's control
+
+Open registration means anyone on the WiFi can appear in the list. Removal is
+the admin's answer to that, so "Remove Device" must stay easy to reach on a
+guest's detail screen - it is the one action that makes the open model
+acceptable.
 
 ---
 

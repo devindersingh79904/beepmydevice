@@ -14,7 +14,12 @@ from src.utils.constants import (
 
 
 class DeviceRegisterRequest(BaseModel):
-    """Body of POST /devices/register."""
+    """Body of POST /devices/register.
+
+    Identical for owned and guest registrations. Which one happens is decided
+    by whether the request carries a user token, not by anything in the body --
+    a client cannot ask to be an owner.
+    """
 
     device_name: str = Field(max_length=255)
     device_type: DeviceType
@@ -50,3 +55,19 @@ class DeviceResponse(BaseModel):
     status: DeviceStatus
     last_heartbeat: datetime | None
     created_at: datetime
+    # Derived from Device.user_id being null. The dashboard shows a "Guest"
+    # badge and disables the alert button when true.
+    is_guest: bool
+
+
+class DeviceRegisterResponse(BaseModel):
+    """Result of POST /devices/register.
+
+    ``device_token`` is returned only for a guest registration. It authorises
+    that one device's heartbeat and nothing else -- an owned device uses its
+    user's JWT instead and gets null here.
+    """
+
+    device_id: uuid.UUID
+    is_guest: bool
+    device_token: str | None = None

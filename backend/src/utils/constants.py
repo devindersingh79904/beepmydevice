@@ -26,6 +26,16 @@ MAX_PASSWORD_LENGTH: Final[int] = 128
 AUTH_SCHEME: Final[str] = "Bearer"
 
 # ---------------------------------------------------------------------------
+# Guest devices
+#
+# A guest auto-registers with no account. It gets a device-scoped token that
+# authorises only its own heartbeat -- never listing, never alerting -- so a
+# guest can be present on the network without being able to act on it.
+# ---------------------------------------------------------------------------
+GUEST_TOKEN_EXPIRE_DAYS: Final[int] = 30
+GUEST_DEVICE_NAME_FALLBACK: Final[str] = "Unknown device"
+
+# ---------------------------------------------------------------------------
 # Device heartbeat
 #
 # A device is considered offline once it has missed roughly three heartbeats.
@@ -122,6 +132,7 @@ class ErrorCode(str, Enum):
     NO_TARGET_DEVICES = "ALERT_002"
     PERMISSION_DENIED = "ALERT_003"
     PUSH_NOTIFICATION_FAILED = "ALERT_004"
+    GUEST_CANNOT_SEND = "ALERT_005"
 
     # Validation
     MISSING_REQUIRED_FIELD = "VAL_001"
@@ -150,6 +161,10 @@ ERROR_MESSAGES: Final[dict[ErrorCode, str]] = {
     ErrorCode.NO_TARGET_DEVICES: "No devices available to alert",
     ErrorCode.PERMISSION_DENIED: "You do not have permission to alert this device",
     ErrorCode.PUSH_NOTIFICATION_FAILED: "Could not deliver the alert",
+    ErrorCode.GUEST_CANNOT_SEND: (
+        "Guest devices can receive alerts but cannot send them. "
+        "Sign in as the network owner to send alerts."
+    ),
     ErrorCode.MISSING_REQUIRED_FIELD: "This field is required",
     ErrorCode.INVALID_FIELD_FORMAT: "This field has an invalid format",
     ErrorCode.INVALID_EMAIL_FORMAT: "Please enter a valid email address",

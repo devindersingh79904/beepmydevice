@@ -74,3 +74,9 @@ Battery may be null on desktops — render nothing, not `0%`.
 
 Only an `ONLINE` device may be alerted. `OFFLINE` cannot receive the push;
 `UNKNOWN` has left the network.
+
+**Guests** (`device.is_guest`) receive alerts but can never send them, so their
+alert button is always disabled — with helper text saying why, since a greyed
+control with no reason reads as a bug. Show the Guest badge *alongside* the
+status badge, never instead of it: a guest is still online, offline or unknown.
+Style it neutral slate, not amber or red — a guest is a normal participant.

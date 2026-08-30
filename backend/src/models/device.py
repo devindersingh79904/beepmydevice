@@ -17,6 +17,18 @@ class Device(Base):
     ``push_token`` is the Firebase (Android) or APNs (iOS) token used to
     deliver the beep. It is refreshed by the client whenever the platform
     rotates it, so it must never be treated as a stable identifier.
+
+    ``user_id`` is nullable, and that is what distinguishes the two kinds of
+    device:
+
+    * **Owned** -- registered by a signed-in user, who is the network admin and
+      may send alerts.
+    * **Guest** -- auto-registered with no account. Belongs to a ``wifi_id`` but
+      to no user. Receives alerts, and cannot send them because sending
+      requires a user token it does not have.
+
+    Guest-ness is derived from ``user_id`` rather than stored in its own
+    column, so the two can never disagree.
     """
 
     __tablename__ = "devices"
@@ -24,8 +36,9 @@ class Device(Base):
     device_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True
+    # Null for guest devices, which belong to a network but to no account.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=True, index=True
     )
     wifi_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -45,8 +58,16 @@ class Device(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    user: Mapped["User"] = relationship(back_populates="devices")  # noqa: F821
+    user: Mapped["User | None"] = relationship(back_populates="devices")  # noqa: F821
     wifi_network: Mapped["WiFiNetwork"] = relationship(back_populates="devices")  # noqa: F821
+
+    @property
+    def is_guest(self) -> bool:
+        """True when this device auto-registered without an account.
+
+        A guest may receive alerts but never send them.
+        """
+        return self.user_id is None
 
     def __repr__(self) -> str:
         return f"<Device device_id={self.device_id} name={self.device_name} status={self.status}>"

@@ -26,16 +26,28 @@ class DeviceService:
         """
         self._db = db
 
-    def register_device(self, user_id: uuid.UUID, device_info: dict[str, Any]) -> uuid.UUID:
+    def register_device(
+        self,
+        user_id: uuid.UUID | None,
+        device_info: dict[str, Any],
+    ) -> tuple[uuid.UUID, str | None]:
         """Register a device, creating its WiFi network row if it is new.
 
         Args:
-            user_id: Owner of the device.
+            user_id: Owner of the device, or None to register a guest. A guest
+                is attached to the WiFi network but to no account.
             device_info: Keys device_name, device_type, push_token, wifi_mac
                 and optionally device_os_version.
 
         Returns:
-            The new device ID.
+            The new device ID, and a device token for a guest registration
+            (None when the device is owned, since it uses its user's JWT).
+
+        Raises:
+            LookupError: If registering a guest against a wifi_mac that no
+                account has claimed. A guest can only join an existing
+                network -- otherwise the first device on an unknown MAC would
+                create an ownerless network nobody could ever administer.
         """
         raise NotImplementedError
 
@@ -46,7 +58,11 @@ class DeviceService:
         page: int,
         limit: int,
     ) -> tuple[list[Device], int]:
-        """List one user's devices on one network, paginated.
+        """List every device on one network, paginated.
+
+        Scoped by network rather than by owner: the admin sees guest devices
+        too, since those are exactly the ones they may need to find. Callers
+        must already have been confirmed as the network's admin.
 
         Returns:
             The page of devices and the total count before pagination.

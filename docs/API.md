@@ -9,7 +9,7 @@ Interactive docs: `/docs` (disabled in production)
 
 | Header | Required | Notes |
 |---|---|---|
-| `Authorization` | All except register/login | `Bearer {token}` |
+| `Authorization` | All except register/login and guest device registration | `Bearer {token}` |
 | `X-Correlation-ID` | Recommended | One UUID per client session; generated server-side if absent |
 | `Content-Type` | On POST/PUT | `application/json` |
 
@@ -119,6 +119,10 @@ Invalidates the caller's token. Returns `200`.
 
 ### POST /devices/register
 
+The only endpoint that accepts an unauthenticated request. What gets created
+depends on whether an `Authorization` header is present — **not** on anything
+in the body, so a client cannot ask to be an owner.
+
 ```json
 {
   "device_name": "Devinder's iPhone",
@@ -130,17 +134,42 @@ Invalidates the caller's token. Returns `200`.
 }
 ```
 
-Returns `201` with `device_id`. The server finds or creates the
-`wifi_networks` row for that MAC, so every device on one router joins the same
-alert group automatically.
+**With a user token — owned device**
+
+```json
+{ "device_id": "uuid", "is_guest": false, "device_token": null }
+```
+
+**Without a token — guest device**
+
+```json
+{ "device_id": "uuid", "is_guest": true, "device_token": "…" }
+```
+
+A guest belongs to the WiFi network but to no account. It appears in the
+admin's device list immediately, with no approval step, and can be alerted
+straight away. `device_token` authorises only that device's own heartbeat —
+never listing, never alerting — so a guest can stay visible without holding an
+account or gaining any ability to act on the network.
+
+An owned registration finds or creates the `wifi_networks` row for the MAC. A
+**guest registration requires the network to already exist**: otherwise the
+first device on an unknown MAC would create an ownerless network that nobody
+could ever administer.
 
 Errors: `DEVICE_003` unsupported type · `DEVICE_004` already registered ·
-`VAL_002` malformed MAC.
+`VAL_002` malformed MAC · `DEVICE_001` guest registering against an unclaimed
+network.
 
 ### GET /devices/list
 
-Query: `page`, `limit`, `sort`. Returns the caller's devices on their current
-network, with `data.pagination`. Push tokens are never included.
+Query: `page`, `limit`, `sort`. Returns **every device on the caller's
+network**, guests included, each flagged with `is_guest`. Scoped by network
+rather than by owner — guest devices are precisely the ones an admin may need
+to find. Push tokens are never included.
+
+Requires a user token. A guest holds only a device token and can never
+enumerate the network it joined.
 
 ### GET /devices/{device_id}
 
@@ -157,11 +186,19 @@ battery. The `wifi_mac` is re-sent each time so the server can detect a device
 that has moved off its registered network — which sets status to `UNKNOWN`, not
 `ONLINE`.
 
-Errors: `DEVICE_001` not found · `VAL_002` battery outside 0–100.
+Accepts **either** the owner's user token or the `device_token` issued at guest
+registration, since guests must keep reporting status without an account.
+Either credential must resolve to *this* device: one device may never heartbeat
+on behalf of another.
+
+Errors: `DEVICE_001` not found · `VAL_002` battery outside 0–100 · `AUTH_004`
+credential belongs to a different device.
 
 ### DELETE /devices/{device_id}
 
-Unregisters a device and clears its push token.
+Unregisters a device and clears its push token. The network admin may remove
+any device on their network, guests included — that control is what makes open
+guest registration acceptable.
 
 ---
 
@@ -189,12 +226,21 @@ Returns `200`:
 
 Status is reported per device, so one failed push does not fail the others.
 
-Authorization runs three checks before anything is sent — the sender owns every
-target, all targets share one network, and the sender is that network's admin.
-Any failure aborts the whole request; there is no partial delivery.
+An empty `device_ids` targets every device on the network, **guests included**.
+
+Authorization runs three checks before anything is sent — all targets share one
+network, the sender is that network's admin, and the targets are reachable. Any
+failure aborts the whole request; there is no partial delivery.
+
+Note that targets need not be *owned* by the sender: guest devices belong to no
+account at all, and alerting them is the point of guest access. Shared network
+membership is the boundary, not ownership. Ownership is still required of the
+**sender**, which is what makes guest sending impossible rather than merely
+hidden — a guest holds only a device token and cannot authenticate here.
 
 Errors: `ALERT_001` targets on different networks · `ALERT_002` no targets
-available · `ALERT_003` permission denied · `ALERT_004` push delivery failed.
+available · `ALERT_003` permission denied · `ALERT_004` push delivery failed ·
+`ALERT_005` a guest attempted to send.
 
 ### GET /alerts/logs
 
@@ -239,6 +285,7 @@ user.
 | `ALERT_002` | No target devices | Banner |
 | `ALERT_003` | Permission denied | Banner |
 | `ALERT_004` | Push notification failed | Banner |
+| `ALERT_005` | Guest cannot send alerts | Banner |
 | `VAL_001` | Missing required field | Highlight field |
 | `VAL_002` | Invalid field format | Highlight field |
 | `VAL_003` | Invalid email format | Highlight field |

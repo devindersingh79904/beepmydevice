@@ -15,6 +15,20 @@ is deliberately deferred.
 - Token validation on every protected endpoint
 - Logout
 
+### Guest access
+
+- Auto-registration with no login, no approval, no setup
+- A guest appears in the admin's device list immediately, badged "Guest"
+- Guests **receive** alerts exactly like owned devices
+- Guests **cannot send** alerts, cannot list devices, cannot read details
+- The admin can remove any guest from their network
+
+This is what makes the app useful for a visitor: their phone becomes findable
+the moment they open it on the WiFi, without anyone setting anything up. The
+restriction is structural, not cosmetic -- a guest holds a device-scoped token
+that authorises only its own heartbeat, so it cannot authenticate at the alert
+endpoint at all.
+
 ### Device management
 
 - Registration on first app launch
@@ -28,8 +42,9 @@ is deliberately deferred.
 
 ### Alerts
 
-- Send to one device, several, or every device on the network
-- Three-stage authorization: ownership, shared network, admin rights
+- Send to one device, several, or every device on the network (guests included)
+- Three-stage authorization: shared network, admin rights, reachable targets
+  (targets need not be owned -- guests have no owner)
 - Routing through the correct push provider per platform
 - Sound and vibration on the receiving device
 - Per-device delivery status in the response
@@ -46,7 +61,7 @@ is deliberately deferred.
 ### Screens
 
 - Login and register
-- Dashboard — device list with live status, send alerts
+- Dashboard — device list with live status and Guest badges, send alerts
 - Device detail
 - Settings and profile
 - Error banner rendering every error, auto-closing after 5 seconds
@@ -66,6 +81,8 @@ is deliberately deferred.
 - Device groups, so an admin can alert "upstairs" or "the kids' devices"
 - Selective alerts by group
 - Multi-admin support — several household members with alert rights
+- Guest approval, if open registration proves too permissive in practice
+- Rate limiting on registration, to prevent device-list flooding
 - Redis-backed WebSocket pub/sub, so the API can run more than one worker
 - Rate limiting
 - Device-to-network binding, so a device cannot re-bind without admin approval

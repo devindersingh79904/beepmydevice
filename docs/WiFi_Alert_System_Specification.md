@@ -333,7 +333,8 @@ Token required for all API calls
 When sending alert:
 ├─ Verify sender is admin ✅
 ├─ Verify all targets on same WiFi ✅
-├─ Verify sender owns all targets ✅
+├─ (superseded) targets need NOT be owned by the sender — guest devices
+│  have no owner; see docs/ARCHITECTURE.md
 └─ Then send alert
 ```
 

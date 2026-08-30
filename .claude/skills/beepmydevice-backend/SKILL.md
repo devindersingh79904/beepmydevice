@@ -57,10 +57,16 @@ marked as shared with the frontend must be changed on both sides together.
 
 ## The security-critical path
 
-`AlertService.send_alert` runs three checks in order — the sender owns every
-target, all targets share one `wifi_id`, the sender is the network admin. Any
+`AlertService.send_alert` runs three checks in order — all targets share one
+`wifi_id`, the sender is that network's admin, targets are reachable. Any
 failure aborts the whole request; there is no partial delivery. A device whose
 heartbeat reported a different WiFi MAC is `UNKNOWN` and must not be alertable.
+
+Targets are deliberately **not** checked for ownership: guest devices
+(`user_id IS NULL`) have no owner, and alerting them is the point of guest
+access. Shared network membership carries the boundary; ownership is required
+only of the sender, which is what makes a guest structurally unable to send —
+it holds a device token scoped to one `device_id`, not a user token.
 
 Changes anywhere near this path need matching cases in
 `tests/test_alerts.py::TestAlertAuthorization`.

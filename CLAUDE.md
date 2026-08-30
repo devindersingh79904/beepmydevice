@@ -68,11 +68,23 @@ transport.
 ## The rules that are easy to break
 
 **The WiFi MAC is the trust boundary.** `AlertService.send_alert` runs three
-checks in order — sender owns every target, all targets share one `wifi_id`,
-sender is the network admin. Any failure aborts the whole request; there is no
+checks in order — all targets share one `wifi_id`, the sender is that network's
+admin, targets are reachable. Any failure aborts the whole request; there is no
 partial delivery. A heartbeat reporting a different MAC sets status `UNKNOWN`,
 not `ONLINE`, and `UNKNOWN` devices must not be alertable. Changes near this
 path need matching cases in `tests/test_alerts.py::TestAlertAuthorization`.
+
+Note the check that is deliberately absent: targets need **not** be owned by
+the sender. Guest devices have no owner at all, so shared network membership
+carries the whole boundary. Ownership is required only of the sender.
+
+**Guests.** `devices.user_id` is nullable; null means a guest that
+auto-registered with no account. A guest receives alerts, appears in the
+admin's list badged "Guest", and can do nothing else — it holds a device token
+scoped to one `device_id` that authorises only its own heartbeat, so it cannot
+list devices or authenticate at the alert endpoint. `is_guest` is derived from
+`user_id IS NULL`, never stored, so the two cannot disagree. The greyed alert
+button in the UI is presentation; the real control is the missing user token.
 
 **Never block the event loop.** Handlers are `async def`. SQLAlchemy sync
 sessions, bcrypt and the push SDKs all block, and one blocking call stalls every

@@ -11,6 +11,11 @@ export const colors = {
   offline: '#DC2626',
   unknown: '#CA8A04',
 
+  // Guest devices. Deliberately neutral, not a warning colour -- a guest is a
+  // normal participant, not a problem to be flagged.
+  guest: '#64748B',
+  guestBackground: '#F1F5F9',
+
   batteryHigh: '#16A34A',
   batteryMedium: '#CA8A04',
   batteryLow: '#DC2626',

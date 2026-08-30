@@ -20,14 +20,42 @@ class TestDeviceRegistration:
     def test_rejects_malformed_wifi_mac(self) -> None:
         raise NotImplementedError
 
-    def test_requires_authentication(self) -> None:
+    def test_registers_guest_when_no_token_supplied(self) -> None:
+        """No Authorization header means a guest, not a rejection."""
+        raise NotImplementedError
+
+    def test_guest_registration_returns_device_token(self) -> None:
+        raise NotImplementedError
+
+    def test_owned_registration_returns_null_device_token(self) -> None:
+        raise NotImplementedError
+
+    def test_rejects_present_but_invalid_token_instead_of_creating_guest(self) -> None:
+        """An expired session must not silently downgrade a device to a guest."""
+        raise NotImplementedError
+
+    def test_guest_cannot_register_against_unclaimed_network(self) -> None:
+        """A guest joins an existing network; it never creates an ownerless one."""
+        raise NotImplementedError
+
+    def test_guest_device_has_null_user_id(self) -> None:
         raise NotImplementedError
 
 
 class TestDeviceList:
     """GET /devices/list."""
 
-    def test_returns_only_devices_owned_by_caller(self) -> None:
+    def test_returns_all_devices_on_network_including_guests(self) -> None:
+        """Scoped by network, not owner -- guests are exactly what admins hunt for."""
+        raise NotImplementedError
+
+    def test_does_not_return_devices_from_another_network(self) -> None:
+        raise NotImplementedError
+
+    def test_flags_guest_devices_with_is_guest(self) -> None:
+        raise NotImplementedError
+
+    def test_guest_device_token_cannot_list_devices(self) -> None:
         raise NotImplementedError
 
     def test_paginates_with_defaults(self) -> None:
@@ -59,6 +87,13 @@ class TestHeartbeat:
     def test_broadcasts_status_change_over_websocket(self) -> None:
         raise NotImplementedError
 
+    def test_accepts_guest_device_token(self) -> None:
+        raise NotImplementedError
+
+    def test_device_token_cannot_heartbeat_a_different_device(self) -> None:
+        """A device token is scoped to one device_id and must not cross over."""
+        raise NotImplementedError
+
 
 class TestDeviceRemoval:
     """DELETE /devices/{device_id}."""
@@ -67,4 +102,8 @@ class TestDeviceRemoval:
         raise NotImplementedError
 
     def test_cannot_remove_another_users_device(self) -> None:
+        raise NotImplementedError
+
+    def test_admin_can_remove_guest_on_their_network(self) -> None:
+        """Removal is the admin's control over open guest registration."""
         raise NotImplementedError

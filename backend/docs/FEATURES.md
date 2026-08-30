@@ -56,18 +56,30 @@ endpoint becomes an account-enumeration oracle.
 
 ---
 
-## 4. Device registration
+## 4. Device registration, owned and guest
 
 **Files:** `services/device_service.py`, `routes/devices.py`,
-`models/device.py`, `models/wifi_network.py`
+`models/device.py`, `models/wifi_network.py`, `middleware/auth_middleware.py`
 
-Register a device; find or create the `wifi_networks` row for its MAC.
+Register a device; find or create the `wifi_networks` row for its MAC. This is
+the only endpoint that accepts an unauthenticated request: no token means a
+guest, which gets a device-scoped token authorising just its own heartbeat.
 
-Watch for: two devices reporting the same MAC must share one `wifi_id` — that
-is the whole alert-grouping mechanism. Normalise the MAC before comparing
-(`normalize_mac_address`), or `00:1a:2b…` and `00-1A-2B…` become two networks.
+Watch for:
 
-**Tests:** `TestDeviceRegistration`.
+- Two devices reporting the same MAC must share one `wifi_id` — that is the
+  whole alert-grouping mechanism. Normalise the MAC before comparing
+  (`normalize_mac_address`), or `00:1a:2b…` and `00-1A-2B…` become two networks.
+- A *missing* token creates a guest; a token that is **present but invalid**
+  must still be rejected. Otherwise an expired session silently downgrades a
+  user's own device into a guest and they lose send access with no explanation.
+- A guest may only join a network that already exists. Letting a guest create
+  one produces an ownerless network with no admin, which nothing can ever
+  administer or send from.
+- Scope the guest's device token to one `device_id`. Scope it to the network
+  instead and any guest can act for any other.
+
+**Tests:** `TestDeviceRegistration` — the guest cases especially.
 
 ---
 
@@ -95,10 +107,13 @@ must drop out of the alert group.
 
 **Files:** `services/device_service.py`, `routes/devices.py`
 
-Paginated list scoped to the caller, plus detail and delete.
+Paginated list scoped to the **network**, plus detail and delete.
 
-Watch for: never serialise `push_token`. Use `selectinload` for the network
-relationship rather than touching it per row.
+Watch for: scope by `wifi_id`, not `user_id` -- an admin must see guest devices,
+which is the whole point of the list. Serialise `is_guest` (derived from
+`user_id IS NULL`) so the dashboard can badge them. A guest's device token must
+not be able to call this at all. Never serialise `push_token`. Use
+`selectinload` for the network relationship rather than touching it per row.
 
 **Tests:** `TestDeviceList`, `TestDeviceRemoval`.
 
@@ -122,12 +137,18 @@ never arrive.
 
 **Files:** `services/alert_service.py`, `routes/alerts.py`, `models/alert_log.py`
 
-Three checks in order: ownership, shared `wifi_id`, admin rights. Then fan out
-with `gather_with_limit`, write the audit row, return per-device status.
+Three checks in order: shared `wifi_id`, admin rights, reachable targets. Then
+fan out with `gather_with_limit`, write the audit row, return per-device status.
 
-Watch for: any check failing aborts the **entire** request — no partial
-delivery. A single failed push, by contrast, is `ALERT_004` for that device
-only and must not fail the others. Empty `device_ids` means the whole network.
+Watch for:
+
+- Do **not** check that the sender owns each target. Guests have no owner, and
+  alerting them is the point of guest access. Shared network membership carries
+  the membership boundary; ownership is required only of the *sender*.
+- Any check failing aborts the **entire** request — no partial delivery. A
+  single failed push, by contrast, is `ALERT_004` for that device only and must
+  not fail the others.
+- Empty `device_ids` means the whole network, guests included.
 
 **Tests:** all of `tests/test_alerts.py`. `TestAlertAuthorization` is the most
 important set in the codebase — it is what stops one household beeping

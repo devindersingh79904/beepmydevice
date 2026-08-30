@@ -339,7 +339,8 @@ Frontend → Connect WebSocket
 - Verify user owns device before alert
 - Check device on same WiFi
 - Only admin can trigger alerts
-- Guest access: view only, no send
+- Guest access: auto-registers with no login, receives alerts, cannot send,
+  cannot list devices (see docs/ARCHITECTURE.md - Guest access)
 
 #### Data Protection
 - HTTPS/TLS for all communication

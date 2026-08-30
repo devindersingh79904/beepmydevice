@@ -8,7 +8,18 @@ are what stop one household from beeping another household's devices.
 class TestAlertAuthorization:
     """The three checks that gate every send."""
 
-    def test_rejects_target_owned_by_another_user_with_alert_003(self) -> None:
+    def test_rejects_target_on_another_network_with_alert_001(self) -> None:
+        raise NotImplementedError
+
+    def test_allows_guest_target_that_sender_does_not_own(self) -> None:
+        """Ownership is not required of targets -- guests have no owner at all."""
+        raise NotImplementedError
+
+    def test_guest_device_token_cannot_send_at_all(self) -> None:
+        """A guest holds no user token, so it fails authentication, not a role check."""
+        raise NotImplementedError
+
+    def test_rejects_guest_sender_with_alert_005(self) -> None:
         raise NotImplementedError
 
     def test_rejects_targets_on_different_wifi_with_alert_001(self) -> None:
@@ -29,6 +40,9 @@ class TestSendAlert:
     """POST /alerts/send."""
 
     def test_sends_to_all_devices_on_network_when_ids_empty(self) -> None:
+        raise NotImplementedError
+
+    def test_empty_ids_includes_guest_devices(self) -> None:
         raise NotImplementedError
 
     def test_routes_ios_devices_to_apns_and_android_to_firebase(self) -> None:

@@ -14,6 +14,10 @@ also the security model: a device may be alerted only by someone on the same
 WiFi network. The network is the proximity proof -- you can only ring what is
 already within earshot.
 
+It also means an account is only needed to *send*. A device can be findable
+without one, which is what guest access is: open the app on the network and you
+appear in the admin's list, alertable, with no login and no approval step.
+
 Everything below follows from that decision.
 
 ---
@@ -98,6 +102,16 @@ ownership, the network for the alert-group check. `alert_logs.target_devices` is
 a text array rather than a join table: rows are written once and never queried
 by individual target.
 
+**`devices.user_id` is nullable**, and that is the whole guest mechanism:
+
+| | `user_id` | Receives alerts | Sends alerts | Lists devices |
+|---|---|---|---|---|
+| Owned | the owner | yes | yes, if network admin | yes |
+| Guest | null | yes | never | never |
+
+Guest-ness is derived from `user_id IS NULL` rather than stored in a column of
+its own, so the two can never drift apart. The API exposes it as `is_guest`.
+
 Foreign keys cascade, so deleting a user removes their networks and devices in
 one statement.
 
@@ -114,13 +128,41 @@ App opens
   -> request notification permission -> push token
   -> request location permission -> read WiFi BSSID
   -> POST /devices/register
-  -> server finds or creates the wifi_networks row for that MAC
+       signed in?  -> owned device, belongs to that user
+       not signed in? -> guest device, belongs to the network only,
+                         issued a device token for its own heartbeat
   -> device stored with status ONLINE
 ```
+
+Which branch runs is decided by whether the request carries a valid user token,
+never by anything in the request body -- a client cannot ask to be an owner.
 
 Location permission is required because both platforms classify the BSSID as
 location data. Without it the app cannot identify the network, and therefore
 cannot work at all.
+
+A guest registration requires the network to already exist. Otherwise the first
+device on an unknown MAC would create an ownerless network that nobody could
+ever administer, and the alert group would have no admin to send from.
+
+The **device token** issued to a guest authorises exactly one thing: that
+device's own heartbeat. It cannot list devices, cannot send alerts, and is
+scoped to a single `device_id`, so one guest cannot act on behalf of another.
+
+### Guest access
+
+A guest is a full participant in being *found* and a non-participant in
+everything else:
+
+- Appears in the admin's device list immediately, badged "Guest"
+- Receives alerts exactly like an owned device
+- Cannot send alerts -- it has no user token, so it cannot authenticate at the
+  alert endpoint at all
+- Cannot enumerate the network it joined
+- Can be removed by the admin at any time
+
+The disabled alert button in the UI is presentation, not the control. The
+control is that sending requires a user token a guest does not have.
 
 ### Heartbeat
 
@@ -140,19 +182,24 @@ left the network, so it is outside the alert group and must not be alertable.
 
 ```
 POST /alerts/send
-  -> 1. sender owns every target?      no -> ALERT_003
-  -> 2. all targets share one wifi_id? no -> ALERT_001
-  -> 3. sender is the network admin?   no -> ALERT_003
+  -> 1. all targets share one wifi_id?  no -> ALERT_001
+  -> 2. sender is that network's admin? no -> ALERT_003
+  -> 3. any reachable targets?          no -> ALERT_002
   -> resolve push tokens
   -> fan out via FCM / APNs, bounded concurrency
   -> write alert_logs row
   -> return per-device delivery status
 ```
 
-The three checks run in that order and any failure aborts the entire request.
-There is no partial delivery -- a request that would ring three of four devices
-rings none, so the sender is never left believing an alert went out when it did
-not.
+The checks run in that order and any failure aborts the entire request. There is
+no partial delivery -- a request that would ring three of four devices rings
+none, so the sender is never left believing an alert went out when it did not.
+
+Note what is **not** checked: that the sender owns each target. Guest devices
+have no owner, and alerting them is the point of guest access, so shared network
+membership carries the entire membership boundary. Ownership is still required
+of the *sender* -- check 2 -- which is what makes a guest structurally unable to
+send rather than merely blocked in the interface.
 
 Delivery status is reported per device, so a single failed push surfaces as
 `ALERT_004` for that device without failing the others.
@@ -176,10 +223,15 @@ fine for Phase 1; this is a Phase 2 item.
 **Authentication** -- bcrypt password hashing, JWT with a 30-day expiry carried
 in the `Authorization` header. Tokens never appear in URLs or logs.
 
-**Authorization** -- ownership and network membership are re-verified on the
+**Authorization** -- network membership and admin rights are re-verified on the
 server for every alert. The client is never trusted to assert which network it
 is on: the WiFi MAC arrives with each heartbeat and is checked against the
 registration.
+
+**Guest scope** -- a guest device holds a device token, not a user token. It is
+scoped to one `device_id` and authorises only that device's heartbeat. Every
+capability beyond being alerted requires a user token, so guest restrictions are
+structural rather than enforced by the UI.
 
 **Transport** -- HTTPS and WSS in production, terminated at Nginx.
 
@@ -188,11 +240,32 @@ endpoint. Errors return generic messages; internal detail stays server-side.
 
 ### Threat notes
 
-A device that reports a *spoofed* WiFi MAC could join an alert group it does not
-belong to. This is bounded by the requirement that the attacker also holds valid
-credentials for an account on that network, so practical exposure is low for
-Phase 1. Binding a device to a network on first registration and requiring admin
-approval for re-binding is the Phase 2 hardening.
+**Open guest registration is a deliberate trade.** Anyone who can reach the API
+and supply a valid WiFi MAC can register a guest device on that network. The
+BSSID is not a secret -- it is visible to anyone in radio range -- so in practice
+this means anyone near the home, or anyone who has ever been near it, can add a
+device to the list.
+
+What that gets them is bounded:
+
+- They can **receive** alerts on their own device. A stranger's phone beeping is
+  a nuisance to them, not a compromise of the household.
+- They **appear in the admin's list**, which is arguably the correct outcome:
+  the admin sees an unrecognised device and can remove it.
+- They **cannot** enumerate devices, read any device's details, send alerts, or
+  learn anything about the network beyond the MAC they already had.
+
+The residual risk is list pollution -- a script registering many guests to make
+the dashboard unusable. Rate limiting on registration (Phase 2) is the mitigation;
+admin removal is the manual one available today. This was accepted because
+requiring approval would defeat guest access: the guest's whole value is that a
+visitor's phone becomes findable without anyone setting anything up.
+
+**MAC spoofing.** A device reporting a MAC it cannot actually see joins an alert
+group it is not physically in. For guests this is the same exposure as above.
+For *owned* devices it is bounded by needing valid credentials for an account on
+that network. Binding a device to a network on first registration and requiring
+admin approval to re-bind is the Phase 2 hardening.
 
 ---
 
@@ -222,6 +295,11 @@ The design leaves room for the planned phases without rework:
   `AlertService.send_alert`; no change to the authorization checks.
 - **Multi-admin (Phase 2)** -- an admin role on the user/network join; only
   `verify_admin` changes.
+- **Promoting a guest** -- a guest that later signs in becomes owned by setting
+  `user_id`; nothing else about the row changes, and `is_guest` follows.
+- **Guest approval (Phase 2)** -- if open registration proves too permissive, a
+  pending state ahead of the alert group is additive; the alert checks are
+  unaffected.
 - **Multiple networks** -- already supported by the schema; a user may own many
   `wifi_networks` rows.
 - **New platforms** -- add a `DeviceType` and a branch in `NotificationService`;

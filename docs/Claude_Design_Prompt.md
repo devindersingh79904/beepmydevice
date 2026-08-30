@@ -10,10 +10,22 @@ I need you to create high-fidelity UI mockups for **BeepMyDevice** - a WiFi-base
 
 ### Project Overview
 - **App Name:** BeepMyDevice
-- **Purpose:** Find and alert own devices on same home WiFi
+- **Purpose:** Find and alert devices on the same home WiFi, across accounts
 - **Platforms:** iOS, Android, Mac, Windows
 - **Tech:** React Native + TypeScript
 - **Design Approach:** Clean, modern, intuitive (minimal friction)
+
+### Two kinds of device (this drives several screens)
+
+- **Owned** - registered by a signed-in user. The network admin. Sends and
+  receives alerts.
+- **Guest** - opened the app on the WiFi without signing in. Auto-registers
+  with no login and no approval, appears in the admin's list immediately,
+  **receives** alerts, and can **never send** them.
+
+Guests are a normal, expected part of the list, not an error state. Style them
+neutrally (slate `#64748B` on `#F1F5F9`), never in amber or red. Every screen
+that lists or details a device needs to show which kind it is.
 
 ### Design System (Use Exactly)
 
@@ -27,6 +39,7 @@ I need you to create high-fidelity UI mockups for **BeepMyDevice** - a WiFi-base
 - White: `#FFFFFF` (backgrounds)
 - Light Gray: `#F3F4F6` (secondary backgrounds)
 - Medium Gray: `#D1D5DB` (borders, disabled)
+- Guest Slate: `#64748B` on `#F1F5F9` (Guest badge - neutral, not a warning)
 
 **Typography:**
 - Display: 32pt, bold (section titles)
@@ -113,24 +126,37 @@ I need you to create high-fidelity UI mockups for **BeepMyDevice** - a WiFi-base
   - Shadow: Subtle
 
   - **Card Layout:**
-    - Row 1: Device name (16pt, bold) | Status badge (right)
-      - Status badge: Green "● Online" or Gray "● Offline" (12pt)
+    - Row 1: Device name (16pt, bold) | Badges (right, 6px gap)
+      - Status badge: Green "● Online", Gray "● Offline", Amber "● Unknown" (12pt)
+      - Guest badge (guests only): "Guest" (11pt) slate #64748B on #F1F5F9, pill
+      - Both badges show together - guest-ness and reachability are independent
     - Row 2: Device type (14pt, gray) - e.g., "iPhone 17 Pro"
     - Row 3: Battery icon + "Battery: 85%" (14pt)
       - Battery color: Green (80%+), Amber (20-80%), Red (<20%)
+      - Omit this row entirely when the device reports no battery (desktops)
     - Row 4: "Last seen 2 min ago" (12pt, gray)
     - Row 5 (Spacer): 8px
     - Row 6: "Send Alert" button (full width, 40px)
-      - Background: Brand blue (online) or gray (offline)
+      - Background: Brand blue (enabled) or gray (disabled)
       - Text: 14pt, bold, white
-      - Disabled when offline
+      - Disabled when offline, unknown, OR the device is a guest
       - Tap feedback: Scale down 0.98
+    - Row 7 (guests only): Helper text (11pt, gray)
+      - "Guests receive alerts but cannot send them"
+      - Required. A greyed button with no explanation reads as a bug
 
   - **Card States:**
-    - Online: Green badge + enabled button + normal text
+    - Online (owned): Green badge + enabled button + normal text
+    - Online (guest): Green badge + Guest badge + disabled button + helper text
     - Offline: Gray badge + disabled gray button + grayed text
+    - Unknown: Amber badge + disabled button (device left the network)
     - Loading: Show skeleton with pulse animation
     - Error: Show error overlay
+
+  - **IMPORTANT - please show all of these:** the device list must include at
+    least one guest device so the Guest badge, the disabled button and the
+    helper text are all visible in the mockup. A realistic list is a mix:
+    two owned devices (one online, one offline) and one online guest.
 
 - **Refresh Button (if empty):**
   - Blue background, white text, 48px height

@@ -102,11 +102,18 @@ an authenticated user).
 
 Detect platform, request permissions, read the WiFi MAC and battery, register.
 
-Watch for: the WiFi BSSID is location data on both platforms, so this needs
-location permission. Denial is not a degraded mode — the app cannot identify the
-network at all, so prompt clearly rather than failing silently. Notification
-denial is softer: the device still lists but cannot be alerted, and the UI must
-say so. Battery is null on desktops — render nothing, not `0%`.
+Watch for:
+
+- The WiFi BSSID is location data on both platforms, so this needs location
+  permission. Denial is not a degraded mode — the app cannot identify the
+  network at all, so prompt clearly rather than failing silently.
+- Registration works signed out. With no token the server returns a guest
+  device and a `device_token`; persist that and use it for the heartbeat.
+  Never send a user token you know to be expired — the server rejects it
+  rather than making a guest, which is the behaviour you want.
+- Notification denial is softer: the device still lists but cannot be alerted,
+  and the UI must say so.
+- Battery is null on desktops — render nothing, not `0%`.
 
 **Tests:** the `device service` block.
 
@@ -120,9 +127,20 @@ say so. Battery is null on desktops — render nothing, not `0%`.
 
 The main screen: every device on the network with live status and battery.
 
-Watch for: the alert button is disabled unless the device is `ONLINE`.
-`OFFLINE` cannot receive the push; `UNKNOWN` has left the network. Status pairs
-colour with a text label so it is not conveyed by colour alone.
+Watch for:
+
+- The alert button is disabled unless the device is `ONLINE`, **and** for any
+  guest. `OFFLINE` cannot receive the push; `UNKNOWN` has left the network; a
+  guest can receive but never send.
+- A greyed button always states its reason. Guests get helper text underneath
+  ("Guests receive alerts but cannot send them"); offline and unknown devices
+  are already explained by the status badge above. A disabled control with no
+  explanation reads as a bug.
+- Status and Guest are two badges shown together, never one replacing the
+  other. A guest is still online, offline or unknown like anything else.
+- Style guests neutrally (slate), never amber or red. A guest is a normal
+  participant, not a problem to flag.
+- Status pairs colour with a text label so it is not conveyed by colour alone.
 
 **Tests:** the `DeviceCard` and `DashboardScreen` blocks.
 

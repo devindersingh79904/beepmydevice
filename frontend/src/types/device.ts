@@ -24,6 +24,13 @@ export interface Device {
   status: DeviceStatus;
   last_heartbeat: string | null;
   created_at: string;
+  /**
+   * True for a device that auto-registered without an account.
+   *
+   * A guest receives alerts like any other device but cannot send them. The
+   * dashboard shows a "Guest" badge and disables its alert button.
+   */
+  is_guest: boolean;
 }
 
 export interface DeviceRegisterRequest {
@@ -33,6 +40,19 @@ export interface DeviceRegisterRequest {
   push_token: string;
   wifi_mac: string;
   network_name?: string;
+}
+
+/**
+ * Result of registering.
+ *
+ * `device_token` is present only for a guest registration -- it authorises
+ * that device's heartbeat and nothing else. An owned device gets null and uses
+ * its user JWT instead.
+ */
+export interface DeviceRegisterResponse {
+  device_id: string;
+  is_guest: boolean;
+  device_token: string | null;
 }
 
 export interface HeartbeatRequest {

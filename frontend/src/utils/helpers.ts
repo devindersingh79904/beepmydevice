@@ -1,6 +1,6 @@
 /** Small pure helpers shared across screens and components. */
 
-import type {DeviceStatus, DeviceType} from '@types/device';
+import type {Device, DeviceStatus, DeviceType} from '@types/device';
 
 /** Format an ISO-8601 timestamp as a relative string, e.g. "2 minutes ago". */
 export function formatRelativeTime(isoTimestamp: string | null): string {
@@ -31,8 +31,22 @@ export function getBatteryColor(batteryLevel: number | null): string {
  *
  * Only ONLINE qualifies: OFFLINE devices cannot receive the push, and UNKNOWN
  * devices have moved off the network and are outside the alert group.
+ *
+ * Guest status is deliberately not consulted here -- a guest receives alerts
+ * exactly like any other device. What a guest cannot do is *send* them.
  */
 export function canReceiveAlert(status: DeviceStatus): boolean {
+  throw new Error('Not implemented');
+}
+
+/**
+ * Whether the alert button should be enabled for this device.
+ *
+ * False for a guest, whose button renders greyed out with a "Guest" badge
+ * explaining why. This is presentation only: the server rejects a guest send
+ * regardless, since a guest holds no user token.
+ */
+export function canSendAlertTo(device: Device): boolean {
   throw new Error('Not implemented');
 }
 
