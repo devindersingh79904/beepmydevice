@@ -2,8 +2,6 @@
 
 **Find & Alert Your Devices at Home**
 
-[![Backend Tests](https://github.com/devindersingh79904/beepmydevice/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/devindersingh79904/beepmydevice/actions/workflows/backend-tests.yml)
-[![Frontend Tests](https://github.com/devindersingh79904/beepmydevice/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/devindersingh79904/beepmydevice/actions/workflows/frontend-tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 BeepMyDevice makes any device on your home WiFi ring, regardless of which account it is
@@ -72,7 +70,7 @@ See [`docs/FEATURES.md`](docs/FEATURES.md) for the complete breakdown.
 | Push (Android) | Firebase Cloud Messaging via `firebase-admin` |
 | Push (iOS) | Apple Push Notification service (`.p8` token auth) |
 | Container | Docker, docker-compose |
-| CI/CD | GitHub Actions |
+| CI/CD | GitHub Actions (staged, currently disabled) |
 | Hosting | Nginx reverse proxy → Uvicorn, Let's Encrypt TLS |
 
 ---
@@ -105,7 +103,7 @@ beepmydevice/
 │       └── styles/       Theme, colors, spacing
 │
 ├── docs/             Specifications, architecture, API reference, standards
-└── .github/          CI workflows and issue templates
+└── .github/          Issue templates (CI workflows staged but disabled)
 ```
 
 ---
@@ -165,7 +163,16 @@ npm test -- --coverage
 npm run lint
 ```
 
-Target coverage is 70% minimum. Both suites run on every push and pull request.
+Target coverage is 70% minimum.
+
+CI is currently switched off. The workflows live in `.github/workflows.disabled/`
+and do nothing there -- GitHub only runs what is in `.github/workflows/`. Turn
+them on by renaming the directory back, once there is enough implemented for a
+green run:
+
+```bash
+git mv .github/workflows.disabled .github/workflows
+```
 
 ---
 

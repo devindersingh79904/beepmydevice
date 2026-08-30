@@ -39,6 +39,11 @@ npm run typecheck && npm run lint
 The backend refuses to start while `SECRET_KEY` is still the `.env.example`
 placeholder — that is a deliberate guard, not a bug.
 
+**CI is deliberately off.** The workflows are staged in
+`.github/workflows.disabled/`, which GitHub ignores; they would fail today
+because nothing is implemented and there is no `package-lock.json`. Do not move
+them back into `.github/workflows/` unless asked. Run checks locally instead.
+
 ## Architecture
 
 Two deployables, one repo. Both enforce a strict one-directional layering:

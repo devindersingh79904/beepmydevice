@@ -89,7 +89,10 @@ cd backend && black src/ && pylint src/ && mypy src/ && pytest
 cd frontend && npm run lint && npm run typecheck && npm test
 ```
 
-Both suites run in CI on every push and pull request.
+CI is currently disabled -- the workflows sit in `.github/workflows.disabled/`,
+where GitHub does not run them. Run these checks locally until enough of
+Phase 1 is implemented for a green build, then rename the directory back to
+`.github/workflows/`.
 
 ---
 

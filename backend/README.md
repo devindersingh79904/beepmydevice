@@ -125,6 +125,9 @@ pytest --cov=src --cov-report=term-missing
 Coverage floor is 70%, enforced by `pyproject.toml`. Firebase and APNs are
 always mocked — a test that reaches a real push provider is not a test.
 
+CI is currently disabled; run the checks locally. See the root
+[`README.md`](../README.md#testing).
+
 ## Coding Standards
 
 [`docs/CODING_STYLE.md`](docs/CODING_STYLE.md) is binding for this directory.

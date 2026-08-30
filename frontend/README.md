@@ -131,6 +131,9 @@ npm run lint
 Coverage floor is 70%, enforced in `package.json`. The axios instance is mocked;
 no test performs a real network call.
 
+CI is currently disabled; run the checks locally. See the root
+[`README.md`](../README.md#testing).
+
 ## Building
 
 ```bash
