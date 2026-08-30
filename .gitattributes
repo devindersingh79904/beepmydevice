@@ -1,0 +1,28 @@
+# Normalise to LF in the repository. Without this, committing from Windows and
+# from macOS/Linux produces whole-file diffs on every checkout.
+* text=auto eol=lf
+
+# Scripts that must keep LF to be executable on the target platform.
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+gradlew     text eol=lf
+
+# Windows-only scripts keep CRLF.
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Binaries: never touched.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.mp3   binary
+*.wav   binary
+*.keystore binary
+*.jar   binary

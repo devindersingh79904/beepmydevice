@@ -1,0 +1,30 @@
+{
+  "root": true,
+  "extends": [
+    "@react-native",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/explicit-function-return-type": [
+      "error",
+      { "allowExpressions": false, "allowTypedFunctionExpressions": true }
+    ],
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-magic-numbers": [
+      "error",
+      { "ignore": [0, 1, -1], "ignoreArrayIndexes": true, "enforceConst": true }
+    ],
+    "max-lines-per-function": ["warn", { "max": 60, "skipComments": true }],
+    "eqeqeq": ["error", "always"]
+  },
+  "overrides": [
+    {
+      "files": ["*.test.ts", "*.test.tsx", "__tests__/**/*"],
+      "rules": { "no-magic-numbers": "off" }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+name: Deploy
+
+# Manual only. An automatic deploy on every push to master would ship a
+# migration before anyone has looked at it.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: production
+        type: choice
+        options: [production]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -f backend/docker/Dockerfile -t beepmydevice-backend:${{ github.sha }} backend/
+
+      # Configure a registry and a deploy target before enabling the steps
+      # below. Left explicit rather than guessed at.
+      - name: Push image
+        run: echo "TODO: configure container registry credentials"
+
+      - name: Deploy
+        run: echo "TODO: configure deploy target"
+
+      - name: Run migrations
+        run: echo "TODO: alembic upgrade head against the deploy target"
+
+      - name: Smoke test
+        run: echo "TODO: curl https://beepmydevice.com/health"

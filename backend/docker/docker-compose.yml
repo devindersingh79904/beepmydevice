@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: beepmydevice-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-beepmydevice}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-beepmydevice}
+      POSTGRES_DB: ${POSTGRES_DB:-beepmydevice_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # The API waits on this so migrations never run against a cold database.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beepmydevice}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: beepmydevice-api
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-beepmydevice}:${POSTGRES_PASSWORD:-beepmydevice}@db:5432/${POSTGRES_DB:-beepmydevice_dev}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

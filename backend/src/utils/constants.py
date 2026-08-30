@@ -1,0 +1,162 @@
+"""Application-wide constants.
+
+Every magic number and string literal used for control flow lives here. Nothing
+in this module reads the environment — see ``src.config`` for anything that
+varies per deployment.
+"""
+
+from enum import Enum
+from typing import Final
+
+# ---------------------------------------------------------------------------
+# Pagination
+# ---------------------------------------------------------------------------
+DEFAULT_PAGE_SIZE: Final[int] = 20
+MAX_PAGE_SIZE: Final[int] = 100
+MIN_PAGE_NUMBER: Final[int] = 1
+DESCENDING_SORT_PREFIX: Final[str] = "-"
+
+# ---------------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------------
+JWT_EXPIRATION_DAYS: Final[int] = 30
+BCRYPT_ROUNDS: Final[int] = 12
+MIN_PASSWORD_LENGTH: Final[int] = 8
+MAX_PASSWORD_LENGTH: Final[int] = 128
+AUTH_SCHEME: Final[str] = "Bearer"
+
+# ---------------------------------------------------------------------------
+# Device heartbeat
+#
+# A device is considered offline once it has missed roughly three heartbeats.
+# ---------------------------------------------------------------------------
+HEARTBEAT_INTERVAL_SECONDS: Final[int] = 30
+HEARTBEAT_GRACE_MULTIPLIER: Final[int] = 3
+OFFLINE_THRESHOLD_SECONDS: Final[int] = (
+    HEARTBEAT_INTERVAL_SECONDS * HEARTBEAT_GRACE_MULTIPLIER
+)
+MIN_BATTERY_LEVEL: Final[int] = 0
+MAX_BATTERY_LEVEL: Final[int] = 100
+
+# ---------------------------------------------------------------------------
+# Push notifications
+# ---------------------------------------------------------------------------
+PUSH_MAX_RETRIES: Final[int] = 3
+PUSH_RETRY_BACKOFF_SECONDS: Final[int] = 2
+PUSH_TIMEOUT_SECONDS: Final[int] = 10
+ALERT_NOTIFICATION_TITLE: Final[str] = "BeepMyDevice"
+ALERT_NOTIFICATION_BODY: Final[str] = "Someone is looking for this device!"
+
+# ---------------------------------------------------------------------------
+# HTTP headers
+# ---------------------------------------------------------------------------
+CORRELATION_ID_HEADER: Final[str] = "X-Correlation-ID"
+AUTHORIZATION_HEADER: Final[str] = "Authorization"
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+SLOW_REQUEST_THRESHOLD_MS: Final[int] = 1000
+LOG_FORMAT: Final[str] = (
+    "[%(asctime)s] [%(levelname)s] [%(correlation_id)s] [%(service)s] %(message)s"
+)
+LOG_DATE_FORMAT: Final[str] = "%Y-%m-%dT%H:%M:%S"
+NO_CORRELATION_ID: Final[str] = "no-correlation-id"
+
+
+# ---------------------------------------------------------------------------
+# Enumerations
+# ---------------------------------------------------------------------------
+class DeviceType(str, Enum):
+    """Platform a registered device runs on."""
+
+    IOS = "ios"
+    ANDROID = "android"
+    WINDOWS = "windows"
+    MACOS = "macos"
+
+
+class DeviceStatus(str, Enum):
+    """Current reachability of a device.
+
+    ``UNKNOWN`` is set when a heartbeat arrives from a WiFi network other than
+    the one the device registered on — the device is reachable but can no
+    longer be treated as part of the alert group.
+    """
+
+    ONLINE = "ONLINE"
+    OFFLINE = "OFFLINE"
+    UNKNOWN = "UNKNOWN"
+
+
+class AlertStatus(str, Enum):
+    """Delivery state of an alert."""
+
+    SENT = "SENT"
+    RECEIVED = "RECEIVED"
+    FAILED = "FAILED"
+
+
+class ErrorCode(str, Enum):
+    """Stable error vocabulary returned to clients.
+
+    The frontend branches on the prefix: ``AUTH_*`` redirects to login,
+    ``VAL_*`` highlights form fields, everything else shows a dismissible
+    banner. Codes are part of the API contract — never renumber them.
+    """
+
+    # Authentication
+    INVALID_CREDENTIALS = "AUTH_001"
+    TOKEN_EXPIRED = "AUTH_002"
+    TOKEN_INVALID = "AUTH_003"
+    UNAUTHORIZED = "AUTH_004"
+
+    # Device
+    DEVICE_NOT_FOUND = "DEVICE_001"
+    DEVICE_OFFLINE = "DEVICE_002"
+    INVALID_DEVICE_TYPE = "DEVICE_003"
+    DEVICE_ALREADY_REGISTERED = "DEVICE_004"
+
+    # Alert
+    DIFFERENT_WIFI_NETWORKS = "ALERT_001"
+    NO_TARGET_DEVICES = "ALERT_002"
+    PERMISSION_DENIED = "ALERT_003"
+    PUSH_NOTIFICATION_FAILED = "ALERT_004"
+
+    # Validation
+    MISSING_REQUIRED_FIELD = "VAL_001"
+    INVALID_FIELD_FORMAT = "VAL_002"
+    INVALID_EMAIL_FORMAT = "VAL_003"
+    PASSWORD_TOO_WEAK = "VAL_004"
+
+    # Infrastructure
+    DATABASE_ERROR = "DB_001"
+    PUSH_SERVICE_UNAVAILABLE = "PUSH_001"
+    INTERNAL_ERROR = "SYS_001"
+
+
+# User-facing text for each error code. Kept separate from the enum so wording
+# can change without touching the codes clients depend on.
+ERROR_MESSAGES: Final[dict[ErrorCode, str]] = {
+    ErrorCode.INVALID_CREDENTIALS: "Invalid email or password",
+    ErrorCode.TOKEN_EXPIRED: "Your session has expired, please log in again",
+    ErrorCode.TOKEN_INVALID: "Invalid authentication token",
+    ErrorCode.UNAUTHORIZED: "You are not authorized to perform this action",
+    ErrorCode.DEVICE_NOT_FOUND: "Device not found",
+    ErrorCode.DEVICE_OFFLINE: "Device is currently offline",
+    ErrorCode.INVALID_DEVICE_TYPE: "Unsupported device type",
+    ErrorCode.DEVICE_ALREADY_REGISTERED: "This device is already registered",
+    ErrorCode.DIFFERENT_WIFI_NETWORKS: "All devices must be on the same WiFi network",
+    ErrorCode.NO_TARGET_DEVICES: "No devices available to alert",
+    ErrorCode.PERMISSION_DENIED: "You do not have permission to alert this device",
+    ErrorCode.PUSH_NOTIFICATION_FAILED: "Could not deliver the alert",
+    ErrorCode.MISSING_REQUIRED_FIELD: "This field is required",
+    ErrorCode.INVALID_FIELD_FORMAT: "This field has an invalid format",
+    ErrorCode.INVALID_EMAIL_FORMAT: "Please enter a valid email address",
+    ErrorCode.PASSWORD_TOO_WEAK: (
+        f"Password must be at least {MIN_PASSWORD_LENGTH} characters"
+    ),
+    ErrorCode.DATABASE_ERROR: "A database error occurred",
+    ErrorCode.PUSH_SERVICE_UNAVAILABLE: "Push notification service is unavailable",
+    ErrorCode.INTERNAL_ERROR: "An unexpected error occurred",
+}
