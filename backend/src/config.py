@@ -92,6 +92,19 @@ class Settings(BaseSettings):
             )
         return value
 
+    @staticmethod
+    def _configured(*values: str) -> bool:
+        """True only when every value is present and not a placeholder.
+
+        `.env.example` ships values like ``your-project-id`` so the file reads
+        as instructions. Copied to `.env` and left alone, a plain truthiness
+        check calls that configured, and the setup verification then reports
+        success while every push fails at the provider with an opaque error.
+        """
+        return all(
+            value and not value.lower().startswith(("your-", "xxxxxxxxxx", "<")) for value in values
+        )
+
     @property
     def is_production(self) -> bool:
         """True when running against the production environment."""
@@ -100,17 +113,17 @@ class Settings(BaseSettings):
     @property
     def firebase_enabled(self) -> bool:
         """True when enough Firebase credentials are present to send Android push."""
-        return bool(self.FIREBASE_PROJECT_ID and self.FIREBASE_PRIVATE_KEY)
+        return self._configured(self.FIREBASE_PROJECT_ID, self.FIREBASE_PRIVATE_KEY)
 
     @property
     def smtp_enabled(self) -> bool:
         """True when enough SMTP settings are present to actually send mail."""
-        return bool(self.SMTP_HOST and self.SMTP_FROM_ADDRESS)
+        return self._configured(self.SMTP_HOST, self.SMTP_FROM_ADDRESS)
 
     @property
     def apns_enabled(self) -> bool:
         """True when enough Apple credentials are present to send iOS push."""
-        return bool(self.APPLE_TEAM_ID and self.APPLE_KEY_ID and self.APPLE_KEY_PATH)
+        return self._configured(self.APPLE_TEAM_ID, self.APPLE_KEY_ID, self.APPLE_KEY_PATH)
 
 
 @lru_cache

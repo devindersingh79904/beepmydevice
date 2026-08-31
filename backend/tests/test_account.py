@@ -382,3 +382,33 @@ def test_device_relationship_exposes_the_owner(db: Session, client: TestClient) 
     assert device is not None
     assert device.user is not None
     assert device.user.notifications_enabled is True
+
+
+class TestProviderConfiguration:
+    """`.env.example` placeholders must not read as configured.
+
+    A plain truthiness check calls "your-project-id" configured, so the setup
+    verification reports success and every push then fails at the provider with
+    an opaque error instead of the clear "not configured" warning.
+    """
+
+    def test_placeholders_do_not_count_as_configured(self) -> None:
+        from src.config import Settings
+
+        assert Settings._configured("your-project-id") is False
+        assert Settings._configured("XXXXXXXXXX") is False
+        assert Settings._configured("<your-key>") is False
+        assert Settings._configured("") is False
+
+    def test_real_values_count_as_configured(self) -> None:
+        from src.config import Settings
+
+        assert Settings._configured("beepmydevice-40933") is True
+        assert Settings._configured("a", "b", "c") is True
+
+    def test_one_placeholder_disqualifies_the_set(self) -> None:
+        from src.config import Settings
+
+        # Half-configured is not configured: a real project ID with a
+        # placeholder key still cannot sign a request.
+        assert Settings._configured("beepmydevice-40933", "your-key") is False

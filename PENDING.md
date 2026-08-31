@@ -10,7 +10,7 @@ Last updated: 2026-08-31, after wiring Firebase for both platforms.
 ## Status
 
 ```
-backend    94 tests · 81.6% coverage · mypy clean · pylint 10.00/10 · black
+backend    97 tests · 81.6% coverage · mypy clean · pylint 10.00/10 · black
 frontend  161 tests · coverage thresholds met · tsc clean · 0 lint errors
 CI         off by design; workflows stay staged in .github/workflows.disabled/
 ```
@@ -59,6 +59,10 @@ took:
 cd backend
 .venv/Scripts/python -c "from src.config import settings; print('firebase:', settings.firebase_enabled)"
 ```
+
+This now reports `False` while the `.env` still holds the `your-project-id`
+placeholders, rather than calling them configured and letting every push fail
+at the provider instead.
 
 ### 2. `RECEIVED` is never set
 
