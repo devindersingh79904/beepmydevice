@@ -3,11 +3,11 @@
 Running hand-off list. Update it as items land; it is the file to read first
 when picking the project back up.
 
-Last updated: 2026-08-31, after Phase 1 completion.
+Last updated: 2026-08-31, after an audit against `docs/FEATURES.md`.
 
 ---
 
-## Phase 1 is complete
+## Status
 
 ```
 backend    82 tests · 81% coverage · mypy clean · pylint 10.00/10 · black
@@ -17,7 +17,64 @@ CI         off by design; workflows stay staged in .github/workflows.disabled/
 
 Both suites were run, not assumed. The API was booted and served real requests.
 
-## The only thing outstanding
+**This file previously said push credentials were the only thing outstanding.
+That was wrong.** An audit against the feature specs found four behaviours that
+are specified and have code written for them, but are never called. The green
+suites did not catch them because every test asserts on freshly-written state.
+
+---
+
+## Open defects
+
+### 1. Devices never go OFFLINE — the significant one
+
+`backend/docs/FEATURES.md` specifies three states:
+
+| Condition | Status |
+|---|---|
+| MAC matches registration | `ONLINE` |
+| MAC differs | `UNKNOWN` |
+| Silent for `OFFLINE_THRESHOLD_SECONDS` | `OFFLINE` |
+
+The third never happens. Nothing writes `OFFLINE`:
+
+- `DeviceService.set_offline()` — never called
+- `DeviceService.get_device_status()`, which does the 90-second calculation —
+  never called
+- `OFFLINE_THRESHOLD_SECONDS` — referenced only inside that uncalled function
+
+`/devices/list` serialises the stored `status` column, and the only writer is
+`update_heartbeat`, which sets `ONLINE` or `UNKNOWN` and nothing else. So a
+device that is switched off, out of range or uninstalled **shows `ONLINE`
+forever**, keeps a live "Send alert" button, and the send is attempted against
+it.
+
+The fix is to derive status at read time from `last_heartbeat` — the logic
+already exists in `get_device_status` — rather than to add a background
+sweeper. Tests must age a device; the current ones all assert on a
+freshly-registered one, which is why this got through.
+
+### 2. Stale push tokens are never cleared
+
+`NotificationService.handle_notification_failure()` is implemented and unit
+tested, but the alert route never calls it. The spec: *"A token rejected as
+unregistered is stale: clear it and mark the device offline rather than
+retrying."*
+
+### 3. No push retry or backoff
+
+`PUSH_MAX_RETRIES` and `PUSH_RETRY_BACKOFF_SECONDS` are defined and unused.
+`docs/FEATURES.md` lists "Retry with backoff on transient failure".
+
+### 4. `RECEIVED` is never set
+
+Alert status is only ever `SENT` or `FAILED`. `docs/FEATURES.md` lists
+`SENT` / `RECEIVED` / `FAILED`. This one needs a new device-to-server
+acknowledgement endpoint, so it is larger than the other three.
+
+---
+
+## Needs you
 
 **Push credentials.** Firebase and APNs keys, and the two credential files they
 come with. Every line of code around them is written and tested; without them
@@ -26,7 +83,7 @@ record and report — the target device just does not ring.
 
 Full instructions: **[`docs/PUSH_SETUP.md`](docs/PUSH_SETUP.md)**.
 
-Nothing else in Phase 1 is waiting on anything.
+---
 
 ---
 
@@ -92,6 +149,13 @@ Everything is verified by test suite and by the API serving HTTP. No screen has
 been rendered on real hardware. The native projects are freshly generated, so
 expect the usual first-run friction: `pod install` on macOS, Gradle sync, SDK
 versions. `npm run ios` needs macOS.
+
+### Windows and macOS are code-ready, not buildable
+
+`detectDeviceType()` handles all four platforms and `package.json` carries
+`run-macos` / `run-windows`, but only `ios/` and `android/` native projects
+exist. The feature list claims four platforms; two of them cannot be built
+today.
 
 ### App launcher icons
 
