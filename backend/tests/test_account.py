@@ -403,7 +403,7 @@ class TestProviderConfiguration:
     def test_real_values_count_as_configured(self) -> None:
         from src.config import Settings
 
-        assert Settings._configured("beepmydevice-40933") is True
+        assert Settings._configured("a-real-project-id") is True
         assert Settings._configured("a", "b", "c") is True
 
     def test_one_placeholder_disqualifies_the_set(self) -> None:
@@ -411,4 +411,4 @@ class TestProviderConfiguration:
 
         # Half-configured is not configured: a real project ID with a
         # placeholder key still cannot sign a request.
-        assert Settings._configured("beepmydevice-40933", "your-key") is False
+        assert Settings._configured("a-real-project-id", "your-key") is False
