@@ -67,7 +67,11 @@ export function ConfirmDialog({
         accessibilityRole="button"
         accessibilityLabel="Dismiss"
         onPress={dismiss}>
+        {/* Exists only to stop a tap on the card reaching the scrim behind it.
+            accessible={false} keeps it out of the accessibility tree, where it
+            would otherwise be announced as an unlabelled button. */}
         <Pressable
+          accessible={false}
           style={[styles.dialog, elevation.dialog]}
           onPress={() => undefined}>
           <Text style={styles.title}>{title}</Text>

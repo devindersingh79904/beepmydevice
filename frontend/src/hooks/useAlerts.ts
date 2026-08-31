@@ -5,10 +5,11 @@
  * the dashboard's confirm dialog and the API. The hook owns the in-flight flag
  * because the dialog must stay open, and un-dismissable, while a send is on
  * the wire.
- *
- * Implementation is Phase 1, like the other hooks in this directory.
  */
 
+import {useContext} from 'react';
+
+import {DeviceContext} from '@context/DeviceContext';
 import type {AlertDeliveryStatus} from '@/types/device';
 
 export interface UseAlertsResult {
@@ -28,5 +29,9 @@ export interface UseAlertsResult {
 }
 
 export function useAlerts(): UseAlertsResult {
-  throw new Error('Not implemented');
+  const context = useContext(DeviceContext);
+  if (context === undefined) {
+    throw new Error('useAlerts must be used inside a DeviceProvider');
+  }
+  return context;
 }

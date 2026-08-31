@@ -2,12 +2,35 @@
 
 import uuid
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.alert_log import AlertLog
+from src.models.device import Device
+from src.models.wifi_network import WiFiNetwork
+from src.services.device_service import owned_network_id
+from src.utils.constants import AlertStatus, DeviceStatus
 from src.utils.logger import get_logger
 
 logger = get_logger("alert_service")
+
+
+class DifferentNetworksError(PermissionError):
+    """Targets span more than one WiFi network (ALERT_001).
+
+    These three subclass the exception types named in the method docstrings, so
+    a caller that only cares "authorization failed" can still catch
+    PermissionError or ValueError, while the route can map each cause onto its
+    own error code instead of guessing from a message string.
+    """
+
+
+class NotNetworkAdminError(PermissionError):
+    """The sender does not administer the target network (ALERT_003)."""
+
+
+class NoReachableTargetsError(ValueError):
+    """Nothing on the network can be alerted right now (ALERT_002)."""
 
 
 class AlertService:
@@ -61,7 +84,115 @@ class AlertService:
                 sender is not the admin of the target network.
             ValueError: If there are no reachable targets.
         """
-        raise NotImplementedError
+        wifi_id, targets = self.resolve_targets(admin_user_id, device_ids)
+        return self.log_alert(
+            admin_user_id,
+            wifi_id,
+            [target.device_id for target in targets],
+            AlertStatus.SENT.value,
+        )
+
+    def resolve_targets(
+        self,
+        admin_user_id: uuid.UUID,
+        device_ids: list[uuid.UUID],
+    ) -> tuple[uuid.UUID, list[Device]]:
+        """Run the three authorization checks and return the approved targets.
+
+        Split out from :meth:`send_alert` so the route can push to the approved
+        devices and report per-device delivery without authorizing twice.
+        Authorization is all-or-nothing; only *push* outcomes are per-device.
+
+        Returns:
+            The network the alert is scoped to, and the devices to beep.
+
+        Raises:
+            PermissionError: If the targets span multiple networks, or the
+                sender is not that network's admin.
+            ValueError: If a named target cannot be alerted, or if a
+                whole-network alert finds nothing reachable.
+        """
+        if device_ids:
+            return self._resolve_named_targets(admin_user_id, device_ids)
+        return self._resolve_network_targets(admin_user_id)
+
+    def _resolve_named_targets(
+        self,
+        admin_user_id: uuid.UUID,
+        device_ids: list[uuid.UUID],
+    ) -> tuple[uuid.UUID, list[Device]]:
+        """Authorize an explicit target list."""
+        targets = list(
+            self._db.execute(select(Device).where(Device.device_id.in_(device_ids))).scalars()
+        )
+        missing = set(device_ids) - {target.device_id for target in targets}
+        if missing:
+            raise NoReachableTargetsError(
+                f"Unknown device(s): {sorted(str(item) for item in missing)}"
+            )
+
+        # Check 1 -- one network, or the proximity guarantee is void.
+        wifi_ids = {target.wifi_id for target in targets}
+        if len(wifi_ids) > 1:
+            logger.warning(f"User {admin_user_id} tried to alert across {len(wifi_ids)} networks")
+            raise DifferentNetworksError("All target devices must be on the same WiFi network")
+        wifi_id = wifi_ids.pop()
+
+        # Check 2 -- the sender administers that network.
+        self._require_admin(admin_user_id, wifi_id)
+
+        # Check 3 -- every *named* target is reachable. Naming an offline device
+        # is a mistake worth reporting, not something to silently drop, and
+        # dropping it would be the partial delivery this service does not do.
+        unreachable = [target for target in targets if target.status != DeviceStatus.ONLINE.value]
+        if unreachable:
+            names = ", ".join(
+                f"{target.device_name or target.device_id} ({target.status})"
+                for target in unreachable
+            )
+            raise NoReachableTargetsError(f"Device(s) cannot be alerted: {names}")
+        return wifi_id, targets
+
+    def _resolve_network_targets(self, admin_user_id: uuid.UUID) -> tuple[uuid.UUID, list[Device]]:
+        """Authorize a whole-network alert.
+
+        The caller named nobody, so the reachable subset is the intent and only
+        an empty result is an error.
+        """
+        wifi_id = self._current_network(admin_user_id)
+        self._require_admin(admin_user_id, wifi_id)
+        targets = list(
+            self._db.execute(
+                select(Device).where(
+                    Device.wifi_id == wifi_id,
+                    Device.status == DeviceStatus.ONLINE.value,
+                )
+            ).scalars()
+        )
+        if not targets:
+            raise NoReachableTargetsError("No devices on this network are currently reachable")
+        return wifi_id, targets
+
+    def _current_network(self, user_id: uuid.UUID) -> uuid.UUID:
+        """Return the network this user is alerting on.
+
+        Raises:
+            ValueError: If the user administers no network.
+        """
+        wifi_id = owned_network_id(self._db, user_id)
+        if wifi_id is None:
+            raise NoReachableTargetsError("You do not have a registered WiFi network")
+        return wifi_id
+
+    def _require_admin(self, user_id: uuid.UUID, wifi_id: uuid.UUID) -> None:
+        """Raise unless this user administers the network.
+
+        Raises:
+            PermissionError: If the user is not the network's admin.
+        """
+        if not self.verify_admin(user_id, wifi_id):
+            logger.warning(f"User {user_id} is not admin of network {wifi_id}")
+            raise NotNetworkAdminError("You do not administer this WiFi network")
 
     def verify_admin(self, user_id: uuid.UUID, wifi_id: uuid.UUID) -> bool:
         """Return True if this user owns the network and may alert on it.
@@ -69,7 +200,10 @@ class AlertService:
         Since guests never hold a user token, this check is what makes guest
         send-access impossible rather than merely disabled in the UI.
         """
-        raise NotImplementedError
+        owner_id = self._db.execute(
+            select(WiFiNetwork.user_id).where(WiFiNetwork.wifi_id == wifi_id)
+        ).scalar_one_or_none()
+        return owner_id is not None and owner_id == user_id
 
     def verify_same_wifi(self, device_ids: list[uuid.UUID]) -> bool:
         """Return True if every target device shares one wifi_id.
@@ -78,7 +212,14 @@ class AlertService:
         is the *only* membership check -- a guest has no owner to verify
         against, so shared network membership carries the whole boundary.
         """
-        raise NotImplementedError
+        if not device_ids:
+            return True
+        distinct_networks = self._db.execute(
+            select(func.count(func.distinct(Device.wifi_id))).where(
+                Device.device_id.in_(device_ids)
+            )
+        ).scalar_one()
+        return distinct_networks == 1
 
     def get_alert_logs(
         self,
@@ -91,7 +232,20 @@ class AlertService:
         Returns:
             The page of alerts and the total count before pagination.
         """
-        raise NotImplementedError
+        total = self._db.execute(
+            select(func.count()).select_from(AlertLog).where(AlertLog.sender_user_id == user_id)
+        ).scalar_one()
+
+        alerts = list(
+            self._db.execute(
+                select(AlertLog)
+                .where(AlertLog.sender_user_id == user_id)
+                .order_by(AlertLog.created_at.desc())
+                .offset((page - 1) * limit)
+                .limit(limit)
+            ).scalars()
+        )
+        return alerts, total
 
     def log_alert(
         self,
@@ -101,4 +255,16 @@ class AlertService:
         status: str,
     ) -> uuid.UUID:
         """Write an audit record for one alert attempt."""
-        raise NotImplementedError
+        alert = AlertLog(
+            sender_user_id=sender_user_id,
+            wifi_id=wifi_id,
+            target_devices=[str(device_id) for device_id in device_ids],
+            status=status,
+        )
+        self._db.add(alert)
+        self._db.flush()
+        logger.info(
+            f"Alert {alert.alert_id} by {sender_user_id} on {wifi_id} "
+            f"targeting {len(device_ids)} device(s): {status}"
+        )
+        return alert.alert_id

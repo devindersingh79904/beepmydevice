@@ -73,8 +73,8 @@ class Settings(BaseSettings):
         if value.startswith("your-super-secret-key"):
             raise ValueError(
                 "SECRET_KEY is still the .env.example placeholder. "
-                "Generate one: python -c \"import secrets; "
-                "print(secrets.token_urlsafe(64))\""
+                'Generate one: python -c "import secrets; '
+                'print(secrets.token_urlsafe(64))"'
             )
         return value
 
@@ -101,7 +101,7 @@ def get_settings() -> Settings:
     Cached so the .env file is parsed once per process. Tests can clear the
     cache with ``get_settings.cache_clear()``.
     """
-    return Settings()
+    return Settings()  # type: ignore[call-arg]  # populated from the environment
 
 
 settings: Settings = get_settings()

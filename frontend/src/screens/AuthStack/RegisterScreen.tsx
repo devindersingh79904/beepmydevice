@@ -72,12 +72,15 @@ function StrengthMeter({score}: {score: number}): React.JSX.Element {
 
 export function RegisterScreen(): React.JSX.Element {
   const navigation = useNavigation<Navigation>();
-  const {register, isLoading} = useAuth();
+  const {register} = useAuth();
   const {errors, fieldErrors, clearErrors} = useErrors();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  // Local, for the same reason as LoginScreen: the context's isLoading
+  // reports session restore, not this form's submission.
+  const [isSubmitting, setSubmitting] = useState(false);
 
   const emailValid = EMAIL_PATTERN.test(email.trim());
   const score = scorePassword(password);
@@ -97,7 +100,12 @@ export function RegisterScreen(): React.JSX.Element {
     if (!canSubmit) {
       return;
     }
-    await register({email: email.trim(), password});
+    setSubmitting(true);
+    try {
+      await register({email: email.trim(), password});
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -162,7 +170,7 @@ export function RegisterScreen(): React.JSX.Element {
             label="Create account"
             onPress={onSubmit}
             disabled={!canSubmit}
-            isLoading={isLoading}
+            isLoading={isSubmitting}
           />
 
           <View style={styles.footer}>

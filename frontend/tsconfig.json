@@ -25,6 +25,6 @@
       "@styles/*": ["styles/*"]
     }
   },
-  "include": ["src/**/*", "__tests__/**/*", "index.js"],
+  "include": ["src/**/*", "__tests__/**/*", "index.js", "jest-matchers.d.ts"],
   "exclude": ["node_modules", "android", "ios", "**/*.test.ts", "coverage"]
 }

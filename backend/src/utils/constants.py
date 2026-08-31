@@ -42,9 +42,7 @@ GUEST_DEVICE_NAME_FALLBACK: Final[str] = "Unknown device"
 # ---------------------------------------------------------------------------
 HEARTBEAT_INTERVAL_SECONDS: Final[int] = 30
 HEARTBEAT_GRACE_MULTIPLIER: Final[int] = 3
-OFFLINE_THRESHOLD_SECONDS: Final[int] = (
-    HEARTBEAT_INTERVAL_SECONDS * HEARTBEAT_GRACE_MULTIPLIER
-)
+OFFLINE_THRESHOLD_SECONDS: Final[int] = HEARTBEAT_INTERVAL_SECONDS * HEARTBEAT_GRACE_MULTIPLIER
 MIN_BATTERY_LEVEL: Final[int] = 0
 MAX_BATTERY_LEVEL: Final[int] = 100
 
@@ -54,6 +52,10 @@ MAX_BATTERY_LEVEL: Final[int] = 100
 PUSH_MAX_RETRIES: Final[int] = 3
 PUSH_RETRY_BACKOFF_SECONDS: Final[int] = 2
 PUSH_TIMEOUT_SECONDS: Final[int] = 10
+# Ceiling on simultaneous provider connections when fanning out one alert.
+# A busy network can hold dozens of devices; sending to all at once would open
+# one connection per device to Firebase or APNs.
+PUSH_MAX_CONCURRENT_SENDS: Final[int] = 10
 ALERT_NOTIFICATION_TITLE: Final[str] = "BeepMyDevice"
 ALERT_NOTIFICATION_BODY: Final[str] = "Someone is looking for this device!"
 
@@ -67,9 +69,9 @@ AUTHORIZATION_HEADER: Final[str] = "Authorization"
 # Logging
 # ---------------------------------------------------------------------------
 SLOW_REQUEST_THRESHOLD_MS: Final[int] = 1000
-LOG_FORMAT: Final[str] = (
-    "[%(asctime)s] [%(levelname)s] [%(correlation_id)s] [%(service)s] %(message)s"
-)
+LOG_FORMAT: Final[
+    str
+] = "[%(asctime)s] [%(levelname)s] [%(correlation_id)s] [%(service)s] %(message)s"
 LOG_DATE_FORMAT: Final[str] = "%Y-%m-%dT%H:%M:%S"
 NO_CORRELATION_ID: Final[str] = "no-correlation-id"
 
@@ -168,9 +170,7 @@ ERROR_MESSAGES: Final[dict[ErrorCode, str]] = {
     ErrorCode.MISSING_REQUIRED_FIELD: "This field is required",
     ErrorCode.INVALID_FIELD_FORMAT: "This field has an invalid format",
     ErrorCode.INVALID_EMAIL_FORMAT: "Please enter a valid email address",
-    ErrorCode.PASSWORD_TOO_WEAK: (
-        f"Password must be at least {MIN_PASSWORD_LENGTH} characters"
-    ),
+    ErrorCode.PASSWORD_TOO_WEAK: (f"Password must be at least {MIN_PASSWORD_LENGTH} characters"),
     ErrorCode.DATABASE_ERROR: "A database error occurred",
     ErrorCode.PUSH_SERVICE_UNAVAILABLE: "Push notification service is unavailable",
     ErrorCode.INTERNAL_ERROR: "An unexpected error occurred",

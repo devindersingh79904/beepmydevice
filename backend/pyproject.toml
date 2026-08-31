@@ -31,7 +31,20 @@ ignore_missing_imports = true
 max-line-length = 100
 
 [tool.pylint."messages control"]
-disable = ["missing-module-docstring"]
+disable = [
+    "missing-module-docstring",
+    # The codebase logs with f-strings throughout, including the helpers in
+    # src/utils/logger.py. Consistency beats the marginal saving of deferring
+    # interpolation for log lines that are almost always emitted.
+    "logging-fstring-interpolation",
+    # SQLAlchemy 2.0 false positives: pylint cannot follow Mapped[...] generics
+    # or the func.* call factory, and reports both as hard errors.
+    "unsubscriptable-object",
+    "not-callable",
+    # ORM models and Pydantic schemas are declarative data classes; a public
+    # method count is not a meaningful measure of them.
+    "too-few-public-methods",
+]
 
 [tool.pylint.design]
 # Enforces the standards in docs/CODING_STANDARDS.md.

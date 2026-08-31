@@ -14,7 +14,9 @@ from src.database import Base
 from src.models import AlertLog, Device, User, WiFiNetwork  # noqa: F401
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# ConfigParser treats "%" as interpolation, and it is legal in a URL-encoded
+# password, so it is escaped before being handed over.
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -24,12 +26,34 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Emit SQL to stdout without connecting to a database."""
-    raise NotImplementedError
+    context.configure(
+        url=config.get_main_option("sqlalchemy.url"),
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 def run_migrations_online() -> None:
     """Apply migrations against a live connection."""
-    raise NotImplementedError
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            # Without this, a column changing type is silently skipped by
+            # autogenerate rather than producing a migration.
+            compare_type=True,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
 
 
 if context.is_offline_mode():

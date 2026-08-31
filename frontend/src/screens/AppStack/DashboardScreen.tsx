@@ -34,6 +34,7 @@ import {useAuth} from '@hooks/useAuth';
 import {useDevices} from '@hooks/useDevices';
 import {useErrors} from '@hooks/useErrors';
 import {useToast} from '@hooks/useToast';
+import {useWebSocket} from '@hooks/useWebSocket';
 import type {AppStackParamList} from '@/navigation/AppNavigator';
 import {colors, sizes, spacing, typography} from '@styles/theme';
 import type {Device} from '@/types/device';
@@ -47,10 +48,12 @@ function NetworkSummary({
   networkName,
   online,
   total,
+  isConnected,
 }: {
   networkName: string | null;
   online: number;
   total: number;
+  isConnected: boolean;
 }): React.JSX.Element {
   return (
     <View style={styles.summary}>
@@ -59,8 +62,13 @@ function NetworkSummary({
         <Text style={styles.networkName}>
           {networkName ?? 'Finding network…'}
         </Text>
+        {/* A dropped socket is routine -- a phone sleeping or changing network
+            does it constantly -- so this reports reconnecting as a status line
+            rather than raising it as an error the user must dismiss. */}
         <Text style={styles.deviceCount}>
-          {`${online} of ${total} devices online`}
+          {isConnected
+            ? `${online} of ${total} devices online`
+            : 'Reconnecting…'}
         </Text>
       </View>
     </View>
@@ -74,6 +82,7 @@ export function DashboardScreen(): React.JSX.Element {
   const {errors, clearErrors} = useErrors();
   const {isSending, sendAlert} = useAlerts();
   const {toast, showToast, dismissToast} = useToast();
+  const {isConnected} = useWebSocket(true);
 
   const [target, setTarget] = useState<Device | null>(null);
 
@@ -109,6 +118,7 @@ export function DashboardScreen(): React.JSX.Element {
             networkName={networkName}
             online={onlineCount}
             total={devices.length}
+            isConnected={isConnected}
           />
         }
         trailing={

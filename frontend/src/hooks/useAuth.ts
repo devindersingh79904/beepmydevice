@@ -1,5 +1,8 @@
 /** Access the authentication context. */
 
+import {useContext} from 'react';
+
+import {AuthContext} from '@context/AuthContext';
 import type {AuthState, LoginRequest, RegisterRequest} from '@/types/user';
 
 export interface UseAuthResult extends AuthState {
@@ -14,5 +17,9 @@ export interface UseAuthResult extends AuthState {
  * @throws If called outside an AuthProvider.
  */
 export function useAuth(): UseAuthResult {
-  throw new Error('Not implemented');
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used inside an AuthProvider');
+  }
+  return context;
 }

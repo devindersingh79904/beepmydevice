@@ -2,12 +2,17 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
+
+if TYPE_CHECKING:
+    from src.models.device import Device
+    from src.models.wifi_network import WiFiNetwork
 
 
 class User(Base):
@@ -29,10 +34,10 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    wifi_networks: Mapped[list["WiFiNetwork"]] = relationship(  # noqa: F821
+    wifi_networks: Mapped[list["WiFiNetwork"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    devices: Mapped[list["Device"]] = relationship(  # noqa: F821
+    devices: Mapped[list["Device"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 

@@ -42,6 +42,8 @@ wheels/
 .coverage.*
 htmlcov/
 coverage.xml
+# Jest writes its HTML/lcov report here on `npm run test:coverage`.
+coverage/
 *.cover
 .mypy_cache/
 .dmypy.json

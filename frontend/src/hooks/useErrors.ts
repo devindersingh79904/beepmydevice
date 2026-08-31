@@ -1,5 +1,8 @@
 /** Access the error context. */
 
+import {useContext} from 'react';
+
+import {ErrorContext} from '@context/ErrorContext';
 import type {ApiError} from '@/types/api';
 
 export interface UseErrorsResult {
@@ -17,5 +20,9 @@ export interface UseErrorsResult {
  * @throws If called outside an ErrorProvider.
  */
 export function useErrors(): UseErrorsResult {
-  throw new Error('Not implemented');
+  const context = useContext(ErrorContext);
+  if (context === undefined) {
+    throw new Error('useErrors must be used inside an ErrorProvider');
+  }
+  return context;
 }

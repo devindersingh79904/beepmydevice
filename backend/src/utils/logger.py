@@ -23,12 +23,10 @@ from src.utils.constants import (
 )
 
 # Set by LoggingMiddleware at the start of each request; read by the filter below.
-correlation_id_var: ContextVar[str] = ContextVar(
-    "correlation_id", default=NO_CORRELATION_ID
-)
+correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default=NO_CORRELATION_ID)
 
 
-class CorrelationIdFilter(logging.Filter):
+class CorrelationIdFilter(logging.Filter):  # pylint: disable=too-few-public-methods
     """Injects the ambient correlation ID and service name into every record."""
 
     def __init__(self, service_name: str) -> None:

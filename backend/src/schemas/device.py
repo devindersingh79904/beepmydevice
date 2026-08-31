@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.utils.constants import (
     MAX_BATTERY_LEVEL,
@@ -11,6 +11,19 @@ from src.utils.constants import (
     DeviceStatus,
     DeviceType,
 )
+from src.utils.validators import MAC_ADDRESS_PATTERN
+
+
+def _validate_mac(value: str) -> str:
+    """Reject a malformed MAC at the API edge.
+
+    The WiFi MAC is the trust boundary for alert authorization, so a bad value
+    is refused rather than normalised into something that might match a real
+    network by accident.
+    """
+    if not MAC_ADDRESS_PATTERN.match(value):
+        raise ValueError("must be a MAC address, e.g. 00:1A:2B:3C:4D:5E")
+    return value
 
 
 class DeviceRegisterRequest(BaseModel):
@@ -28,6 +41,8 @@ class DeviceRegisterRequest(BaseModel):
     wifi_mac: str
     network_name: str | None = Field(default=None, max_length=255)
 
+    _check_mac = field_validator("wifi_mac")(_validate_mac)
+
 
 class HeartbeatRequest(BaseModel):
     """Body of PUT /devices/{device_id}/heartbeat.
@@ -36,10 +51,10 @@ class HeartbeatRequest(BaseModel):
     server can detect a device that has moved off the registered network.
     """
 
-    battery_level: int | None = Field(
-        default=None, ge=MIN_BATTERY_LEVEL, le=MAX_BATTERY_LEVEL
-    )
+    battery_level: int | None = Field(default=None, ge=MIN_BATTERY_LEVEL, le=MAX_BATTERY_LEVEL)
     wifi_mac: str
+
+    _check_mac = field_validator("wifi_mac")(_validate_mac)
 
 
 class DeviceResponse(BaseModel):

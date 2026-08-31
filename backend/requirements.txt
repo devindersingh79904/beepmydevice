@@ -21,7 +21,11 @@ bcrypt==4.1.1
 
 # --- Push notifications ------------------------------------------------------
 firebase-admin==6.2.0
-apns2==0.7.2
+# APNs is called over plain HTTP/2 rather than through a client library.
+# apns2 pins PyJWT<2.0 while firebase-admin requires PyJWT>=2.5, so the two
+# cannot coexist; Apple's token-authenticated API is a signed JWT and one POST,
+# which python-jose and httpx already cover.
+httpx[http2]==0.25.2
 
 # --- Configuration -----------------------------------------------------------
 python-dotenv==1.0.0
@@ -30,7 +34,6 @@ python-dotenv==1.0.0
 pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-httpx==0.25.2
 
 # --- Tooling -----------------------------------------------------------------
 black==23.11.0

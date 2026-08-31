@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -9,6 +10,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
 from src.utils.constants import DeviceStatus
+
+if TYPE_CHECKING:
+    from src.models.user import User
+    from src.models.wifi_network import WiFiNetwork
 
 
 class Device(Base):
@@ -38,7 +43,10 @@ class Device(Base):
     )
     # Null for guest devices, which belong to a network but to no account.
     user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=True, index=True
+        UUID(as_uuid=True),
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )
     wifi_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -58,8 +66,8 @@ class Device(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    user: Mapped["User | None"] = relationship(back_populates="devices")  # noqa: F821
-    wifi_network: Mapped["WiFiNetwork"] = relationship(back_populates="devices")  # noqa: F821
+    user: Mapped["User | None"] = relationship(back_populates="devices")
+    wifi_network: Mapped["WiFiNetwork"] = relationship(back_populates="devices")
 
     @property
     def is_guest(self) -> bool:

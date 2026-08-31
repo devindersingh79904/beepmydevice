@@ -82,3 +82,24 @@ export const MS_PER_SECOND = 1_000;
 // --- App metadata -----------------------------------------------------------
 /** Shown on the settings "Version" row. Keep in step with package.json. */
 export const APP_VERSION = '1.0.0';
+
+// --- Alert playback ---------------------------------------------------------
+/** Bundled sound played when this device is alerted. */
+export const ALERT_SOUND_FILE = 'alert.mp3';
+/** One buzz of the alert vibration. */
+const VIBRATION_BUZZ_MS = 800;
+/** Gap between buzzes. */
+const VIBRATION_GAP_MS = 400;
+/**
+ * Vibration pattern in milliseconds: wait, buzz, wait, buzz…
+ *
+ * Three buzzes rather than one: long enough to be findable from another room.
+ */
+export const ALERT_VIBRATION_PATTERN = [
+  0,
+  VIBRATION_BUZZ_MS,
+  VIBRATION_GAP_MS,
+  VIBRATION_BUZZ_MS,
+  VIBRATION_GAP_MS,
+  VIBRATION_BUZZ_MS,
+];

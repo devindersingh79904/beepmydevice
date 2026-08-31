@@ -17,7 +17,9 @@ Three things in this codebase block and must always be wrapped:
 Use ``run_blocking`` for these. Never call them bare from an ``async def``.
 """
 
+import asyncio
 from collections.abc import Callable
+from functools import partial
 from typing import ParamSpec, TypeVar
 
 from anyio import to_thread
@@ -46,7 +48,9 @@ async def run_blocking(func: Callable[P, T], *args: P.args, **kwargs: P.kwargs) 
 
             device = await run_blocking(service.get_device, device_id)
     """
-    raise NotImplementedError
+    # partial() rather than to_thread.run_sync(func, *args): the anyio API
+    # takes positional arguments only, and binding here keeps keyword support.
+    return await to_thread.run_sync(partial(func, *args, **kwargs))
 
 
 async def gather_with_limit(
@@ -66,4 +70,15 @@ async def gather_with_limit(
     Returns:
         Results in the same order as ``tasks``.
     """
-    raise NotImplementedError
+    if not tasks:
+        return []
+
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def run_one(task: Callable[[], T]) -> T:
+        async with semaphore:
+            return await run_blocking(task)
+
+    # gather preserves input order regardless of completion order, which is
+    # what lets the caller zip results back onto the devices they came from.
+    return await asyncio.gather(*(run_one(task) for task in tasks))

@@ -30,13 +30,17 @@ type Navigation = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 export function LoginScreen(): React.JSX.Element {
   const navigation = useNavigation<Navigation>();
-  const {login, isLoading} = useAuth();
+  const {login} = useAuth();
   const {errors, fieldErrors, clearErrors} = useErrors();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState<string | undefined>();
   const [passwordError, setPasswordError] = useState<string | undefined>();
+  // Local, not the auth context's isLoading: that flag means "restoring a
+  // persisted session", which is true on first mount and would leave this
+  // button disabled before the user has typed anything.
+  const [isSubmitting, setSubmitting] = useState(false);
 
   const onSubmit = async (): Promise<void> => {
     const trimmed = email.trim();
@@ -49,7 +53,12 @@ export function LoginScreen(): React.JSX.Element {
       return;
     }
 
-    await login({email: trimmed, password});
+    setSubmitting(true);
+    try {
+      await login({email: trimmed, password});
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -108,7 +117,7 @@ export function LoginScreen(): React.JSX.Element {
             <Text style={styles.link}>Forgot password?</Text>
           </Pressable>
 
-          <Button label="Sign in" onPress={onSubmit} isLoading={isLoading} />
+          <Button label="Sign in" onPress={onSubmit} isLoading={isSubmitting} />
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account? </Text>

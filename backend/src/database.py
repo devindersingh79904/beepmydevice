@@ -7,8 +7,6 @@ close) in exactly one place and makes the session trivial to override in tests.
 """
 
 from collections.abc import Generator
-from typing import Any
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -34,9 +32,6 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 class Base(DeclarativeBase):
     """Declarative base shared by every ORM model."""
-
-    # Populated by SQLAlchemy on each mapped class.
-    metadata: Any
 
 
 def get_db() -> Generator[Session, None, None]:

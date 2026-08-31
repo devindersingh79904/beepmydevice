@@ -26,11 +26,7 @@ from src.utils.logger import get_correlation_id
 
 def _timestamp() -> str:
     """Return the current UTC time as an ISO-8601 string with milliseconds."""
-    return (
-        datetime.now(timezone.utc)
-        .isoformat(timespec="milliseconds")
-        .replace("+00:00", "Z")
-    )
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def build_pagination(total_count: int, page: int, page_size: int) -> dict[str, Any]:

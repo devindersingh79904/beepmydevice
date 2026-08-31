@@ -1,5 +1,8 @@
 /** Device list state, kept live by the status WebSocket. */
 
+import {useContext} from 'react';
+
+import {DeviceContext} from '@context/DeviceContext';
 import type {Device} from '@/types/device';
 
 export interface UseDevicesResult {
@@ -28,5 +31,9 @@ export interface UseDevicesResult {
  * change without a refetch.
  */
 export function useDevices(): UseDevicesResult {
-  throw new Error('Not implemented');
+  const context = useContext(DeviceContext);
+  if (context === undefined) {
+    throw new Error('useDevices must be used inside a DeviceProvider');
+  }
+  return context;
 }
