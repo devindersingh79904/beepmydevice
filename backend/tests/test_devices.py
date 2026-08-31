@@ -1,6 +1,7 @@
 """Tests for /devices/* endpoints and DeviceService."""
 
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,7 +11,13 @@ from sqlalchemy.orm import Session
 from src.models.device import Device
 from src.models.wifi_network import WiFiNetwork
 from src.routes import websocket as websocket_routes
-from src.utils.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, DeviceStatus, ErrorCode
+from src.utils.constants import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+    OFFLINE_THRESHOLD_SECONDS,
+    DeviceStatus,
+    ErrorCode,
+)
 from tests.conftest import (
     OTHER_MAC,
     VALID_MAC,
@@ -382,3 +389,79 @@ class TestDeviceRemoval:
 
         assert response.status_code == 200
         assert db.get(Device, uuid.UUID(guest["device_id"])) is None
+
+
+class TestStatusGoesStale:
+    """A device that stops speaking must stop reading as ONLINE.
+
+    Every other test in this file asserts on a device registered moments
+    earlier, which is exactly why nothing caught the status column being
+    reported verbatim: it is correct at the moment it is written and never
+    revisited.
+    """
+
+    @staticmethod
+    def _age(db: Session, device_id: str, seconds: int) -> None:
+        """Backdate a device's last heartbeat."""
+        device = db.get(Device, uuid.UUID(device_id))
+        device.last_heartbeat = datetime.now(timezone.utc) - timedelta(seconds=seconds)
+        db.flush()
+
+    def test_reports_offline_once_the_heartbeat_window_passes(
+        self, client: TestClient, auth_headers: dict[str, str], db: Session
+    ) -> None:
+        device = register_device(client, auth_headers)
+        self._age(db, device["device_id"], OFFLINE_THRESHOLD_SECONDS + 1)
+
+        response = client.get("/devices/list", headers=auth_headers)
+
+        assert _content(response)[0]["status"] == DeviceStatus.OFFLINE.value
+
+    def test_detail_agrees_with_the_list(
+        self, client: TestClient, auth_headers: dict[str, str], db: Session
+    ) -> None:
+        device = register_device(client, auth_headers)
+        self._age(db, device["device_id"], OFFLINE_THRESHOLD_SECONDS + 1)
+
+        response = client.get(f"/devices/{device['device_id']}", headers=auth_headers)
+
+        assert _content(response)["status"] == DeviceStatus.OFFLINE.value
+
+    def test_stays_online_inside_the_window(
+        self, client: TestClient, auth_headers: dict[str, str], db: Session
+    ) -> None:
+        device = register_device(client, auth_headers)
+        self._age(db, device["device_id"], OFFLINE_THRESHOLD_SECONDS - 5)
+
+        response = client.get("/devices/list", headers=auth_headers)
+
+        assert _content(response)[0]["status"] == DeviceStatus.ONLINE.value
+
+    def test_unknown_is_not_downgraded_to_offline(
+        self, client: TestClient, auth_headers: dict[str, str], db: Session
+    ) -> None:
+        device = register_device(client, auth_headers)
+        client.put(
+            f"/devices/{device['device_id']}/heartbeat",
+            json={"battery_level": 50, "wifi_mac": OTHER_MAC},
+            headers=auth_headers,
+        )
+        self._age(db, device["device_id"], OFFLINE_THRESHOLD_SECONDS + 1)
+
+        response = client.get("/devices/list", headers=auth_headers)
+
+        # UNKNOWN says *which network* the device is on, not how recently it
+        # spoke, so ageing must not overwrite it.
+        assert _content(response)[0]["status"] == DeviceStatus.UNKNOWN.value
+
+    def test_a_device_that_never_heartbeat_is_offline(
+        self, client: TestClient, auth_headers: dict[str, str], db: Session
+    ) -> None:
+        device = register_device(client, auth_headers)
+        stored = db.get(Device, uuid.UUID(device["device_id"]))
+        stored.last_heartbeat = None
+        db.flush()
+
+        response = client.get("/devices/list", headers=auth_headers)
+
+        assert _content(response)[0]["status"] == DeviceStatus.OFFLINE.value

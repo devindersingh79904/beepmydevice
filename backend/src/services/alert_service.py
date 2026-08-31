@@ -8,7 +8,12 @@ from sqlalchemy.orm import Session
 from src.models.alert_log import AlertLog
 from src.models.device import Device
 from src.models.wifi_network import WiFiNetwork
-from src.services.device_service import owned_network_id
+from src.services.device_service import (
+    effective_status,
+    heartbeat_cutoff,
+    is_alertable,
+    owned_network_id,
+)
 from src.utils.constants import AlertStatus, DeviceStatus
 from src.utils.logger import get_logger
 
@@ -144,10 +149,12 @@ class AlertService:
         # Check 3 -- every *named* target is reachable. Naming an offline device
         # is a mistake worth reporting, not something to silently drop, and
         # dropping it would be the partial delivery this service does not do.
-        unreachable = [target for target in targets if target.status != DeviceStatus.ONLINE.value]
+        # is_alertable, not the status column: a device that stopped speaking
+        # still has ONLINE stored, and pushing at it would go nowhere.
+        unreachable = [target for target in targets if not is_alertable(target)]
         if unreachable:
             names = ", ".join(
-                f"{target.device_name or target.device_id} ({target.status})"
+                f"{target.device_name or target.device_id} ({effective_status(target)})"
                 for target in unreachable
             )
             raise NoReachableTargetsError(f"Device(s) cannot be alerted: {names}")
@@ -161,11 +168,16 @@ class AlertService:
         """
         wifi_id = self._current_network(admin_user_id)
         self._require_admin(admin_user_id, wifi_id)
+        # The heartbeat bound is applied in SQL as well as the status column:
+        # a device that stopped speaking still has ONLINE stored, and alerting
+        # it would attempt a push that cannot land.
         targets = list(
             self._db.execute(
                 select(Device).where(
                     Device.wifi_id == wifi_id,
                     Device.status == DeviceStatus.ONLINE.value,
+                    Device.last_heartbeat.is_not(None),
+                    Device.last_heartbeat >= heartbeat_cutoff(),
                 )
             ).scalars()
         )

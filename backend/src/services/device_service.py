@@ -23,6 +23,40 @@ from src.utils.validators import normalize_mac_address
 logger = get_logger("device_service")
 
 
+def heartbeat_cutoff() -> datetime:
+    """The moment before which a heartbeat is too old to count as reachable."""
+    return datetime.now(timezone.utc) - timedelta(seconds=OFFLINE_THRESHOLD_SECONDS)
+
+
+def effective_status(device: Device) -> str:
+    """Return a device's status as of now, not as of its last write.
+
+    The stored column records what the last heartbeat said. Nothing rewrites it
+    when a device simply stops speaking, so reading it directly reports a phone
+    that was switched off an hour ago as ONLINE -- with a live alert button
+    over it. Staleness is therefore derived on every read.
+
+    UNKNOWN is left alone: it is a statement about *which network* the device is
+    on, and only a heartbeat from the registered MAC clears it.
+    """
+    if device.status == DeviceStatus.UNKNOWN.value:
+        return DeviceStatus.UNKNOWN.value
+    if device.last_heartbeat is None:
+        return DeviceStatus.OFFLINE.value
+
+    last_heartbeat = device.last_heartbeat
+    if last_heartbeat.tzinfo is None:
+        last_heartbeat = last_heartbeat.replace(tzinfo=timezone.utc)
+    if last_heartbeat < heartbeat_cutoff():
+        return DeviceStatus.OFFLINE.value
+    return device.status
+
+
+def is_alertable(device: Device) -> bool:
+    """True when this device can actually receive an alert right now."""
+    return effective_status(device) == DeviceStatus.ONLINE.value
+
+
 def owned_network_id(db: Session, user_id: uuid.UUID) -> uuid.UUID | None:
     """Return the most recently claimed network this user administers.
 
@@ -305,21 +339,7 @@ class DeviceService:
 
     def get_device_status(self, device_id: uuid.UUID) -> str:
         """Return the current status, derived from the last heartbeat time."""
-        device = self.get_device(device_id)
-
-        # UNKNOWN is a statement about *which network* the device is on, not
-        # about how recently it spoke, so a fresh heartbeat never clears it
-        # here -- only a heartbeat from the registered MAC does.
-        if device.status == DeviceStatus.UNKNOWN.value:
-            return DeviceStatus.UNKNOWN.value
-
-        if device.last_heartbeat is None:
-            return DeviceStatus.OFFLINE.value
-
-        deadline = datetime.now(timezone.utc) - timedelta(seconds=OFFLINE_THRESHOLD_SECONDS)
-        if device.last_heartbeat < deadline:
-            return DeviceStatus.OFFLINE.value
-        return device.status
+        return effective_status(self.get_device(device_id))
 
     # -- mutations ----------------------------------------------------------
 

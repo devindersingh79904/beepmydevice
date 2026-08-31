@@ -28,7 +28,7 @@ from src.config import settings
 from src.database import Base, get_db
 from src.main import app
 from src.models import Device, User, WiFiNetwork  # noqa: F401  (registers tables)
-from src.services.notification_service import NotificationService
+from src.services.notification_service import NotificationService, PushOutcome
 
 SKIP_REASON = (
     "PostgreSQL is not reachable. Start it with: "
@@ -171,6 +171,7 @@ class PushRecorder:
         self.firebase: list[str] = []
         self.apns: list[str] = []
         self.failing_tokens: set[str] = set()
+        self.dead_tokens: set[str] = set()
 
     @property
     def all_tokens(self) -> list[str]:
@@ -178,8 +179,20 @@ class PushRecorder:
         return self.firebase + self.apns
 
     def fail(self, push_token: str) -> None:
-        """Make the next push to this token report failure."""
+        """Make pushes to this token report a transient failure."""
         self.failing_tokens.add(push_token)
+
+    def reject(self, push_token: str) -> None:
+        """Make the provider disown this token, as it does for a deleted app."""
+        self.dead_tokens.add(push_token)
+
+    def outcome_for(self, push_token: str) -> PushOutcome:
+        """Decide what the fake provider reports for this token."""
+        if push_token in self.dead_tokens:
+            return PushOutcome.TOKEN_INVALID
+        if push_token in self.failing_tokens:
+            return PushOutcome.TRANSIENT_FAILURE
+        return PushOutcome.DELIVERED
 
 
 @pytest.fixture
@@ -187,13 +200,17 @@ def mock_push(monkeypatch: pytest.MonkeyPatch) -> PushRecorder:
     """Stub Firebase and APNs so no test ever hits a real push provider."""
     recorder = PushRecorder()
 
-    def fake_firebase(_self: NotificationService, push_token: str, _title: str, _body: str) -> bool:
+    def fake_firebase(
+        _self: NotificationService, push_token: str, _title: str, _body: str
+    ) -> PushOutcome:
         recorder.firebase.append(push_token)
-        return push_token not in recorder.failing_tokens
+        return recorder.outcome_for(push_token)
 
-    def fake_apns(_self: NotificationService, push_token: str, _title: str, _body: str) -> bool:
+    def fake_apns(
+        _self: NotificationService, push_token: str, _title: str, _body: str
+    ) -> PushOutcome:
         recorder.apns.append(push_token)
-        return push_token not in recorder.failing_tokens
+        return recorder.outcome_for(push_token)
 
     monkeypatch.setattr(NotificationService, "send_firebase_message", fake_firebase)
     monkeypatch.setattr(NotificationService, "send_apns_message", fake_apns)

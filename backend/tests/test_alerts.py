@@ -5,6 +5,7 @@ are what stop one household from beeping another household's devices.
 """
 
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -13,7 +14,13 @@ from sqlalchemy.orm import Session
 from src.models.alert_log import AlertLog
 from src.models.device import Device
 from src.services.notification_service import NotificationService
-from src.utils.constants import AlertStatus, DeviceStatus, ErrorCode
+from src.utils.constants import (
+    OFFLINE_THRESHOLD_SECONDS,
+    PUSH_MAX_RETRIES,
+    AlertStatus,
+    DeviceStatus,
+    ErrorCode,
+)
 from tests.conftest import (
     OTHER_MAC,
     VALID_MAC,
@@ -356,3 +363,146 @@ class TestAlertLogs:
         response = client.get("/alerts/logs", headers=stranger)
 
         assert _content(response) == []
+
+
+class TestStaleDevicesAreNotTargets:
+    """A device that stopped speaking cannot be alerted.
+
+    The stored status column still says ONLINE -- nothing rewrites it when a
+    phone is simply switched off -- so authorization has to bound it by the
+    heartbeat window or it will happily push at something unreachable.
+    """
+
+    @staticmethod
+    def _age(db: Session, device_id: str, seconds: int) -> None:
+        """Backdate a device's last heartbeat."""
+        device = db.get(Device, uuid.UUID(device_id))
+        device.last_heartbeat = datetime.now(timezone.utc) - timedelta(seconds=seconds)
+        db.flush()
+
+    def test_naming_a_stale_device_is_rejected(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+        db: Session,
+        mock_push: PushRecorder,
+    ) -> None:
+        device = register_device(client, auth_headers)
+        self._age(db, device["device_id"], OFFLINE_THRESHOLD_SECONDS + 1)
+
+        response = client.post(
+            "/alerts/send",
+            json={"device_ids": [device["device_id"]]},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 400
+        assert _codes(response) == [ErrorCode.NO_TARGET_DEVICES.value]
+        assert mock_push.all_tokens == []
+
+    def test_a_whole_network_alert_skips_stale_devices(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+        db: Session,
+        mock_push: PushRecorder,
+    ) -> None:
+        fresh = register_device(client, auth_headers, device_name="Fresh", push_token="fresh")
+        stale = register_device(client, auth_headers, device_name="Stale", push_token="stale")
+        self._age(db, stale["device_id"], OFFLINE_THRESHOLD_SECONDS + 1)
+
+        response = client.post("/alerts/send", json={"device_ids": []}, headers=auth_headers)
+
+        assert response.status_code == 200
+        assert mock_push.all_tokens == ["fresh"]
+        assert fresh["device_id"] != stale["device_id"]
+
+    def test_all_stale_means_no_targets(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+        db: Session,
+        mock_push: PushRecorder,
+    ) -> None:
+        device = register_device(client, auth_headers)
+        self._age(db, device["device_id"], OFFLINE_THRESHOLD_SECONDS + 1)
+
+        response = client.post("/alerts/send", json={"device_ids": []}, headers=auth_headers)
+
+        assert response.status_code == 400
+        assert _codes(response) == [ErrorCode.NO_TARGET_DEVICES.value]
+
+
+class TestPushFailureHandling:
+    """What happens to the token when a push does not land."""
+
+    def test_a_disowned_token_is_cleared(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+        db: Session,
+        mock_push: PushRecorder,
+    ) -> None:
+        registered = register_device(client, auth_headers, push_token="dead-token")
+        mock_push.reject("dead-token")
+
+        client.post(
+            "/alerts/send",
+            json={"device_ids": [registered["device_id"]]},
+            headers=auth_headers,
+        )
+
+        device = db.get(Device, uuid.UUID(registered["device_id"]))
+        # Leaving it in place means this device silently fails forever while
+        # still looking reachable.
+        assert device.push_token is None
+        assert device.status == DeviceStatus.OFFLINE.value
+
+    def test_a_transient_failure_leaves_the_token_alone(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+        db: Session,
+        mock_push: PushRecorder,
+    ) -> None:
+        registered = register_device(client, auth_headers, push_token="flaky-token")
+        mock_push.fail("flaky-token")
+
+        client.post(
+            "/alerts/send",
+            json={"device_ids": [registered["device_id"]]},
+            headers=auth_headers,
+        )
+
+        device = db.get(Device, uuid.UUID(registered["device_id"]))
+        # The provider was merely unavailable; the token is still good.
+        assert device.push_token == "flaky-token"
+
+    def test_a_transient_failure_is_retried(
+        self, client: TestClient, auth_headers: dict[str, str], mock_push: PushRecorder
+    ) -> None:
+        registered = register_device(client, auth_headers, push_token="flaky-token")
+        mock_push.fail("flaky-token")
+
+        client.post(
+            "/alerts/send",
+            json={"device_ids": [registered["device_id"]]},
+            headers=auth_headers,
+        )
+
+        assert mock_push.firebase.count("flaky-token") == PUSH_MAX_RETRIES
+
+    def test_a_disowned_token_is_not_retried(
+        self, client: TestClient, auth_headers: dict[str, str], mock_push: PushRecorder
+    ) -> None:
+        registered = register_device(client, auth_headers, push_token="dead-token")
+        mock_push.reject("dead-token")
+
+        client.post(
+            "/alerts/send",
+            json={"device_ids": [registered["device_id"]]},
+            headers=auth_headers,
+        )
+
+        # No number of attempts makes a dead token live.
+        assert mock_push.firebase.count("dead-token") == 1

@@ -32,8 +32,15 @@ cause of "push just doesn't arrive".
 ## Firebase (Android, and iOS delivery)
 
 1. Create a project at <https://console.firebase.google.com> (any name).
-2. **Add an Android app** with package name `com.beepmydevice`.
+2. **Add an Android app** with package name **exactly `com.beepmydevice`**.
    Download `google-services.json` → `frontend/android/app/google-services.json`.
+
+   > The package name must match `applicationId` in
+   > `android/app/build.gradle`. When it does not, the Google Services Gradle
+   > plugin fails the build with *"No matching client found for package name"* —
+   > which reads like a broken setup rather than a typo. A project can hold
+   > several Android apps, so a wrong one is fixed by adding another with the
+   > right package name and re-downloading, not by starting over.
 3. **Add an iOS app** with bundle ID `com.beepmydevice.app`.
    Download `GoogleService-Info.plist` →
    `frontend/ios/BeepMyDevice/GoogleService-Info.plist`, then add it to the

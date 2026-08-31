@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "Template only. The real google-services.json is downloaded from the Firebase",
+    "console (Project settings -> Your apps -> Android) and is gitignored, because",
+    "it is deployment configuration rather than source.",
+    "",
+    "package_name MUST equal the applicationId in android/app/build.gradle --",
+    "currently com.beepmydevice. The Google Services Gradle plugin fails the build",
+    "with 'No matching client found for package name' when they differ, which is",
+    "the usual reason a fresh Firebase setup will not compile.",
+    "",
+    "See docs/PUSH_SETUP.md for the full walkthrough."
+  ],
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "your-project-id",
+    "storage_bucket": "your-project-id.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": {
+          "package_name": "com.beepmydevice"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "YOUR_ANDROID_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

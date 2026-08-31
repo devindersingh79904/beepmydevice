@@ -20,7 +20,7 @@ from src.schemas.device import (
     DeviceResponse,
     HeartbeatRequest,
 )
-from src.services.device_service import DeviceService
+from src.services.device_service import DeviceService, effective_status
 from src.utils.concurrency import run_blocking
 from src.utils.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_PAGE_NUMBER, ErrorCode
 from src.utils.logger import get_logger
@@ -32,8 +32,15 @@ router = APIRouter(prefix="/devices", tags=["Devices"])
 
 
 def _serialize(device: Device) -> dict[str, Any]:
-    """Render a device for the API, without its push token."""
-    return DeviceResponse.model_validate(device).model_dump(mode="json")
+    """Render a device for the API, without its push token.
+
+    ``status`` is the derived one: the stored column only records what the last
+    heartbeat said, so a device that simply stopped speaking would otherwise be
+    reported as ONLINE indefinitely.
+    """
+    payload = DeviceResponse.model_validate(device).model_dump(mode="json")
+    payload["status"] = effective_status(device)
+    return payload
 
 
 def _not_found() -> HTTPException:

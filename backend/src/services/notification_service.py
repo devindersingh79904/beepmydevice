@@ -16,6 +16,7 @@ This module deliberately trips four pylint checks, disabled below:
 
 import time
 import uuid
+from enum import Enum
 from pathlib import Path
 
 import httpx
@@ -27,6 +28,8 @@ from src.models.device import Device
 from src.utils.constants import (
     ALERT_NOTIFICATION_BODY,
     ALERT_NOTIFICATION_TITLE,
+    PUSH_MAX_RETRIES,
+    PUSH_RETRY_BACKOFF_SECONDS,
     PUSH_TIMEOUT_SECONDS,
     DeviceStatus,
     DeviceType,
@@ -53,6 +56,24 @@ HTTP_OK = 200
 # Cached (token, minted_at) for the process.
 _apns_token: tuple[str, float] | None = None
 
+# APNs replies that mean the token will never work again.
+APNS_GONE = 410
+APNS_DEAD_TOKEN_REASONS = {"BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic"}
+
+
+class PushOutcome(str, Enum):
+    """Why a push did or did not land.
+
+    A plain boolean cannot carry the distinction the retry rules need: a
+    provider that is briefly unavailable should be tried again, while a token
+    the provider has never heard of should be cleared and never retried,
+    because no number of attempts will make it valid.
+    """
+
+    DELIVERED = "DELIVERED"
+    TOKEN_INVALID = "TOKEN_INVALID"
+    TRANSIENT_FAILURE = "TRANSIENT_FAILURE"
+
 
 class NotificationService:
     """Adapter over the two push providers.
@@ -75,7 +96,7 @@ class NotificationService:
         """
         self._db = db
 
-    def send(self, device_type: str, push_token: str, title: str, body: str) -> bool:
+    def send(self, device_type: str, push_token: str, title: str, body: str) -> PushOutcome:
         """Dispatch to the provider matching the device type.
 
         Args:
@@ -85,11 +106,12 @@ class NotificationService:
             body: Notification body.
 
         Returns:
-            True if the provider accepted the message.
+            Whether the message landed, and if not, whether retrying could help.
         """
         if not push_token:
+            # No token is a permanent condition for this device, not a blip.
             logger.warning("Cannot send push: device has no token")
-            return False
+            return PushOutcome.TOKEN_INVALID
 
         if device_type == DeviceType.IOS.value:
             return self.send_apns_message(push_token, title, body)
@@ -103,9 +125,9 @@ class NotificationService:
             return self.send_firebase_message(push_token, title, body)
 
         logger.error(f"No push provider for device type {device_type}")
-        return False
+        return PushOutcome.TOKEN_INVALID
 
-    def send_firebase_message(self, push_token: str, title: str, body: str) -> bool:
+    def send_firebase_message(self, push_token: str, title: str, body: str) -> PushOutcome:
         """Send an Android notification through Firebase Cloud Messaging.
 
         Uses a high-priority data message so the app wakes and plays the alert
@@ -113,11 +135,11 @@ class NotificationService:
         """
         if not settings.firebase_enabled:
             logger.warning("Firebase is not configured; dropping Android push")
-            return False
+            return PushOutcome.TRANSIENT_FAILURE
+
+        from firebase_admin import messaging
 
         try:
-            from firebase_admin import messaging
-
             message = messaging.Message(
                 token=push_token,
                 notification=messaging.Notification(title=title, body=body),
@@ -130,23 +152,28 @@ class NotificationService:
                 ),
             )
             messaging.send(message, app=self._firebase())
-            return True
+            return PushOutcome.DELIVERED
+        except (messaging.UnregisteredError, messaging.SenderIdMismatchError):
+            # The token names an install that no longer exists, or belongs to a
+            # different sender. Retrying cannot fix either.
+            logger.warning(f"Firebase rejected token {push_token[:12]} as dead")
+            return PushOutcome.TOKEN_INVALID
         except Exception:
             log_exception(logger, "Firebase push failed", token=push_token[:12])
-            return False
+            return PushOutcome.TRANSIENT_FAILURE
 
-    def send_apns_message(self, push_token: str, title: str, body: str) -> bool:
+    def send_apns_message(self, push_token: str, title: str, body: str) -> PushOutcome:
         """Send an iOS notification through APNs using .p8 token authentication."""
         if not settings.apns_enabled:
             logger.warning("APNs is not configured; dropping iOS push")
-            return False
+            return PushOutcome.TRANSIENT_FAILURE
 
         host = APNS_SANDBOX_HOST if settings.APPLE_USE_SANDBOX else APNS_PRODUCTION_HOST
         try:
             provider_token = self._apns_provider_token()
         except Exception:
             log_exception(logger, "Could not mint APNs provider token")
-            return False
+            return PushOutcome.TRANSIENT_FAILURE
 
         payload = {
             "aps": {
@@ -175,15 +202,32 @@ class NotificationService:
                 )
         except Exception:
             log_exception(logger, "APNs push failed", token=push_token[:12])
-            return False
+            return PushOutcome.TRANSIENT_FAILURE
 
-        if response.status_code != HTTP_OK:
-            logger.warning(
-                f"APNs rejected push to {push_token[:12]}: "
-                f"{response.status_code} {response.text}"
-            )
-            return False
-        return True
+        return self._classify_apns_response(response, push_token)
+
+    @staticmethod
+    def _classify_apns_response(response: httpx.Response, push_token: str) -> PushOutcome:
+        """Turn an APNs reply into an outcome.
+
+        Apple distinguishes "this token is gone" from "try again later" by
+        status and a `reason` string. Conflating them means either retrying
+        forever against a deleted app, or throwing away a good token over a blip.
+        """
+        if response.status_code == HTTP_OK:
+            return PushOutcome.DELIVERED
+
+        try:
+            reason = response.json().get("reason", "")
+        except Exception:  # pylint: disable=broad-exception-caught
+            reason = ""
+
+        if response.status_code == APNS_GONE or reason in APNS_DEAD_TOKEN_REASONS:
+            logger.warning(f"APNs rejected token {push_token[:12]} as dead: {reason}")
+            return PushOutcome.TOKEN_INVALID
+
+        logger.warning(f"APNs rejected push to {push_token[:12]}: {response.status_code} {reason}")
+        return PushOutcome.TRANSIENT_FAILURE
 
     @staticmethod
     def _apns_provider_token() -> str:
@@ -203,25 +247,46 @@ class NotificationService:
         _apns_token = (token, now)
         return token
 
-    def send_alert_to(self, device: Device) -> bool:
-        """Send the standard alert notification to one device.
+    def send_alert_to(self, device: Device) -> PushOutcome:
+        """Send the standard alert notification to one device, with retries.
 
         Honours the owner's notification preference: a user who switched alerts
         off is not pushed to, which is what makes the settings toggle mean
         something rather than only greying itself out. A guest device has no
         owner and so is unaffected by anyone's preferences.
+
+        A transient failure is retried with a widening gap, because the usual
+        cause is the provider being briefly unavailable. A rejected *token* is
+        never retried -- no number of attempts makes a dead token live.
         """
         owner = device.user
         if owner is not None and not owner.notifications_enabled:
             logger.info(f"Skipping push to {device.device_id}: owner has notifications off")
-            return False
+            return PushOutcome.TOKEN_INVALID
 
-        return self.send(
-            device.device_type,
-            device.push_token or "",
-            ALERT_NOTIFICATION_TITLE,
-            ALERT_NOTIFICATION_BODY,
-        )
+        outcome = PushOutcome.TRANSIENT_FAILURE
+        for attempt in range(PUSH_MAX_RETRIES):
+            outcome = self.send(
+                device.device_type,
+                device.push_token or "",
+                ALERT_NOTIFICATION_TITLE,
+                ALERT_NOTIFICATION_BODY,
+            )
+            if outcome is not PushOutcome.TRANSIENT_FAILURE:
+                return outcome
+
+            remaining = PUSH_MAX_RETRIES - attempt - 1
+            if remaining:
+                delay = PUSH_RETRY_BACKOFF_SECONDS * (attempt + 1)
+                logger.info(
+                    f"Retrying push to {device.device_id} in {delay}s "
+                    f"({remaining} attempt(s) left)"
+                )
+                # Blocking, deliberately: this runs in a worker thread via
+                # gather_with_limit, never on the event loop.
+                time.sleep(delay)
+
+        return outcome
 
     def handle_notification_failure(self, device_id: uuid.UUID) -> bool:
         """React to a rejected push.

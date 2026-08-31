@@ -26,51 +26,35 @@ suites did not catch them because every test asserts on freshly-written state.
 
 ## Open defects
 
-### 1. Devices never go OFFLINE — the significant one
+Three of the four found in the audit are fixed, with tests that exercise the
+condition rather than a freshly-written row.
 
-`backend/docs/FEATURES.md` specifies three states:
+### Fixed: devices now go OFFLINE
 
-| Condition | Status |
-|---|---|
-| MAC matches registration | `ONLINE` |
-| MAC differs | `UNKNOWN` |
-| Silent for `OFFLINE_THRESHOLD_SECONDS` | `OFFLINE` |
+Status is derived on every read from `last_heartbeat`, in one place
+(`device_service.effective_status`), and applied to the list, the detail
+endpoint and alert targeting. A whole-network alert bounds the heartbeat window
+in SQL, so a device that stopped speaking is not a target. `UNKNOWN` is left
+alone -- it describes *which network* a device is on, not how recently it spoke.
 
-The third never happens. Nothing writes `OFFLINE`:
+Tested by ageing a device past `OFFLINE_THRESHOLD_SECONDS`, which is exactly
+what the old suite never did.
 
-- `DeviceService.set_offline()` — never called
-- `DeviceService.get_device_status()`, which does the 90-second calculation —
-  never called
-- `OFFLINE_THRESHOLD_SECONDS` — referenced only inside that uncalled function
+### Fixed: dead push tokens are cleared, transient failures retried
 
-`/devices/list` serialises the stored `status` column, and the only writer is
-`update_heartbeat`, which sets `ONLINE` or `UNKNOWN` and nothing else. So a
-device that is switched off, out of range or uninstalled **shows `ONLINE`
-forever**, keeps a live "Send alert" button, and the send is attempted against
-it.
+`PushOutcome` replaces the boolean a push used to return, because a boolean
+cannot distinguish "the provider is having a bad minute" from "this token names
+an app that no longer exists". Firebase's `UnregisteredError` and APNs' 410 /
+`BadDeviceToken` mean the token is gone: it is cleared immediately and never
+retried. Anything else is retried `PUSH_MAX_RETRIES` times with a widening gap.
 
-The fix is to derive status at read time from `last_heartbeat` — the logic
-already exists in `get_device_status` — rather than to add a background
-sweeper. Tests must age a device; the current ones all assert on a
-freshly-registered one, which is why this got through.
+### Still open: `RECEIVED` is never set
 
-### 2. Stale push tokens are never cleared
-
-`NotificationService.handle_notification_failure()` is implemented and unit
-tested, but the alert route never calls it. The spec: *"A token rejected as
-unregistered is stale: clear it and mark the device offline rather than
-retrying."*
-
-### 3. No push retry or backoff
-
-`PUSH_MAX_RETRIES` and `PUSH_RETRY_BACKOFF_SECONDS` are defined and unused.
-`docs/FEATURES.md` lists "Retry with backoff on transient failure".
-
-### 4. `RECEIVED` is never set
-
-Alert status is only ever `SENT` or `FAILED`. `docs/FEATURES.md` lists
-`SENT` / `RECEIVED` / `FAILED`. This one needs a new device-to-server
-acknowledgement endpoint, so it is larger than the other three.
+Alert status is only ever `SENT` or `FAILED`. Closing it needs the alert row
+written before the push (so `alert_id` can travel in the payload), a new
+device-authenticated acknowledgement endpoint, and the app calling it when a
+push arrives. It is also only meaningfully testable once push actually
+delivers, so it is parked until Firebase is live.
 
 ---
 
@@ -156,12 +140,6 @@ versions. `npm run ios` needs macOS.
 `run-macos` / `run-windows`, but only `ios/` and `android/` native projects
 exist. The feature list claims four platforms; two of them cannot be built
 today.
-
-### App launcher icons
-
-Still the React Native default. The brand mark is in `assets/images/`; turning
-it into `mipmap-*` and `AppIcon.appiconset` sets is a small design task nobody
-has asked for yet.
 
 ### Phase 2 limits, unchanged
 

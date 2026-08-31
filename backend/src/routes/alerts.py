@@ -21,7 +21,7 @@ from src.services.alert_service import (
     DifferentNetworksError,
     NotNetworkAdminError,
 )
-from src.services.notification_service import NotificationService
+from src.services.notification_service import NotificationService, PushOutcome
 from src.utils.concurrency import gather_with_limit, run_blocking
 from src.utils.constants import (
     DEFAULT_PAGE_SIZE,
@@ -84,14 +84,25 @@ async def send_alert(
         PUSH_MAX_CONCURRENT_SENDS,
     )
 
+    # A token the provider disowned is cleared now rather than retried on every
+    # future alert: it can never work again, and leaving it in place means the
+    # device silently fails forever while still looking reachable.
+    for device, outcome in zip(targets, results):
+        if outcome is PushOutcome.TOKEN_INVALID and device.push_token:
+            await run_blocking(notifier.handle_notification_failure, device.device_id)
+
     delivery = [
         AlertDeliveryStatus(
             device_id=device.device_id,
             device_name=device.device_name,
-            status=AlertStatus.SENT if delivered else AlertStatus.FAILED,
-            error_code=None if delivered else ErrorCode.PUSH_NOTIFICATION_FAILED.value,
+            status=(AlertStatus.SENT if outcome is PushOutcome.DELIVERED else AlertStatus.FAILED),
+            error_code=(
+                None
+                if outcome is PushOutcome.DELIVERED
+                else ErrorCode.PUSH_NOTIFICATION_FAILED.value
+            ),
         )
-        for device, delivered in zip(targets, results)
+        for device, outcome in zip(targets, results)
     ]
 
     # One device failing does not make the alert a failure; every device
@@ -111,7 +122,7 @@ async def send_alert(
     )
 
 
-def _send_to(notifier: NotificationService, device: Device) -> Callable[[], bool]:
+def _send_to(notifier: NotificationService, device: Device) -> Callable[[], PushOutcome]:
     """Return a zero-argument callable that pushes to one device.
 
     Bound eagerly so ``gather_with_limit`` receives independent callables
