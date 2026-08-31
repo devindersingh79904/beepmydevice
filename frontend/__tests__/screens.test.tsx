@@ -68,6 +68,11 @@ beforeEach(() => {
     created_at: new Date().toISOString(),
   });
   deviceService.getWifiNetworkName.mockResolvedValue('Home-WiFi');
+  authService.getPreferences.mockResolvedValue({
+    notifications_enabled: true,
+    sound_enabled: true,
+    vibration_enabled: true,
+  });
   deviceService.listDevices.mockResolvedValue({
     items: [],
     pagination: {
@@ -120,6 +125,36 @@ describe('DeviceCard', () => {
     // Renders nothing at all rather than "0%", which would read as a flat
     // battery instead of a device that has none.
     expect(screen.queryByText(/Battery:/)).toBeNull();
+  });
+
+  it('opens the device when the card body is pressed', () => {
+    const onPress = jest.fn();
+    render(
+      <DeviceCard
+        device={buildDevice()}
+        onPress={onPress}
+        onSendAlert={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText('Pixel 8, ONLINE'));
+
+    expect(onPress).toHaveBeenCalledWith('device-1');
+  });
+
+  it('sends an alert for an ONLINE owned device', () => {
+    const onSendAlert = jest.fn();
+    render(
+      <DeviceCard
+        device={buildDevice()}
+        onPress={jest.fn()}
+        onSendAlert={onSendAlert}
+      />,
+    );
+
+    fireEvent.press(screen.getByRole('button', {name: 'Send alert'}));
+
+    expect(onSendAlert).toHaveBeenCalledWith('device-1');
   });
 
   it('disables the alert button for a guest and says why', () => {

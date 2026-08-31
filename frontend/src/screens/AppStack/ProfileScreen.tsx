@@ -23,6 +23,8 @@ import {
   TextField,
   Toast,
 } from '@components/index';
+import {isApiErrorArray} from '@services/api';
+import * as authService from '@services/auth';
 import {useAuth} from '@hooks/useAuth';
 import {useErrors} from '@hooks/useErrors';
 import {useToast} from '@hooks/useToast';
@@ -36,8 +38,9 @@ type Navigation = NativeStackNavigationProp<AppStackParamList, 'Profile'>;
 export function ProfileScreen(): React.JSX.Element {
   const navigation = useNavigation<Navigation>();
   const {user} = useAuth();
-  const {errors, fieldErrors, clearErrors} = useErrors();
+  const {errors, fieldErrors, clearErrors, showErrors} = useErrors();
   const {toast, showToast, dismissToast} = useToast();
+  const [isSubmitting, setSubmitting] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -49,11 +52,31 @@ export function ProfileScreen(): React.JSX.Element {
     newPassword.length >= MIN_PASSWORD_LENGTH &&
     matches;
 
-  // The change-password endpoint is not in `API_ROUTES` yet, so this screen
-  // renders the form the canvas specifies and reports the gap rather than
-  // pretending to save.
-  const onSubmit = (): void => {
-    showToast('info', 'Password changes are not available yet');
+  const onSubmit = async (): Promise<void> => {
+    if (!canSubmit) {
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await authService.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      // Cleared on success so the form cannot be resubmitted, and so a shoulder
+      // surfer is not left looking at the new password.
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmation('');
+      showToast('success', 'Password changed');
+    } catch (error) {
+      if (isApiErrorArray(error)) {
+        showErrors(error);
+      } else {
+        showToast('error', 'Could not change your password');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -120,6 +143,7 @@ export function ProfileScreen(): React.JSX.Element {
                 label="Update password"
                 onPress={onSubmit}
                 disabled={!canSubmit}
+                isLoading={isSubmitting}
               />
             </View>
           </ScrollView>

@@ -136,3 +136,35 @@ async def get_alert_logs(
         message="Alert history retrieved",
         pagination=build_pagination(total, page, limit),
     )
+
+
+@router.get("/logs/device/{device_id}")
+async def get_device_alert_logs(
+    device_id: uuid.UUID,
+    page: int = Query(default=MIN_PAGE_NUMBER, ge=MIN_PAGE_NUMBER),
+    limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """List the alerts that targeted one device, newest first.
+
+    Scoped by network administration rather than ownership, so an admin can
+    see what has been sent to a guest device -- which has no owner at all.
+    """
+    service = AlertService(db)
+    try:
+        alerts, total = await run_blocking(
+            service.get_device_alert_logs, user_id, device_id, page, limit
+        )
+    except LookupError as exc:
+        raise _alert_error(
+            ErrorCode.DEVICE_NOT_FOUND, status.HTTP_404_NOT_FOUND, "Device not found"
+        ) from exc
+    except PermissionError as exc:
+        raise _alert_error(ErrorCode.UNAUTHORIZED, status.HTTP_403_FORBIDDEN, str(exc)) from exc
+
+    return success_response(
+        [AlertLogResponse.model_validate(alert).model_dump(mode="json") for alert in alerts],
+        message="Device alert history retrieved",
+        pagination=build_pagination(total, page, limit),
+    )

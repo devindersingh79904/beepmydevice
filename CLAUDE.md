@@ -9,11 +9,15 @@ it is signed in to. Apple Find My and Google Find My Device group devices by
 **account**; this groups them by **network**. That one substitution is both the
 product differentiator and the security model.
 
-**Phase 1 is implemented.** The backend serves all ten endpoints plus the
-status WebSocket; the frontend has every screen from the design canvas wired to
-real services, contexts and hooks. Backend: 59 tests, ~80% coverage, `mypy`
-clean, `pylint` 9.98. Frontend: 137 tests, 70% coverage thresholds met, `tsc`
-and `eslint` clean.
+**Phase 1 is complete.** The backend serves fifteen endpoints plus the status
+WebSocket; the frontend has every screen from the design canvas wired to real
+services, contexts and hooks, with both native projects generated and
+configured. Backend: 82 tests, ~81% coverage, `mypy` clean, `pylint` 10.00.
+Frontend: 161 tests, coverage thresholds met, `tsc` and `eslint` clean.
+
+The only thing outstanding is push **credentials** — see
+[`docs/PUSH_SETUP.md`](docs/PUSH_SETUP.md). Everything around them is built and
+tested; without them `NotificationService` logs what it would have sent.
 
 Docstrings are still the specification — where one describes behaviour, the
 code is expected to match it, and a change to either should change both.
@@ -46,11 +50,11 @@ Use **Python 3.11 or 3.12**; several pins have no wheels for 3.13+. The test
 suite needs PostgreSQL: `docker compose -f docker/docker-compose.yml up -d db`.
 Run the API with `--workers 1` (see the WebSocket note below).
 
-**CI is still off.** The workflows are staged in `.github/workflows.disabled/`.
-The reasons they would once have failed are gone — there is a
-`package-lock.json`, and every check passes — but the backend suite needs a
-PostgreSQL service container that the staged workflows do not yet define. Do
-not move them back into `.github/workflows/` unless asked.
+**CI is on.** `backend-tests.yml` and `frontend-tests.yml` run in
+`.github/workflows/`: format, lint, type check and tests on both sides, with a
+PostgreSQL service container and an `alembic upgrade head` step that catches a
+model change nobody wrote a migration for. Only `deploy.yml` is still staged in
+`.github/workflows.disabled/`, since deployment needs real infrastructure.
 
 ## Architecture
 

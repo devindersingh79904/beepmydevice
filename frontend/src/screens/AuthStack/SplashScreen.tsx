@@ -8,20 +8,14 @@
 import React from 'react';
 import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
 
-import {Icon, Screen} from '@components/index';
-import {colors, radius, sizes, spacing, typography} from '@styles/theme';
+import {Logo, Screen} from '@components/index';
+import {colors, spacing, typography} from '@styles/theme';
 
 export function SplashScreen(): React.JSX.Element {
   return (
     <Screen accent>
       <View style={styles.container}>
-        <View style={styles.logo}>
-          <Icon
-            name="wifi"
-            size={sizes.splashLogoIcon}
-            color={colors.primary}
-          />
-        </View>
+        <Logo variant="splash" />
         <Text style={styles.title}>BeepMyDevice</Text>
         <Text style={styles.tagline}>Find any device on your WiFi</Text>
         <ActivityIndicator
@@ -41,14 +35,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.s20,
     padding: spacing.s32,
-  },
-  logo: {
-    width: sizes.splashLogo,
-    height: sizes.splashLogo,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    borderRadius: radius.none,
   },
   title: {...typography.displayTitle, color: colors.textInverse},
   tagline: {...typography.body, color: colors.accent200},

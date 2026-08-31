@@ -247,6 +247,43 @@ class AlertService:
         )
         return alerts, total
 
+    def get_device_alert_logs(
+        self,
+        user_id: uuid.UUID,
+        device_id: uuid.UUID,
+        page: int,
+        limit: int,
+    ) -> tuple[list[AlertLog], int]:
+        """List the alerts that targeted one device, newest first.
+
+        Scoped by *network administration*, not ownership: a guest has no owner
+        and the admin still needs to see what has been sent to it.
+
+        Raises:
+            LookupError: If no such device exists.
+            PermissionError: If the caller does not administer its network.
+        """
+        device = self._db.get(Device, device_id)
+        if device is None:
+            raise LookupError(f"No device with ID {device_id}")
+        self._require_admin(user_id, device.wifi_id)
+
+        # target_devices holds IDs as text, which is how log_alert wrote them.
+        targeted = AlertLog.target_devices.contains([str(device_id)])
+        total = self._db.execute(
+            select(func.count()).select_from(AlertLog).where(targeted)
+        ).scalar_one()
+        alerts = list(
+            self._db.execute(
+                select(AlertLog)
+                .where(targeted)
+                .order_by(AlertLog.created_at.desc())
+                .offset((page - 1) * limit)
+                .limit(limit)
+            ).scalars()
+        )
+        return alerts, total
+
     def log_alert(
         self,
         sender_user_id: uuid.UUID,

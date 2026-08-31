@@ -88,6 +88,11 @@ beforeEach(() => {
     created_at: new Date().toISOString(),
   });
   deviceService.getWifiNetworkName.mockResolvedValue('Home-WiFi');
+  authService.getPreferences.mockResolvedValue({
+    notifications_enabled: true,
+    sound_enabled: true,
+    vibration_enabled: true,
+  });
   mockList([]);
   websocketService.onStatusUpdate.mockReturnValue(jest.fn());
   websocketService.onConnectionChange.mockReturnValue(jest.fn());

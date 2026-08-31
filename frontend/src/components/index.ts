@@ -12,6 +12,7 @@ export {GuestBadge} from './GuestBadge';
 export {Icon} from './Icon';
 export type {IconName} from './Icon';
 export {LoadingSpinner} from './LoadingSpinner';
+export {Logo} from './Logo';
 export {Rule} from './Rule';
 export {Screen} from './Screen';
 export {ScreenHeader} from './ScreenHeader';

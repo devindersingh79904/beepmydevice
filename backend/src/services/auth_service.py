@@ -1,5 +1,7 @@
 """Authentication: registration, login, token issue and verification."""
 
+import hashlib
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -11,7 +13,11 @@ from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.models.user import User
-from src.utils.constants import BCRYPT_ROUNDS
+from src.utils.constants import (
+    BCRYPT_ROUNDS,
+    PASSWORD_RESET_EXPIRE_MINUTES,
+    PASSWORD_RESET_TOKEN_BYTES,
+)
 from src.utils.logger import get_logger
 
 logger = get_logger("auth_service")
@@ -215,6 +221,150 @@ class AuthService:
             _revoked_token_ids.add(token_id)
         logger.info("Token revoked")
         return True
+
+    # -- password management ------------------------------------------------
+
+    def change_password(
+        self,
+        user_id: uuid.UUID,
+        current_password: str,
+        new_password: str,
+    ) -> bool:
+        """Replace a user's password after checking the current one.
+
+        Args:
+            user_id: The signed-in user.
+            current_password: Checked against the stored hash. Requiring it is
+                what stops a stolen but unexpired token being used to lock the
+                real owner out of their account.
+            new_password: Replacement, already length-checked by the schema.
+
+        Returns:
+            True once the new password is stored.
+
+        Raises:
+            LookupError: If the user no longer exists.
+            PermissionError: If ``current_password`` does not match.
+        """
+        user = self._db.get(User, user_id)
+        if user is None:
+            raise LookupError("No such user")
+
+        if not self.verify_password(current_password, user.password_hash):
+            logger.warning(f"Rejected password change for {user_id}: wrong current password")
+            raise PermissionError("Current password is incorrect")
+
+        user.password_hash = self.hash_password(new_password)
+        self._db.flush()
+        logger.info(f"Password changed for {user_id}")
+        return True
+
+    def begin_password_reset(self, email: str) -> tuple[str, str] | None:
+        """Issue a single-use reset token for an account.
+
+        Returns:
+            The recipient address and the raw token, or None when no account
+            has that address. Callers must respond identically either way --
+            revealing which addresses are registered is exactly what the login
+            endpoint already refuses to do.
+        """
+        normalized_email = email.strip().lower()
+        user = self._db.execute(
+            select(User).where(User.email == normalized_email)
+        ).scalar_one_or_none()
+        if user is None:
+            logger.info(f"Password reset requested for unknown address {normalized_email}")
+            return None
+
+        raw_token = secrets.token_urlsafe(PASSWORD_RESET_TOKEN_BYTES)
+        user.password_reset_token_hash = self._hash_reset_token(raw_token)
+        user.password_reset_expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=PASSWORD_RESET_EXPIRE_MINUTES
+        )
+        self._db.flush()
+        logger.info(f"Password reset issued for {user.user_id}")
+        return user.email, raw_token
+
+    def reset_password(self, raw_token: str, new_password: str) -> bool:
+        """Consume a reset token and set a new password.
+
+        Returns:
+            True once the password is replaced.
+
+        Raises:
+            PermissionError: If the token is unknown, already used or expired.
+        """
+        token_hash = self._hash_reset_token(raw_token)
+        user = self._db.execute(
+            select(User).where(User.password_reset_token_hash == token_hash)
+        ).scalar_one_or_none()
+
+        if user is None or user.password_reset_expires_at is None:
+            raise PermissionError("This reset link is not valid")
+
+        expires_at = user.password_reset_expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < datetime.now(timezone.utc):
+            raise PermissionError("This reset link has expired")
+
+        user.password_hash = self.hash_password(new_password)
+        # Cleared immediately: a reset link works exactly once.
+        user.password_reset_token_hash = None
+        user.password_reset_expires_at = None
+        self._db.flush()
+        logger.info(f"Password reset completed for {user.user_id}")
+        return True
+
+    @staticmethod
+    def _hash_reset_token(raw_token: str) -> str:
+        """Hash a reset token for storage.
+
+        SHA-256 rather than bcrypt: the token is 32 random bytes, so there is
+        no weak input to slow an attacker down over, and the reset endpoint has
+        to look the row up *by* the hash.
+        """
+        return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+    # -- notification preferences -------------------------------------------
+
+    def get_preferences(self, user_id: uuid.UUID) -> User:
+        """Return the user row carrying the notification preferences.
+
+        Raises:
+            LookupError: If the user no longer exists.
+        """
+        user = self._db.get(User, user_id)
+        if user is None:
+            raise LookupError("No such user")
+        return user
+
+    def update_preferences(
+        self,
+        user_id: uuid.UUID,
+        notifications_enabled: bool | None = None,
+        sound_enabled: bool | None = None,
+        vibration_enabled: bool | None = None,
+    ) -> User:
+        """Apply the preferences a client sent.
+
+        Only the fields actually supplied are written, so a client can send one
+        toggle without having to echo back the other two and risk clobbering a
+        change made on another device.
+
+        Raises:
+            LookupError: If the user no longer exists.
+        """
+        user = self.get_preferences(user_id)
+        if notifications_enabled is not None:
+            user.notifications_enabled = notifications_enabled
+        if sound_enabled is not None:
+            user.sound_enabled = sound_enabled
+        if vibration_enabled is not None:
+            user.vibration_enabled = vibration_enabled
+        self._db.flush()
+        logger.info(f"Preferences updated for {user_id}")
+        return user
 
     @staticmethod
     def hash_password(password: str) -> str:

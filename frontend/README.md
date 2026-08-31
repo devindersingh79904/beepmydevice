@@ -22,14 +22,19 @@ For iOS you also need the pods:
 cd ios && pod install && cd ..
 ```
 
-### Icon fonts
+### Assets
 
-`react-native-vector-icons` needs its fonts registered natively or **every icon
-renders as a blank box**, with no warning in JS:
+Fonts, icons and the alert sound are already linked into both native projects.
+After adding a new one to `assets/`, re-run the linker:
 
-- **iOS** — add `Feather.ttf` and `MaterialCommunityIcons.ttf` to `UIAppFonts`
-  in `ios/BeepMyDevice/Info.plist`.
-- **Android** — apply `fonts.gradle` in `android/app/build.gradle`.
+```bash
+npx react-native-asset
+```
+
+It reads `react-native.config.js`. The bundled Archivo faces are static
+instances generated from Google's variable font — React Native cannot vary
+weight from a variable font, so a face per weight is the only thing that
+renders as designed.
 
 ## Checks
 

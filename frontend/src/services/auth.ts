@@ -2,15 +2,20 @@
 
 import type {
   AuthToken,
+  ChangePasswordRequest,
+  ForgotPasswordRequest,
   LoginRequest,
+  NotificationPreferences,
+  NotificationPreferencesUpdate,
   RegisterRequest,
+  ResetPasswordRequest,
   User,
 } from '@/types/user';
 import {API_ROUTES, STORAGE_KEYS} from '@utils/constants';
 import {getLogger} from '@utils/logger';
 import {clearAll, getItem, setItem} from '@utils/storage';
 
-import {post} from './api';
+import {get, post, put} from './api';
 
 const logger = getLogger('auth-service');
 
@@ -69,4 +74,49 @@ export async function getStoredToken(): Promise<string | null> {
 /** Return the persisted user, or null when not signed in. */
 export async function getStoredUser(): Promise<User | null> {
   return getItem<User>(STORAGE_KEYS.USER);
+}
+
+/** Replace the signed-in user's password. */
+export async function changePassword(
+  payload: ChangePasswordRequest,
+): Promise<void> {
+  await put<ChangePasswordRequest, unknown>(
+    API_ROUTES.CHANGE_PASSWORD,
+    payload,
+  );
+  logger.info('Password changed');
+}
+
+/**
+ * Ask for a password reset link.
+ *
+ * Resolves the same way whether or not the address has an account -- the
+ * server deliberately does not say, and the UI must not either.
+ */
+export async function forgotPassword(email: string): Promise<void> {
+  await post<ForgotPasswordRequest, unknown>(API_ROUTES.FORGOT_PASSWORD, {
+    email,
+  });
+}
+
+/** Consume a reset token and set a new password. */
+export async function resetPassword(
+  payload: ResetPasswordRequest,
+): Promise<void> {
+  await post<ResetPasswordRequest, unknown>(API_ROUTES.RESET_PASSWORD, payload);
+}
+
+/** Read the stored notification preferences. */
+export async function getPreferences(): Promise<NotificationPreferences> {
+  return get<NotificationPreferences>(API_ROUTES.PREFERENCES);
+}
+
+/** Write the toggles that changed, leaving the others alone. */
+export async function updatePreferences(
+  changes: NotificationPreferencesUpdate,
+): Promise<NotificationPreferences> {
+  return put<NotificationPreferencesUpdate, NotificationPreferences>(
+    API_ROUTES.PREFERENCES,
+    changes,
+  );
 }

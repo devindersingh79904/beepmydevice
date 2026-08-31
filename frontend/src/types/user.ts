@@ -31,3 +31,31 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
+/**
+ * Notification settings.
+ *
+ * Every field is optional on the way *in* so a client can send only the toggle
+ * the user flipped; the server always returns all three.
+ */
+export interface NotificationPreferences {
+  notifications_enabled: boolean;
+  sound_enabled: boolean;
+  vibration_enabled: boolean;
+}
+
+export type NotificationPreferencesUpdate = Partial<NotificationPreferences>;

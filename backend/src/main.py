@@ -25,7 +25,7 @@ logger = get_logger("main")
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Start and stop background work around the server lifetime.
 
     Startup initialises the push providers; shutdown closes WebSocket
@@ -80,7 +80,10 @@ def _validation_code(field: str | None, error_type: str) -> ErrorCode:
         return ErrorCode.MISSING_REQUIRED_FIELD
     if field == "email":
         return ErrorCode.INVALID_EMAIL_FORMAT
-    if field == "password" and error_type in _LENGTH_ERROR_TYPES:
+    # Any password field, not just one named exactly "password": the change and
+    # reset bodies call theirs new_password, and a length failure on those is
+    # still "too weak" to the client.
+    if field is not None and field.endswith("password") and error_type in _LENGTH_ERROR_TYPES:
         return ErrorCode.PASSWORD_TOO_WEAK
     if field == "device_type":
         return ErrorCode.INVALID_DEVICE_TYPE
@@ -115,7 +118,9 @@ async def validation_exception_handler(
 
 
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+async def http_exception_handler(
+    request: Request, exc: HTTPException  # pylint: disable=unused-argument
+) -> JSONResponse:
     """Return the envelope routes already built, or wrap a plain detail in one.
 
     Routes raise HTTPException with a ready-made envelope as the detail, so the

@@ -21,6 +21,7 @@ import {
 import {useAuth} from '@hooks/useAuth';
 import {useDevices} from '@hooks/useDevices';
 import {useErrors} from '@hooks/useErrors';
+import {usePreferences} from '@hooks/usePreferences';
 import {useToast} from '@hooks/useToast';
 import type {AppStackParamList} from '@/navigation/AppNavigator';
 import {borderWidth, colors, spacing, typography} from '@styles/theme';
@@ -66,11 +67,7 @@ export function SettingsScreen(): React.JSX.Element {
   const {errors, clearErrors} = useErrors();
   const {toast, showToast, dismissToast} = useToast();
 
-  // Notification preferences are local for now: there is no preferences
-  // endpoint yet, so these persist no further than the screen.
-  const [pushEnabled, setPushEnabled] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [vibrationEnabled, setVibrationEnabled] = useState(false);
+  const {preferences, setPreference} = usePreferences();
   const [isLogoutOpen, setLogoutOpen] = useState(false);
 
   const guests = devices.filter(device => device.is_guest);
@@ -145,21 +142,25 @@ export function SettingsScreen(): React.JSX.Element {
             icon="bell"
             accessory={
               <Toggle
-                value={pushEnabled}
-                onValueChange={setPushEnabled}
+                value={preferences.notifications_enabled}
+                onValueChange={value =>
+                  void setPreference('notifications_enabled', value)
+                }
                 accessibilityLabel="Push notifications"
               />
             }
           />
-          {pushEnabled ? (
+          {preferences.notifications_enabled ? (
             <>
               <SettingsRow
                 label="Sound"
                 icon="volume-2"
                 accessory={
                   <Toggle
-                    value={soundEnabled}
-                    onValueChange={setSoundEnabled}
+                    value={preferences.sound_enabled}
+                    onValueChange={value =>
+                      void setPreference('sound_enabled', value)
+                    }
                     accessibilityLabel="Alert sound"
                   />
                 }
@@ -169,8 +170,10 @@ export function SettingsScreen(): React.JSX.Element {
                 icon="vibrate"
                 accessory={
                   <Toggle
-                    value={vibrationEnabled}
-                    onValueChange={setVibrationEnabled}
+                    value={preferences.vibration_enabled}
+                    onValueChange={value =>
+                      void setPreference('vibration_enabled', value)
+                    }
                     accessibilityLabel="Alert vibration"
                   />
                 }

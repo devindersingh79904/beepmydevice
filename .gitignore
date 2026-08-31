@@ -114,3 +114,11 @@ pids/
 *.seed
 tmp/
 temp/
+
+# --- Push credentials -------------------------------------------------------
+# Deployment secrets, never committed. See docs/PUSH_SETUP.md for where each
+# one comes from and where it belongs.
+frontend/android/app/google-services.json
+frontend/ios/BeepMyDevice/GoogleService-Info.plist
+backend/*.p8
+backend/AuthKey_*.p8

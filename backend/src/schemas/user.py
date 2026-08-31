@@ -39,3 +39,37 @@ class AuthTokenResponse(BaseModel):
     token: str
     token_type: str = "Bearer"
     expires_at: datetime
+
+
+class ChangePasswordRequest(BaseModel):
+    """Body of PUT /auth/change-password."""
+
+    current_password: str
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Body of POST /auth/forgot-password."""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Body of POST /auth/reset-password."""
+
+    token: str
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+
+
+class NotificationPreferences(BaseModel):
+    """Notification settings, returned by GET and accepted by PUT /auth/preferences.
+
+    Every field is optional on the way in so a client can send just the toggle
+    the user flipped; omitted fields keep their stored value.
+    """
+
+    model_config = {"from_attributes": True}
+
+    notifications_enabled: bool | None = None
+    sound_enabled: bool | None = None
+    vibration_enabled: bool | None = None

@@ -48,12 +48,17 @@ export const API_ROUTES = {
   REGISTER: '/auth/register',
   LOGIN: '/auth/login',
   LOGOUT: '/auth/logout',
+  CHANGE_PASSWORD: '/auth/change-password',
+  FORGOT_PASSWORD: '/auth/forgot-password',
+  RESET_PASSWORD: '/auth/reset-password',
+  PREFERENCES: '/auth/preferences',
   DEVICE_REGISTER: '/devices/register',
   DEVICE_LIST: '/devices/list',
   DEVICE_DETAIL: (id: string): string => `/devices/${id}`,
   DEVICE_HEARTBEAT: (id: string): string => `/devices/${id}/heartbeat`,
   ALERT_SEND: '/alerts/send',
   ALERT_LOGS: '/alerts/logs',
+  ALERT_LOGS_FOR_DEVICE: (id: string): string => `/alerts/logs/device/${id}`,
   WS_STATUS: '/ws/status',
 } as const;
 
@@ -84,8 +89,14 @@ export const MS_PER_SECOND = 1_000;
 export const APP_VERSION = '1.0.0';
 
 // --- Alert playback ---------------------------------------------------------
-/** Bundled sound played when this device is alerted. */
-export const ALERT_SOUND_FILE = 'alert.mp3';
+/**
+ * Bundled sound played when this device is alerted.
+ *
+ * WAV, not MP3: Android resolves it from res/raw, which decodes WAV with no
+ * codec involved, and the file is short enough that the size difference does
+ * not matter.
+ */
+export const ALERT_SOUND_FILE = 'alert.wav';
 /** One buzz of the alert vibration. */
 const VIBRATION_BUZZ_MS = 800;
 /** Gap between buzzes. */

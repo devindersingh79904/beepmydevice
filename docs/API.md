@@ -117,6 +117,50 @@ registered.
 
 Invalidates the caller's token. Returns `200`.
 
+### PUT /auth/change-password
+
+```json
+{ "current_password": "…", "new_password": "at-least-8-chars" }
+```
+
+Requires the current password as well as the new one: without it a stolen but
+still-valid token would be enough to lock the real owner out.
+
+Errors: `AUTH_001` current password wrong · `VAL_004` new password too weak.
+
+### POST /auth/forgot-password
+
+```json
+{ "email": "user@example.com" }
+```
+
+Always returns `200` with the same message, registered or not — otherwise this
+becomes the account enumerator `/auth/login` deliberately is not. The token is
+single-use, expires in an hour, and is stored only as a SHA-256 hash. With no
+SMTP configured the link is logged instead of emailed.
+
+### POST /auth/reset-password
+
+```json
+{ "token": "…", "new_password": "at-least-8-chars" }
+```
+
+Errors: `AUTH_003` token unknown, already used, or expired.
+
+### GET /auth/preferences · PUT /auth/preferences
+
+```json
+{ "notifications_enabled": true, "sound_enabled": true, "vibration_enabled": false }
+```
+
+On `PUT` every field is optional; only what is sent is written, so a client can
+push the one toggle the user flipped without clobbering a change made on
+another device.
+
+`notifications_enabled` is enforced server-side: an alert is not pushed to a
+device whose owner has switched it off. Guest devices have no owner and so are
+unaffected by anyone's preferences.
+
 ---
 
 ## Devices
@@ -270,6 +314,14 @@ since the caller named nobody in particular.
 ### GET /alerts/logs
 
 Query: `page`, `limit`. Returns the caller's alert history, newest first.
+
+### GET /alerts/logs/device/{device_id}
+
+Query: `page`, `limit`. Returns the alerts that targeted one device, newest
+first. Scoped by network administration rather than ownership, so an admin can
+read a guest device's history — a guest has no owner.
+
+Errors: `DEVICE_001` not found · `AUTH_004` device on another network.
 
 ---
 

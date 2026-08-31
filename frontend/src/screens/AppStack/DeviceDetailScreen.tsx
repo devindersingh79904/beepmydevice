@@ -20,6 +20,7 @@ import {
   StatusBadge,
 } from '@components/index';
 import {useAlerts} from '@hooks/useAlerts';
+import {useDeviceAlertHistory} from '@hooks/useDeviceAlertHistory';
 import {useDevices} from '@hooks/useDevices';
 import {useErrors} from '@hooks/useErrors';
 import type {AppStackParamList} from '@/navigation/AppNavigator';
@@ -32,6 +33,7 @@ import {
   typography,
 } from '@styles/theme';
 import {BATTERY_FULL} from '@utils/constants';
+import type {AlertLog} from '@/types/device';
 import {
   canSendAlertTo,
   formatDate,
@@ -73,6 +75,23 @@ function BatteryBlock({device}: {device: Device}): React.JSX.Element {
   );
 }
 
+/** One line of alert history: when it was sent, and whether it landed. */
+function AlertHistoryRow({alert}: {alert: AlertLog}): React.JSX.Element {
+  const delivered = alert.status !== 'FAILED';
+  return (
+    <View style={styles.historyRow}>
+      <Text style={styles.caption}>{formatRelativeTime(alert.created_at)}</Text>
+      <Text
+        style={[
+          styles.historyOutcome,
+          {color: delivered ? colors.textTertiary : colors.errorText},
+        ]}>
+        {delivered ? '✓ Delivered' : '✗ Failed'}
+      </Text>
+    </View>
+  );
+}
+
 /** Name, platform and OS version beside the device glyph. */
 function Identity({device}: {device: Device}): React.JSX.Element {
   const name = device.device_name ?? getDeviceTypeLabel(device.device_type);
@@ -105,6 +124,9 @@ export function DeviceDetailScreen(): React.JSX.Element {
   const {devices, networkName, removeDevice} = useDevices();
   const {errors, clearErrors} = useErrors();
   const {isSending, sendAlert} = useAlerts();
+  const {alerts, refresh: refreshHistory} = useDeviceAlertHistory(
+    params.deviceId,
+  );
 
   const [isAlertOpen, setAlertOpen] = useState(false);
   const [isRemoveOpen, setRemoveOpen] = useState(false);
@@ -134,6 +156,9 @@ export function DeviceDetailScreen(): React.JSX.Element {
   const onConfirmAlert = async (): Promise<void> => {
     await sendAlert([device.device_id]);
     setAlertOpen(false);
+    // The send just added a row; reload so the history reflects it without the
+    // user having to leave and come back.
+    await refreshHistory();
   };
 
   return (
@@ -182,9 +207,13 @@ export function DeviceDetailScreen(): React.JSX.Element {
 
           <View>
             <Text style={styles.sectionTitle}>Alert history</Text>
-            {/* Populated once an alert-log hook exists; the canvas shows this
-                empty state by default. */}
-            <Text style={styles.bodyMuted}>No alerts sent yet</Text>
+            {alerts.length === 0 ? (
+              <Text style={styles.bodyMuted}>No alerts sent yet</Text>
+            ) : (
+              alerts.map(alert => (
+                <AlertHistoryRow key={alert.alert_id} alert={alert} />
+              ))
+            )}
           </View>
 
           {device.is_guest ? null : (
@@ -277,6 +306,15 @@ const styles = StyleSheet.create({
   },
   batteryFill: {height: sizes.batteryBar},
   meta: {gap: spacing.s2},
+  historyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.s10,
+    borderBottomWidth: borderWidth.hairline,
+    borderBottomColor: colors.border,
+  },
+  historyOutcome: {...typography.smallStrong},
   sectionTitle: {
     ...typography.sectionTitle,
     color: colors.textPrimary,

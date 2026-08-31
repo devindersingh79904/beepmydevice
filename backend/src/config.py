@@ -53,6 +53,20 @@ class Settings(BaseSettings):
     APPLE_BUNDLE_ID: str = "com.beepmydevice.app"
     APPLE_USE_SANDBOX: bool = True
 
+    # --- Transactional email (password reset) ------------------------------
+    # Optional: with no host configured the reset link is logged instead of
+    # sent, which is what makes the flow testable without a mail account.
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = True
+    SMTP_FROM_ADDRESS: str = "no-reply@beepmydevice.com"
+    SMTP_TIMEOUT_SECONDS: int = 10
+    SMTP_LINK_LIFETIME_HINT: str = "an hour"
+    # Base URL the reset link points at. The app deep-links this path.
+    PASSWORD_RESET_URL_BASE: str = "https://app.beepmydevice.com/reset-password"
+
     # --- Server ------------------------------------------------------------
     SERVER_HOST: str = "0.0.0.0"
     SERVER_PORT: int = 8000
@@ -87,6 +101,11 @@ class Settings(BaseSettings):
     def firebase_enabled(self) -> bool:
         """True when enough Firebase credentials are present to send Android push."""
         return bool(self.FIREBASE_PROJECT_ID and self.FIREBASE_PRIVATE_KEY)
+
+    @property
+    def smtp_enabled(self) -> bool:
+        """True when enough SMTP settings are present to actually send mail."""
+        return bool(self.SMTP_HOST and self.SMTP_FROM_ADDRESS)
 
     @property
     def apns_enabled(self) -> bool:

@@ -32,3 +32,14 @@ export async function getAlertLogs(
 ): Promise<{items: AlertLog[]; pagination: PaginationMeta}> {
   return getPaginated<AlertLog>(API_ROUTES.ALERT_LOGS, params);
 }
+
+/** List the alerts that targeted one device, newest first. */
+export async function getDeviceAlertLogs(
+  deviceId: string,
+  params?: PaginationParams,
+): Promise<{items: AlertLog[]; pagination: PaginationMeta}> {
+  return getPaginated<AlertLog>(
+    API_ROUTES.ALERT_LOGS_FOR_DEVICE(deviceId),
+    params,
+  );
+}

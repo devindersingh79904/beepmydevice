@@ -115,3 +115,8 @@ a dashboard connected to another. Redis pub/sub is the Phase 2 fix. See
 a service, a Pydantic schema for the contract, a TypeScript type in
 `frontend/src/types/`, and a path in `API_ROUTES`. Both coding-style documents
 cover the layering rules.
+
+## Setup
+
+- [`PUSH_SETUP.md`](PUSH_SETUP.md) — Firebase and APNs credentials, the only
+  outstanding Phase 1 item. Everything around them is built and tested.

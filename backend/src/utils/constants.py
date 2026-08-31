@@ -33,6 +33,10 @@ AUTH_SCHEME: Final[str] = "Bearer"
 # guest can be present on the network without being able to act on it.
 # ---------------------------------------------------------------------------
 GUEST_TOKEN_EXPIRE_DAYS: Final[int] = 30
+# A reset link is emailed, so it lives long enough to be read but not long
+# enough to sit useful in an inbox.
+PASSWORD_RESET_EXPIRE_MINUTES: Final[int] = 60
+PASSWORD_RESET_TOKEN_BYTES: Final[int] = 32
 GUEST_DEVICE_NAME_FALLBACK: Final[str] = "Unknown device"
 
 # ---------------------------------------------------------------------------

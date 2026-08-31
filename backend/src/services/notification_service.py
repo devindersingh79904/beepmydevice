@@ -204,7 +204,18 @@ class NotificationService:
         return token
 
     def send_alert_to(self, device: Device) -> bool:
-        """Send the standard alert notification to one device."""
+        """Send the standard alert notification to one device.
+
+        Honours the owner's notification preference: a user who switched alerts
+        off is not pushed to, which is what makes the settings toggle mean
+        something rather than only greying itself out. A guest device has no
+        owner and so is unaffected by anyone's preferences.
+        """
+        owner = device.user
+        if owner is not None and not owner.notifications_enabled:
+            logger.info(f"Skipping push to {device.device_id}: owner has notifications off")
+            return False
+
         return self.send(
             device.device_type,
             device.push_token or "",

@@ -18,11 +18,11 @@ import {
   View,
 } from 'react-native';
 
-import {Button, ErrorAlert, Icon, Screen, TextField} from '@components/index';
+import {Button, ErrorAlert, Logo, Screen, TextField} from '@components/index';
 import {useAuth} from '@hooks/useAuth';
 import {useErrors} from '@hooks/useErrors';
 import type {AuthStackParamList} from '@/navigation/AuthNavigator';
-import {colors, radius, sizes, spacing, typography} from '@styles/theme';
+import {colors, spacing, typography} from '@styles/theme';
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -71,11 +71,7 @@ export function LoginScreen(): React.JSX.Element {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled">
           <View style={styles.logo}>
-            <Icon
-              name="wifi"
-              size={sizes.authLogoIcon}
-              color={colors.textInverse}
-            />
+            <Logo variant="auth" />
           </View>
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to reach your devices</Text>
@@ -107,12 +103,9 @@ export function LoginScreen(): React.JSX.Element {
             error={passwordError ?? fieldErrors.password}
           />
 
-          {/* The canvas shows this link but specifies no reset flow, and the
-              auth stack has no screen for one yet. Kept in place so the layout
-              matches; wire it up when the flow is designed. */}
           <Pressable
             accessibilityRole="link"
-            onPress={() => undefined}
+            onPress={() => navigation.navigate('ForgotPassword')}
             style={styles.forgot}>
             <Text style={styles.link}>Forgot password?</Text>
           </Pressable>
@@ -141,12 +134,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.s24,
   },
   logo: {
-    width: sizes.authLogo,
-    height: sizes.authLogo,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radius.none,
+    alignSelf: 'flex-start',
     marginTop: spacing.s24,
     marginBottom: spacing.s20,
   },

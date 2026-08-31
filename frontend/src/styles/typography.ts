@@ -13,19 +13,26 @@
 import type {TextStyle} from 'react-native';
 
 /**
- * The canvas is set in Archivo.
+ * The canvas is set in Archivo, and the faces are bundled.
  *
- * The font files are not bundled yet (`frontend/assets/fonts/` is empty). Until
- * they are, both families resolve to the platform's system font, which is the
- * closest available grotesque. To switch the whole app over: drop
- * `Archivo-Regular/SemiBold/Bold.ttf` into `assets/fonts/`, run
- * `npx react-native-asset`, and flip this one flag.
+ * `assets/fonts/` holds static instances generated from Google's variable
+ * Archivo (OFL, see `assets/fonts/OFL.txt`); React Native cannot vary weight
+ * from a variable font, so a static face per weight is the only thing that
+ * actually renders as designed. They are linked into both native projects by
+ * `npx react-native-asset`, driven by `react-native.config.js`.
+ *
+ * Set this to false to fall back to the platform's system font -- useful when
+ * bringing up a new native project before the assets have been linked.
  */
-const ARCHIVO_BUNDLED = false;
+const ARCHIVO_BUNDLED = true;
 
-const headingFamily = ARCHIVO_BUNDLED ? 'Archivo-Bold' : undefined;
-const bodyFamily = ARCHIVO_BUNDLED ? 'Archivo-Regular' : undefined;
-
+/**
+ * A bundled face carries its own weight, so `fontWeight` is deliberately not
+ * set alongside it: asking for weight 700 on top of Archivo-Bold makes the
+ * platform synthesise a second layer of boldness over an already-bold face.
+ * The system-font fallback has no such face, so there it is the weight that
+ * does the work.
+ */
 export const fontWeight = {
   regular: '400',
   semibold: '600',
@@ -47,15 +54,21 @@ export const fontSize = {
   displayTitle: 34,
 } as const;
 
-const heading = {
-  fontFamily: headingFamily,
-  fontWeight: fontWeight.bold,
-} as const;
+const heading = (
+  ARCHIVO_BUNDLED ? {fontFamily: 'Archivo-Bold'} : {fontWeight: fontWeight.bold}
+) as TextStyle;
 
-const body = {
-  fontFamily: bodyFamily,
-  fontWeight: fontWeight.regular,
-} as const;
+const body = (
+  ARCHIVO_BUNDLED
+    ? {fontFamily: 'Archivo-Regular'}
+    : {fontWeight: fontWeight.regular}
+) as TextStyle;
+
+const semibold = (
+  ARCHIVO_BUNDLED
+    ? {fontFamily: 'Archivo-SemiBold'}
+    : {fontWeight: fontWeight.semibold}
+) as TextStyle;
 
 const TIGHT_TRACKING = -0.5;
 const BADGE_TRACKING = 0.5;
@@ -113,19 +126,16 @@ export const typography = {
 
   /** Emphasised body -- validation messages, toggle labels. */
   bodyStrong: {
-    ...body,
+    ...semibold,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
   },
   captionStrong: {
-    ...body,
+    ...semibold,
     fontSize: fontSize.caption,
-    fontWeight: fontWeight.semibold,
   },
   smallStrong: {
-    ...body,
+    ...semibold,
     fontSize: fontSize.small,
-    fontWeight: fontWeight.semibold,
   },
   /** Button label. */
   button: {...heading, fontSize: fontSize.body},

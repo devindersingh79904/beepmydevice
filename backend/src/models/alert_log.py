@@ -3,8 +3,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ARRAY, DateTime, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.database import Base
@@ -14,8 +14,12 @@ class AlertLog(Base):
     """One alert send, retained for auditing and debugging.
 
     ``target_devices`` stores device IDs as a plain text array rather than a
-    join table: rows are written once and never queried by individual target,
-    so a join table would add cost without buying anything.
+    join table: rows are written once, and the one query that does look at an
+    individual target -- a device's alert history -- is served by the
+    PostgreSQL containment operator rather than a join.
+
+    The dialect ARRAY, not the generic one: only the dialect type implements
+    ``contains`` (``@>``), which that history query needs.
     """
 
     __tablename__ = "alert_logs"

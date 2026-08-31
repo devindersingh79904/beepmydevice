@@ -3,124 +3,117 @@
 Running hand-off list. Update it as items land; it is the file to read first
 when picking the project back up.
 
-Last updated: 2026-08-31, after Phase 1 implementation.
+Last updated: 2026-08-31, after Phase 1 completion.
 
 ---
 
-## Phase 1 status: implemented and verified
+## Phase 1 is complete
 
 ```
-backend    59 tests · 80% coverage · mypy clean · pylint 9.98 · black
-frontend  137 tests · coverage thresholds met · tsc clean · 0 lint errors
+backend    82 tests · 81% coverage · mypy clean · pylint 10.00/10 · black
+frontend  161 tests · coverage thresholds met · tsc clean · 0 lint errors
+CI         backend-tests.yml + frontend-tests.yml enabled
 ```
 
-Both suites were run, not assumed. The API was also booted and served real
-requests (`/health`, `/auth/register`, all ten routes in the OpenAPI schema).
+Both suites were run, not assumed. The API was booted and served real requests.
 
-### What works
+## The only thing outstanding
 
-- **Auth** — register, login, JWT issue/verify, logout via a revocation list.
-  Login is timing-equalised so it cannot be used to discover which addresses
-  are registered.
-- **Devices** — owned and guest registration, network-scoped listing,
-  heartbeat, removal. A heartbeat from a MAC other than the registered one sets
-  `UNKNOWN`, and `UNKNOWN` devices are not alertable.
-- **Guests** — `user_id` stays null, `is_guest` is derived, and the device
-  token is scoped to one `device_id`. It cannot list, and at `/alerts/send` it
-  gets `ALERT_005` (that code was documented but unreachable before).
-- **Alerts** — the three authorization checks in order, all-or-nothing, with
-  per-device push delivery reported separately.
-- **Realtime** — the status WebSocket, with broadcasts aimed at the network's
-  admin rather than every dashboard in the process.
-- **Frontend** — all eleven canvas screens on real services, contexts and
-  hooks; device self-registration and the 30-second heartbeat; the socket
-  reconnecting with backoff.
+**Push credentials.** Firebase and APNs keys, and the two credential files they
+come with. Every line of code around them is written and tested; without them
+`NotificationService` logs what it *would* have sent, so alerts still authorize,
+record and report — the target device just does not ring.
 
-### Defects found and fixed along the way
+Full instructions: **[`docs/PUSH_SETUP.md`](docs/PUSH_SETUP.md)**.
 
-| Defect | Impact before the fix |
+Nothing else in Phase 1 is waiting on anything.
+
+---
+
+## What landed in this pass
+
+### Native projects
+
+`frontend/ios/` and `frontend/android/` were **empty** — no Xcode project, no
+Gradle files. Both were generated from the RN 0.73.2 template and configured:
+
+- iOS bundle ID `com.beepmydevice.app`, Android `applicationId`
+  `com.beepmydevice`. The APNs topic must match the iOS bundle ID exactly or
+  delivery fails silently.
+- `UIBackgroundModes: remote-notification` — without it an alert can never wake
+  the app to ring at full volume.
+- `NSLocationWhenInUseUsageDescription` written properly. It was empty, which
+  both fails App Store review and shows the user a blank permission prompt —
+  and the app cannot function without that permission, since the BSSID is the
+  alert group's identity.
+- Android permissions: fine location, WiFi state, `POST_NOTIFICATIONS`
+  (required from Android 13, silently drops notifications without it), vibrate.
+- Google Services Gradle plugin and the Firebase BoM.
+
+### Fonts and assets
+
+- **Icon fonts linked** into both projects. Without this every icon renders as
+  a blank box and nothing in JS warns about it.
+- **Archivo bundled.** Google publishes only a variable font, and React Native
+  cannot vary weight from one, so static Regular/SemiBold/Bold instances were
+  generated with `fonttools` and their name tables rewritten — the instancer
+  leaves all three claiming to be SemiBold, which would make iOS resolve them to
+  one face. `ARCHIVO_BUNDLED` is now on, and the explicit `fontWeight` was
+  dropped from the composed styles because a bundled face carries its own
+  weight and pairing both synthesises a second layer of bolding.
+- **Alert sound** generated as `assets/sounds/alert.wav` — an alternating
+  two-tone pattern, which reads as "come and find me" rather than as a
+  notification — and placed in `res/raw` where react-native-sound looks.
+- **New brand mark** extracted from `Logo-selection.png` at 1x/2x/3x with a
+  transparent ground, and wired into the splash and sign-in screens via a
+  `Logo` component. The export's ground turned out to be exactly `#F3F2F2`, the
+  design system's background, so tile and artwork share one colour and no edge
+  shows between them.
+
+### The four missing endpoints
+
+| Endpoint | Note |
 |---|---|
-| `requirements.txt` was uninstallable — `firebase-admin` needs `pyjwt>=2.5`, `apns2` pins `PyJWT<2.0` | The backend could not be installed at all. APNs now goes over HTTP/2 via `httpx`, dropping `apns2` |
-| `migrations/script.py.mako` missing | No migration could ever be generated |
-| `migrations/env.py` was a stub | Migrations could not run |
-| Login button used the auth context's `isLoading` | Disabled on first mount, before the user typed anything |
-| `wifi_mac` had no format validation | Malformed MACs reached the trust boundary |
-| Invalid `device_type` reported `VAL_002` | Contract says `DEVICE_003` |
-| Dialog card was an unlabelled `Pressable` | Announced to screen readers as a button |
+| `PUT /auth/change-password` | Requires the current password, so a stolen token cannot lock the owner out |
+| `POST /auth/forgot-password` · `POST /auth/reset-password` | Single-use token, SHA-256 hashed, 1 hour expiry. Responds identically for unknown addresses |
+| `GET` / `PUT /auth/preferences` | Partial updates only. **Enforced server-side** — a device whose owner disabled notifications is not pushed to |
+| `GET /alerts/logs/device/{id}` | Scoped by network administration, so an admin can read a guest's history |
+
+Plus `ForgotPasswordScreen`, and Settings/Profile/DeviceDetail wired to the real
+endpoints instead of local state and placeholders.
 
 ---
 
-## What is *not* done
+## Not done, and not Phase 1
 
-### 1. Icon fonts are not linked — the UI looks broken without this
-
-`react-native-vector-icons` needs its fonts registered natively or **every icon
-renders as a blank box**, silently.
-
-- iOS: add `Feather.ttf` and `MaterialCommunityIcons.ttf` to `UIAppFonts` in
-  `ios/BeepMyDevice/Info.plist`
-- Android: apply `fonts.gradle` in `android/app/build.gradle`
-
-This is the first thing to do before running the app on a device.
-
-### 2. Never run on a real device or simulator
+### Never run on a device or simulator
 
 Everything is verified by test suite and by the API serving HTTP. No screen has
-been rendered on iOS or Android hardware. Expect the usual first-run native
-issues: pod install, Gradle, permissions prompts.
+been rendered on real hardware. The native projects are freshly generated, so
+expect the usual first-run friction: `pod install` on macOS, Gradle sync, SDK
+versions. `npm run ios` needs macOS.
 
-### 3. Push notifications are not configured
+### App launcher icons
 
-Deliberately deferred. `NotificationService` degrades cleanly — it logs what it
-would have sent when credentials are absent — so alerts currently record and
-report as delivered without a device actually ringing.
+Still the React Native default. The brand mark is in `assets/images/`; turning
+it into `mipmap-*` and `AppIcon.appiconset` sets is a small design task nobody
+has asked for yet.
 
-Needed to close it:
-- A Firebase project; fill `FIREBASE_*` in `backend/.env` and add
-  `google-services.json` / `GoogleService-Info.plist` to the app
-- An APNs `.p8` key; fill `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_KEY_PATH`
-- `frontend/assets/alert.mp3` — the alert sound is referenced but the file does
-  not exist yet
+### Phase 2 limits, unchanged
 
-### 4. Endpoints the UI expects that do not exist
-
-- **Change password** — `ProfileScreen` renders the form and reports honestly
-  that it cannot save. There is no route in `API_ROUTES`.
-- **Alert history per device** — `DeviceDetailScreen` shows the canvas's empty
-  state. `GET /alerts/logs` exists but is not per-device, and no hook consumes
-  it.
-- **Notification preferences** — the Settings toggles are local state and do
-  not survive a restart.
-- **Forgot password** — a placeholder link, exactly as in the canvas. No flow
-  is designed.
-
-### 5. Known Phase 2 limits, unchanged
-
-- `WebSocketManager` and the token revocation set are in process memory, so the
+- `WebSocketManager` and the token revocation set live in process memory, so the
   API must run **one worker**. Redis pub/sub lifts both.
-- Sync SQLAlchemy behind `run_blocking`. A file-by-file async migration would
-  be worse than either alone.
+- Sync SQLAlchemy behind `run_blocking`.
 - No rate limiting.
+- `deploy.yml` is still staged in `.github/workflows.disabled/` — deployment
+  needs real infrastructure.
 
-### 6. Typography
+### Lint warnings
 
-Archivo is not bundled. `styles/typography.ts` falls back to the system font
-behind a single `ARCHIVO_BUNDLED` flag. Drop
-`Archivo-Regular/SemiBold/Bold.ttf` into `assets/fonts/`, run
-`npx react-native-asset`, flip the flag.
-
-### 7. Lint warnings
-
-Eleven `max-lines-per-function` warnings on screen render bodies and the two
+Fifteen `max-lines-per-function` warnings on screen render bodies and the two
 providers. The natural subcomponents are already extracted; what remains is JSX
-composition, and splitting it further would create components that exist only
-to satisfy the rule.
-
-### 8. CI
-
-Still staged in `.github/workflows.disabled/`. The old blockers are gone —
-there is a `package-lock.json` and every check passes — but the backend job
-needs a PostgreSQL service container the staged workflow does not define.
+composition, and splitting it further would create components that exist only to
+satisfy the rule.
 
 ---
 
@@ -140,7 +133,7 @@ pytest
 cd frontend
 npm install
 npm test && npm run typecheck && npm run lint
-npm run ios   # or android — see the icon-font note above first
+npm run android      # or ios, on macOS
 ```
 
 On Windows, `localhost` resolves to `::1` first, where a WSL relay can shadow
@@ -151,10 +144,10 @@ the port Docker published on `0.0.0.0`. The test suite pins itself to
 
 ## One design decision worth a second look
 
-The canvas overrides the Modernist accent to blue and then uses that single
-accent for *everything*: the primary button, the ONLINE badge, the guest badge,
-and error text and the error banner. So errors are blue, not red. That is
-faithful to the design as delivered, and it is what the code does.
+The canvas uses a single blue accent for *everything*: the primary button, the
+ONLINE badge, the guest badge, and error text and the error banner. So errors
+are blue, not red. That is faithful to the design as delivered, and it is what
+the code does.
 
 If red errors are wanted, it is a two-line change in
 `frontend/src/styles/colors.ts` (`error`, `errorText`) — but it breaks the

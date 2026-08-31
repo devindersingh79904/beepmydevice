@@ -12,6 +12,7 @@ import {ConfirmDialog} from '../src/components/ConfirmDialog';
 import {EmptyState} from '../src/components/EmptyState';
 import {GuestBadge} from '../src/components/GuestBadge';
 import {LoadingSpinner} from '../src/components/LoadingSpinner';
+import {Logo} from '../src/components/Logo';
 import {Rule} from '../src/components/Rule';
 import {SectionLabel} from '../src/components/SectionLabel';
 import {SettingsRow} from '../src/components/SettingsRow';
@@ -114,6 +115,16 @@ describe('badges and indicators', () => {
     render(<Avatar name="Dev Kim" size="large" />);
 
     expect(screen.getByText('DK')).toBeTruthy();
+  });
+});
+
+describe('Logo', () => {
+  it.each(['splash', 'auth'] as const)('renders the %s variant', variant => {
+    render(<Logo variant={variant} />);
+
+    // One accessible element, not a decorative image the reader skips: the
+    // mark is the only thing identifying the app on the splash.
+    expect(screen.getByLabelText('BeepMyDevice')).toBeTruthy();
   });
 });
 

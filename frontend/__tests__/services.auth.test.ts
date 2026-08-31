@@ -150,3 +150,96 @@ describe('auth service', () => {
     await expect(authService.getStoredUser()).resolves.toBeNull();
   });
 });
+
+
+describe('account service calls', () => {
+  const issued = {
+    user_id: 'user-1',
+    token: 'jwt-123',
+    token_type: 'Bearer',
+    expires_at: new Date().toISOString(),
+  };
+
+  it('changePassword PUTs both passwords', async () => {
+    apiClient.put.mockResolvedValue(unwrapped({}));
+
+    await authService.changePassword({
+      current_password: 'OldPass123',
+      new_password: 'NewPass1234',
+    });
+
+    expect(apiClient.put).toHaveBeenCalledWith(API_ROUTES.CHANGE_PASSWORD, {
+      current_password: 'OldPass123',
+      new_password: 'NewPass1234',
+    });
+  });
+
+  it('forgotPassword POSTs just the address', async () => {
+    apiClient.post.mockResolvedValue(unwrapped({}));
+
+    await authService.forgotPassword('dev@example.com');
+
+    expect(apiClient.post).toHaveBeenCalledWith(API_ROUTES.FORGOT_PASSWORD, {
+      email: 'dev@example.com',
+    });
+  });
+
+  it('resetPassword POSTs the token and the new password', async () => {
+    apiClient.post.mockResolvedValue(unwrapped({}));
+
+    await authService.resetPassword({token: 'tok', new_password: 'NewPass1234'});
+
+    expect(apiClient.post).toHaveBeenCalledWith(API_ROUTES.RESET_PASSWORD, {
+      token: 'tok',
+      new_password: 'NewPass1234',
+    });
+  });
+
+  it('reads and writes preferences', async () => {
+    const preferences = {
+      notifications_enabled: true,
+      sound_enabled: false,
+      vibration_enabled: true,
+    };
+    apiClient.get.mockResolvedValue(unwrapped(preferences));
+    apiClient.put.mockResolvedValue(unwrapped(preferences));
+
+    await expect(authService.getPreferences()).resolves.toEqual(preferences);
+    await authService.updatePreferences({sound_enabled: false});
+
+    expect(apiClient.put).toHaveBeenCalledWith(API_ROUTES.PREFERENCES, {
+      sound_enabled: false,
+    });
+  });
+
+  it('login still round-trips after the new calls were added', async () => {
+    apiClient.post.mockResolvedValue(unwrapped(issued));
+
+    await authService.login({email: 'dev@example.com', password: 'CorrectHorse9'});
+
+    await expect(authService.getStoredToken()).resolves.toBe('jwt-123');
+  });
+});
+
+describe('alert service routes', () => {
+  const alertModule = require('../src/services/alert') as typeof import('../src/services/alert');
+
+  it('lists the caller history and one device history', async () => {
+    apiClient.get.mockResolvedValue(unwrapped([], {total_count: 0}));
+
+    await alertModule.getAlertLogs({page: 1});
+    await alertModule.getDeviceAlertLogs('device-1');
+
+    expect(apiClient.get).toHaveBeenCalledWith(API_ROUTES.ALERT_LOGS, {
+      params: {page: 1},
+    });
+    expect(apiClient.get).toHaveBeenCalledWith(
+      API_ROUTES.ALERT_LOGS_FOR_DEVICE('device-1'),
+      {params: undefined},
+    );
+  });
+
+  it('builds parameterised routes rather than string-concatenating them', () => {
+    expect(API_ROUTES.ALERT_LOGS_FOR_DEVICE('abc')).toBe('/alerts/logs/device/abc');
+  });
+});
