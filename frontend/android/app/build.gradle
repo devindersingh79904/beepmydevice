@@ -122,8 +122,11 @@ dependencies {
 
     // Firebase Cloud Messaging. The BoM pins one consistent set of versions so
     // the messaging artifact never has to be versioned by hand.
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
     implementation("com.google.firebase:firebase-messaging")
+    // firebase-analytics is deliberately not included. Messaging does not need
+    // it, and this app's premise is that it does not track anyone -- adding
+    // analytics would start collecting behavioural data by default.
     implementation("com.facebook.react:flipper-integration")
 
     if (hermesEnabled.toBoolean()) {
