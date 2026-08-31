@@ -50,11 +50,12 @@ Use **Python 3.11 or 3.12**; several pins have no wheels for 3.13+. The test
 suite needs PostgreSQL: `docker compose -f docker/docker-compose.yml up -d db`.
 Run the API with `--workers 1` (see the WebSocket note below).
 
-**CI is on.** `backend-tests.yml` and `frontend-tests.yml` run in
-`.github/workflows/`: format, lint, type check and tests on both sides, with a
-PostgreSQL service container and an `alembic upgrade head` step that catches a
-model change nobody wrote a migration for. Only `deploy.yml` is still staged in
-`.github/workflows.disabled/`, since deployment needs real infrastructure.
+**CI is deliberately off.** All three workflows are staged in
+`.github/workflows.disabled/`, which GitHub ignores. They are kept current --
+`backend-tests.yml` has its PostgreSQL service and an `alembic upgrade head`
+step -- but they do not run. **Do not move them into `.github/workflows/`
+unless explicitly asked**, and treat a task list that merely mentions "CI" as
+not being that ask.
 
 ## Architecture
 

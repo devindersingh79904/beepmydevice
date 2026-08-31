@@ -22,11 +22,18 @@ authority for what the UI looks like, and it is checked in:
 | `frontend/docs/design/Design decision/All Screens.dc.html` | Index — imports the app canvas once per screen, and is the list of the eleven screens that must exist |
 | `frontend/docs/design/Design decision/BeepMyDevice.dc.html` | **The canvas.** Every screen's markup, copy and state logic |
 | `frontend/docs/design/Design decision/_ds/modernist-*/styles.css` | The "Modernist" design system: tokens and component classes |
-| `frontend/docs/design/All Screens-selection (2).png` | Rendered reference |
+| `frontend/docs/design/all-screens.png` | Rendered reference for every screen |
+| `frontend/docs/design/logo.png` | The brand mark, as exported |
 
 Those files are the source; `frontend/src/styles/` is their translation into
 React Native. When the two disagree, the canvas wins and the token file is
 wrong.
+
+The exports carry **stable names**, not the browser's `… (2).png` /
+`… (3).png`. A new export overwrites the file of the same name, so there is
+never a question of which one is current — git holds the previous version. Keep
+it that way; the one time a numbered copy was left beside the current one, this
+table pointed at the stale design.
 
 ## Commands
 

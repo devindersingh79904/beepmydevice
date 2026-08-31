@@ -12,7 +12,7 @@ Last updated: 2026-08-31, after Phase 1 completion.
 ```
 backend    82 tests · 81% coverage · mypy clean · pylint 10.00/10 · black
 frontend  161 tests · coverage thresholds met · tsc clean · 0 lint errors
-CI         backend-tests.yml + frontend-tests.yml enabled
+CI         off by design; workflows stay staged in .github/workflows.disabled/
 ```
 
 Both suites were run, not assumed. The API was booted and served real requests.
@@ -64,7 +64,7 @@ Gradle files. Both were generated from the RN 0.73.2 template and configured:
 - **Alert sound** generated as `assets/sounds/alert.wav` — an alternating
   two-tone pattern, which reads as "come and find me" rather than as a
   notification — and placed in `res/raw` where react-native-sound looks.
-- **New brand mark** extracted from `Logo-selection.png` at 1x/2x/3x with a
+- **New brand mark** extracted from `docs/design/logo.png` at 1x/2x/3x with a
   transparent ground, and wired into the splash and sign-in screens via a
   `Logo` component. The export's ground turned out to be exactly `#F3F2F2`, the
   design system's background, so tile and artwork share one colour and no edge
@@ -105,8 +105,9 @@ has asked for yet.
   API must run **one worker**. Redis pub/sub lifts both.
 - Sync SQLAlchemy behind `run_blocking`.
 - No rate limiting.
-- `deploy.yml` is still staged in `.github/workflows.disabled/` — deployment
-  needs real infrastructure.
+- All workflows stay staged in `.github/workflows.disabled/` and are not to be
+  enabled without being explicitly asked. They are kept current so enabling
+  them is a one-line move when that day comes.
 
 ### Lint warnings
 
