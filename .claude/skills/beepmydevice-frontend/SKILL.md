@@ -145,3 +145,44 @@ Compose from `components/` — never re-implement a header, badge or dialog:
 pushing the layout ›  `Toast` for transient outcomes › `ConfirmDialog` for
 anything destructive. `AlertModal` is the one specialised dialog, because the
 network line in it is the visible half of the WiFi trust boundary.
+
+## Testing (Phase 1 is implemented)
+
+```bash
+cd frontend
+npm test                # 137 tests
+npm run test:coverage   # 70% thresholds, currently met
+```
+
+Every native module is mocked once in `jest.setup.js` — Config, AsyncStorage,
+DeviceInfo, NetworkInfo, Firebase messaging, Sound, vector-icons. Add new ones
+there rather than per-file, so a test that forgets one does not fail with an
+unrelated error deep inside a library.
+
+Two things worth knowing before writing a test here:
+
+- **`Modal` renders its children twice** under the test renderer, so
+  `getByRole` on anything inside a dialog throws "found multiple elements".
+  Use `getAllBy*` and act on every match.
+- **The api-client is tested through a stubbed axios adapter**, not by mocking
+  axios. That keeps the real interceptors — the token header, the correlation
+  ID, the envelope unwrapping, the AUTH_* teardown — under test.
+
+## Patterns this codebase settled on
+
+**`isLoading` from `useAuth` means "restoring a persisted session".** It is
+true on first mount and is *not* a form's submitting state. A screen that
+submits tracks its own `isSubmitting`; wiring the context flag to a button
+leaves it disabled before the user has typed anything.
+
+**Errors reach the banner through the context, not through try/catch at call
+sites.** Services throw `ApiError[]`; contexts catch, check `isApiErrorArray`
+and call `showErrors`. A screen only handles what it can act on inline.
+
+**The api-client unwraps once.** The response interceptor returns `data`
+(`content` + optional `pagination`) and throws `ApiError[]`. Nothing downstream
+writes `response.data.data`, and nothing else creates an axios instance.
+
+**WebSocket frames are partial.** A frame carries only what changed, so apply
+it with `??` against the current value — treating a missing `status` as
+`null` would blank out a device the user is looking at.

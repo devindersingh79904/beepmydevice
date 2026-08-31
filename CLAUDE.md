@@ -9,11 +9,14 @@ it is signed in to. Apple Find My and Google Find My Device group devices by
 **account**; this groups them by **network**. That one substitution is both the
 product differentiator and the security model.
 
-**The codebase is a skeleton.** Configuration, types, constants, contracts and
-documentation are complete; every service method, route handler, hook and
-component raises `NotImplementedError` / `throw new Error('Not implemented')`.
-Implementation is Phase 1 work, 6–8 weeks. When filling in a stub, the docstring
-above it states the intended behaviour — treat it as the specification.
+**Phase 1 is implemented.** The backend serves all ten endpoints plus the
+status WebSocket; the frontend has every screen from the design canvas wired to
+real services, contexts and hooks. Backend: 59 tests, ~80% coverage, `mypy`
+clean, `pylint` 9.98. Frontend: 137 tests, 70% coverage thresholds met, `tsc`
+and `eslint` clean.
+
+Docstrings are still the specification — where one describes behaviour, the
+code is expected to match it, and a change to either should change both.
 
 ## Commands
 
@@ -39,10 +42,15 @@ npm run typecheck && npm run lint
 The backend refuses to start while `SECRET_KEY` is still the `.env.example`
 placeholder — that is a deliberate guard, not a bug.
 
-**CI is deliberately off.** The workflows are staged in
-`.github/workflows.disabled/`, which GitHub ignores; they would fail today
-because nothing is implemented and there is no `package-lock.json`. Do not move
-them back into `.github/workflows/` unless asked. Run checks locally instead.
+Use **Python 3.11 or 3.12**; several pins have no wheels for 3.13+. The test
+suite needs PostgreSQL: `docker compose -f docker/docker-compose.yml up -d db`.
+Run the API with `--workers 1` (see the WebSocket note below).
+
+**CI is still off.** The workflows are staged in `.github/workflows.disabled/`.
+The reasons they would once have failed are gone — there is a
+`package-lock.json`, and every check passes — but the backend suite needs a
+PostgreSQL service container that the staged workflows do not yet define. Do
+not move them back into `.github/workflows/` unless asked.
 
 ## Architecture
 
@@ -129,7 +137,8 @@ either alone.
 `docs/API.md` the endpoints and error table, `docs/CODING_STANDARDS.md` the
 cross-cutting contract. Per-side rules live in `backend/docs/CODING_STYLE.md`
 and `frontend/docs/CODING_STYLE.md`, wired into skills in `.claude/skills/`.
-`docs/BeepMyDevice_UI_UX_Design_Brief.md` is the reference for building screens.
+`frontend/docs/design/` holds the design canvas, which is the authority for
+what every screen looks like — read it before changing one.
 
 Where planning docs conflict with these, the working docs win. One resolved
 conflict: `CODING_STANDARDS.md` §5 shows `pagination` beside `data`; every other

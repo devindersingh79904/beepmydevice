@@ -97,6 +97,10 @@ trip.
 
 Errors: `VAL_003` invalid email · `VAL_004` weak password · `409` email taken.
 
+Validation failures return **422** with one entry per bad field, so a client can
+highlight all of them in one pass. `VAL_003` and `VAL_004` are per-field codes:
+a generic `VAL_002` is only used for fields with no code of their own.
+
 ### POST /auth/login
 
 ```json
@@ -155,7 +159,17 @@ account or gaining any ability to act on the network.
 An owned registration finds or creates the `wifi_networks` row for the MAC. A
 **guest registration requires the network to already exist**: otherwise the
 first device on an unknown MAC would create an ownerless network that nobody
-could ever administer.
+could ever administer. A guest naming an unclaimed MAC gets **404** with
+`DEVICE_001`.
+
+Registering again with a push token already on this network **updates that
+device** rather than adding a second row — a reinstall must not leave the admin
+looking at the same phone twice. Ownership has to match, so a re-registration
+never converts an owned device into a guest or the reverse.
+
+Errors: `VAL_002` malformed `wifi_mac` · `DEVICE_003` unsupported
+`device_type` · `AUTH_003` a token was supplied but is invalid (an expired
+session must not silently downgrade a device into a guest).
 
 Errors: `DEVICE_003` unsupported type · `DEVICE_004` already registered ·
 `VAL_002` malformed MAC · `DEVICE_001` guest registering against an unclaimed
@@ -238,9 +252,20 @@ membership is the boundary, not ownership. Ownership is still required of the
 **sender**, which is what makes guest sending impossible rather than merely
 hidden — a guest holds only a device token and cannot authenticate here.
 
-Errors: `ALERT_001` targets on different networks · `ALERT_002` no targets
-available · `ALERT_003` permission denied · `ALERT_004` push delivery failed ·
-`ALERT_005` a guest attempted to send.
+Errors: `ALERT_001` targets on different networks (400) · `ALERT_002` no
+targets available (400) · `ALERT_003` permission denied (403) · `ALERT_004`
+push delivery failed (per device, inside a 200) · `ALERT_005` a guest attempted
+to send (403).
+
+`ALERT_005` is what a guest gets for presenting its `device_token` here. That is
+a valid credential which simply may not do this, so it is reported as its own
+code rather than as `AUTH_003` — an `AUTH_*` code tells the client to clear the
+session and show the login screen, which is the wrong response to "you are a
+guest".
+
+Naming an offline or `UNKNOWN` device explicitly is `ALERT_002` and sends
+nothing at all. An empty `device_ids` instead targets the reachable subset,
+since the caller named nobody in particular.
 
 ### GET /alerts/logs
 

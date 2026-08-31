@@ -3,148 +3,149 @@
 Running hand-off list. Update it as items land; it is the file to read first
 when picking the project back up.
 
-Last updated: 2026-08-31, after the design-canvas implementation and the
-toolchain verification pass.
+Last updated: 2026-08-31, after Phase 1 implementation.
 
 ---
 
-## Done
-
-**All eleven screens from the design canvas are implemented**, and the frontend
-now typechecks and lints clean. The canvas is
-`frontend/docs/design/Design decision/BeepMyDevice.dc.html`; the screen list is
-`All Screens.dc.html`.
+## Phase 1 status: implemented and verified
 
 ```
-npm run typecheck   # 0 errors
-npm run lint        # 0 errors, 8 warnings (see below)
-npm test            # suites load; all 30 specs are unwritten placeholders
+backend    59 tests · 80% coverage · mypy clean · pylint 9.98 · black
+frontend  137 tests · coverage thresholds met · tsc clean · 0 lint errors
 ```
 
-### The UI
+Both suites were run, not assumed. The API was also booted and served real
+requests (`/health`, `/auth/register`, all ten routes in the OpenAPI schema).
 
-- `frontend/src/styles/` — `colors.ts`, `spacing.ts`, `typography.ts`,
-  `theme.ts`. The "Modernist" system: one neutral ramp plus one blue accent,
-  zero corner radius, 2pt section rules and 1pt row rules.
-- `frontend/src/components/` — `Screen`, `ScreenHeader`, `Button`, `TextField`,
-  `Toggle`, `Icon`, `Avatar`, `Rule`, `SectionLabel`, `SettingsSectionHeader`,
-  `SettingsRow`, `StatusBadge`, `GuestBadge`, `BatteryIndicator`, `DeviceCard`,
-  `ConfirmDialog`, `AlertModal`, `ErrorAlert`, `Toast`, `SkeletonCard`,
-  `EmptyState`, `LoadingSpinner`, plus an `index.ts` barrel.
-- `frontend/src/screens/` — Splash, Login, Register, Dashboard, DeviceDetail
-  (owned and guest), Settings, Profile. Loading, empty and error states
-  included.
-- `frontend/src/navigation/` — `AuthNavigator`, `AppNavigator`,
-  `RootNavigator`.
-- `frontend/src/utils/helpers.ts` and `frontend/src/hooks/useToast.ts` are
-  implemented; both are pure/local, with no network.
-- Docs: `.claude/skills/beepmydevice-frontend/SKILL.md` and
-  `frontend/docs/CODING_STYLE.md` name the canvas as the design authority and
-  spell out the system's rules and the deliberate deviations from it.
+### What works
 
-### Toolchain defects found and fixed
+- **Auth** — register, login, JWT issue/verify, logout via a revocation list.
+  Login is timing-equalised so it cannot be used to discover which addresses
+  are registered.
+- **Devices** — owned and guest registration, network-scoped listing,
+  heartbeat, removal. A heartbeat from a MAC other than the registered one sets
+  `UNKNOWN`, and `UNKNOWN` devices are not alertable.
+- **Guests** — `user_id` stays null, `is_guest` is derived, and the device
+  token is scoped to one `device_id`. It cannot list, and at `/alerts/send` it
+  gets `ALERT_005` (that code was documented but unreachable before).
+- **Alerts** — the three authorization checks in order, all-or-nothing, with
+  per-device push delivery reported separately.
+- **Realtime** — the status WebSocket, with broadcasts aimed at the network's
+  admin rather than every dashboard in the process.
+- **Frontend** — all eleven canvas screens on real services, contexts and
+  hooks; device self-registration and the 30-second heartbeat; the socket
+  reconnecting with backoff.
 
-These were pre-existing and had never been caught, because `node_modules` had
-never been installed. Each one blocked a build or a check outright:
+### Defects found and fixed along the way
 
-| Problem | Fix |
+| Defect | Impact before the fix |
 |---|---|
-| `babel-plugin-module-resolver` used by `babel.config.js` but absent from `package.json` — **Metro could not bundle the app at all**, and every Jest suite failed to load | added as a devDependency |
-| `@types/*` path alias — TypeScript reserves that specifier for DefinitelyTyped and rejected all 25 imports through it with TS6137 | alias removed from `tsconfig.json` and `babel.config.js`; domain types now import as `@/types/...` |
-| No `.prettierrc` — Prettier 3 fell back to its own defaults and `prettier/prettier` errored on nearly every line (857 errors) | added `frontend/.prettierrc.js` with the React Native template settings the codebase is actually written in |
-| `eslint-plugin-jest` missing, so ESLint could not even start (`Environment key "jest/globals" is unknown`) | added as a devDependency |
-| `eslint-plugin-prettier@4` (transitive) incompatible with the pinned Prettier 3 (`prettier.resolveConfig.sync is not a function`) | upgraded to `^5` |
-| `react-native-vector-icons` ships no types (TS7016) | added `@types/react-native-vector-icons` |
-| 35 unused declarations in the stub files, against `noUnusedLocals`/`noUnusedParameters` | stub parameters prefixed with `_` (the convention this repo's own ESLint `argsIgnorePattern` already encodes); two dead value imports trimmed |
-
-`frontend/package-lock.json` is now committed, so these versions are pinned.
+| `requirements.txt` was uninstallable — `firebase-admin` needs `pyjwt>=2.5`, `apns2` pins `PyJWT<2.0` | The backend could not be installed at all. APNs now goes over HTTP/2 via `httpx`, dropping `apns2` |
+| `migrations/script.py.mako` missing | No migration could ever be generated |
+| `migrations/env.py` was a stub | Migrations could not run |
+| Login button used the auth context's `isLoading` | Disabled on first mount, before the user typed anything |
+| `wifi_mac` had no format validation | Malformed MACs reached the trust boundary |
+| Invalid `device_type` reported `VAL_002` | Contract says `DEVICE_003` |
+| Dialog card was an unlabelled `Pressable` | Announced to screen readers as a button |
 
 ---
 
-## Pending — next session
+## What is *not* done
 
-### 1. Link the icon fonts
+### 1. Icon fonts are not linked — the UI looks broken without this
 
-`react-native-vector-icons` needs its native fonts registered or **every icon
-in the app renders as a blank box**. Nothing in the JS will warn you.
+`react-native-vector-icons` needs its fonts registered natively or **every icon
+renders as a blank box**, silently.
 
-- iOS: add `Feather.ttf` and `MaterialCommunityIcons.ttf` to
-  `UIAppFonts` in `Info.plist`
+- iOS: add `Feather.ttf` and `MaterialCommunityIcons.ttf` to `UIAppFonts` in
+  `ios/BeepMyDevice/Info.plist`
 - Android: apply `fonts.gradle` in `android/app/build.gradle`
 
-### 2. Hooks, contexts and services — the Phase 1 wiring
+This is the first thing to do before running the app on a device.
 
-Screens are complete and bound to hook contracts, but the hooks still
-`throw new Error('Not implemented')`, so the app cannot run end to end yet.
-Outstanding:
+### 2. Never run on a real device or simulator
 
-- `context/AuthContext.tsx`, `context/DeviceContext.tsx`,
-  `context/ErrorContext.tsx`
-- `hooks/useAuth.ts`, `hooks/useDevices.ts`, `hooks/useErrors.ts`,
-  `hooks/useAlerts.ts`, `hooks/useWebSocket.ts`, `hooks/usePushNotifications.ts`
-- `services/api.ts`, `auth.ts`, `device.ts`, `alert.ts`, `notification.ts`,
-  `websocket.ts`
-- `utils/api-client.ts`, `storage.ts`, `logger.ts`
-- `App.tsx` — provider wiring. Order matters: `ErrorProvider` outermost,
-  `DeviceProvider` innermost, and `SafeAreaProvider` must wrap the lot or every
-  `Screen` loses its insets.
+Everything is verified by test suite and by the API serving HTTP. No screen has
+been rendered on iOS or Android hardware. Expect the usual first-run native
+issues: pod install, Gradle, permissions prompts.
 
-Two contract changes to honour:
+### 3. Push notifications are not configured
 
-- `UseDevicesResult` gained `networkName: string | null` (the dashboard header
-  names the WiFi) and `removeDevice(deviceId)`.
-- `hooks/useAlerts.ts` is new: `isSending`, `lastDelivery`, `sendAlert(ids)`.
+Deliberately deferred. `NotificationService` degrades cleanly — it logs what it
+would have sent when credentials are absent — so alerts currently record and
+report as delivered without a device actually ringing.
 
-When implementing a stub, drop the `_` prefix from the parameters as you start
-using them.
+Needed to close it:
+- A Firebase project; fill `FIREBASE_*` in `backend/.env` and add
+  `google-services.json` / `GoogleService-Info.plist` to the app
+- An APNs `.p8` key; fill `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_KEY_PATH`
+- `frontend/assets/alert.mp3` — the alert sound is referenced but the file does
+  not exist yet
 
-### 3. Screen gaps that need a backend contract first
+### 4. Endpoints the UI expects that do not exist
 
-- **Alert history** on `DeviceDetailScreen` renders the canvas's empty state.
-  It needs an alert-log hook over `getAlertLogs` before it can show rows.
-- **Change password** on `ProfileScreen` renders the form but has no endpoint —
-  there is no route for it in `API_ROUTES`. It reports that rather than
-  pretending to save.
-- **Notification preferences** in Settings are local component state; they need
-  a preferences endpoint (or local persistence) to survive a restart.
-- **Forgot password** is a placeholder link, exactly as in the canvas. No flow
-  is designed yet.
+- **Change password** — `ProfileScreen` renders the form and reports honestly
+  that it cannot save. There is no route in `API_ROUTES`.
+- **Alert history per device** — `DeviceDetailScreen` shows the canvas's empty
+  state. `GET /alerts/logs` exists but is not per-device, and no hook consumes
+  it.
+- **Notification preferences** — the Settings toggles are local state and do
+  not survive a restart.
+- **Forgot password** — a placeholder link, exactly as in the canvas. No flow
+  is designed.
 
-### 4. Tests
+### 5. Known Phase 2 limits, unchanged
 
-All 30 specs in `__tests__/` are placeholders whose bodies throw
-`Not implemented`, so the suite is red by design. The names describe what to
-write. `package.json` sets a 70% coverage threshold.
-
-Nothing currently covers the new UI. Worth writing first: `helpers.ts` (pure,
-easy), the guest/offline disabled-button behaviour on `DeviceCard`, and
-`ErrorAlert` rendering *every* error rather than the first.
-
-### 5. Lint warnings
-
-Eight `max-lines-per-function` warnings on screen render bodies. The natural
-subcomponents are already extracted (`NetworkSummary`, `BatteryBlock`,
-`Identity`, `GuestRow`, `StrengthMeter`); what remains is JSX composition, and
-splitting it further would create components that exist only to satisfy the
-rule. Left as warnings deliberately — revisit only if a screen grows again.
+- `WebSocketManager` and the token revocation set are in process memory, so the
+  API must run **one worker**. Redis pub/sub lifts both.
+- Sync SQLAlchemy behind `run_blocking`. A file-by-file async migration would
+  be worse than either alone.
+- No rate limiting.
 
 ### 6. Typography
 
-Archivo is not bundled. `frontend/assets/fonts/` is empty and
-`styles/typography.ts` falls back to the system font behind a single
-`ARCHIVO_BUNDLED` flag. To finish the look: add
-`Archivo-Regular/SemiBold/Bold.ttf`, run `npx react-native-asset`, flip the
-flag.
+Archivo is not bundled. `styles/typography.ts` falls back to the system font
+behind a single `ARCHIVO_BUNDLED` flag. Drop
+`Archivo-Regular/SemiBold/Bold.ttf` into `assets/fonts/`, run
+`npx react-native-asset`, flip the flag.
 
-### 7. Backend
+### 7. Lint warnings
 
-Untouched — still the full Phase 1 skeleton.
+Eleven `max-lines-per-function` warnings on screen render bodies and the two
+providers. The natural subcomponents are already extracted; what remains is JSX
+composition, and splitting it further would create components that exist only
+to satisfy the rule.
 
 ### 8. CI
 
-Still disabled in `.github/workflows.disabled/`. The two things that blocked it
-are now gone: there is a `package-lock.json`, and `typecheck`/`lint` pass. The
-remaining blocker is `npm test`, which is red by design until item 4 is done.
+Still staged in `.github/workflows.disabled/`. The old blockers are gone —
+there is a `package-lock.json` and every check passes — but the backend job
+needs a PostgreSQL service container the staged workflow does not define.
+
+---
+
+## Running it
+
+```bash
+# Backend — Python 3.11 or 3.12 only; 3.13+ has no wheels for some pins
+cd backend
+python -m venv .venv && .venv/Scripts/activate
+pip install -r requirements.txt
+docker compose -f docker/docker-compose.yml up -d db
+python -m alembic upgrade head
+uvicorn src.main:app --reload --workers 1
+pytest
+
+# Frontend
+cd frontend
+npm install
+npm test && npm run typecheck && npm run lint
+npm run ios   # or android — see the icon-font note above first
+```
+
+On Windows, `localhost` resolves to `::1` first, where a WSL relay can shadow
+the port Docker published on `0.0.0.0`. The test suite pins itself to
+`127.0.0.1` for that reason; if the API cannot reach the database, try the same.
 
 ---
 

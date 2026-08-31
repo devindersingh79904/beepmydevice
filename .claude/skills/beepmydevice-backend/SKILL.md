@@ -70,3 +70,53 @@ it holds a device token scoped to one `device_id`, not a user token.
 
 Changes anywhere near this path need matching cases in
 `tests/test_alerts.py::TestAlertAuthorization`.
+
+## Running it (Phase 1 is implemented)
+
+```bash
+cd backend
+python -m venv .venv && .venv/Scripts/activate   # Windows; else .venv/bin/activate
+pip install -r requirements.txt
+docker compose -f docker/docker-compose.yml up -d db
+python -m alembic upgrade head
+uvicorn src.main:app --reload --workers 1
+pytest --cov=src --cov-report=term-missing
+```
+
+**Python 3.11 or 3.12 only.** Several pins (`psycopg2-binary`, `pydantic`) have
+no wheels for 3.13+ and fall back to building from source.
+
+**`--workers 1` is not a shortcut.** `WebSocketManager` and the token
+revocation set both live in process memory; a second worker silently breaks
+status updates and logout for a fraction of requests.
+
+The test suite needs a real PostgreSQL — `UUID` and `ARRAY` have no SQLite
+equivalent, and the alert rules are exactly what you do not want to test
+against a different database than production runs. It manages its own
+`<db>_test` database and skips with an explanation when none is reachable.
+
+## Patterns this codebase settled on
+
+**One exception subclass per error code.** A service raises
+`DifferentNetworksError` / `NotNetworkAdminError` / `NoReachableTargetsError`
+(subclasses of `PermissionError` / `ValueError`, so the documented `Raises:`
+still holds) and the route maps each to `ALERT_001` / `ALERT_003` / `ALERT_002`.
+Never branch on an exception's message text.
+
+**Each service owns the credential it issues.** `AuthService` issues user
+tokens; `DeviceService` issues device tokens and both carry a `type` claim, so
+a device token presented where a user token is required is rejected on the
+claim rather than by luck. That claim is the whole mechanism behind "a guest
+cannot send".
+
+**Services flush, they never commit.** `get_db` owns the transaction boundary,
+so a later failure in the same request still rolls back everything before it.
+
+**Wrap every blocking call.** Routes are `async def`; `run_blocking` for
+SQLAlchemy, bcrypt and push SDK calls, `gather_with_limit` for push fan-out.
+A bare call in a handler stalls every concurrent request, and with a heartbeat
+per device every 30 seconds that is not hypothetical.
+
+**A broadcast needs an audience.** `WebSocketManager.broadcast_*` takes the
+network admin's user ID. Omitting it sends to every connected dashboard in the
+process, which means one household's device status reaching another's.

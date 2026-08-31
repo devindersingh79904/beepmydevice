@@ -22,6 +22,27 @@ For iOS you also need the pods:
 cd ios && pod install && cd ..
 ```
 
+### Icon fonts
+
+`react-native-vector-icons` needs its fonts registered natively or **every icon
+renders as a blank box**, with no warning in JS:
+
+- **iOS** — add `Feather.ttf` and `MaterialCommunityIcons.ttf` to `UIAppFonts`
+  in `ios/BeepMyDevice/Info.plist`.
+- **Android** — apply `fonts.gradle` in `android/app/build.gradle`.
+
+## Checks
+
+```bash
+npm run typecheck    # tsc --noEmit
+npm run lint         # 0 errors; the remaining warnings are screen length
+npm test             # 137 tests
+npm run test:coverage
+```
+
+Native modules are mocked in `jest.setup.js`, so no test touches a real device
+API, push provider or network.
+
 ## Prerequisites
 
 - Node.js 18+
@@ -44,11 +65,20 @@ src/
 ├── context/         Auth, Device and Error providers
 ├── navigation/      Root / Auth / App navigators
 ├── utils/           api-client, constants, storage, logger, helpers
-└── styles/          theme, colors, spacing
+└── styles/          theme, colors, spacing, typography
 ```
 
 Dependency direction: `screens/` → `hooks/` → `services/` → `api-client`. A
 screen never imports axios. See [`docs/CODING_STYLE.md`](docs/CODING_STYLE.md).
+
+## Design
+
+Every screen is built from the canvas in [`docs/design/`](docs/design/), which
+is checked in and is the authority for what the UI looks like. The system is
+"Modernist": one neutral ramp plus a single accent, zero corner radius, and two
+border weights that mean different things — 2pt separates sections, 1pt
+separates rows. `styles/` is that canvas translated into React Native; when the
+two disagree, the canvas is right.
 
 ## Technologies
 
