@@ -3,7 +3,7 @@
 Running hand-off list. Update it as items land; it is the file to read first
 when picking the project back up.
 
-Last updated: 2026-08-31, after wiring Firebase for both platforms.
+Last updated: 2026-08-31, after the backend service-account key landed.
 
 ---
 
@@ -17,8 +17,9 @@ CI         off by design; workflows stay staged in .github/workflows.disabled/
 
 Both suites were run, not assumed. The API was booted and served real requests.
 
-**Android is ready to build and test.** iOS is staged but cannot be built from
-Windows. One defect and one credential remain — both below.
+**Android is ready to build and test**, push included: `settings.firebase_enabled`
+reports `True`. iOS is staged but cannot be built from Windows. One defect
+remains, below.
 
 ---
 
@@ -26,45 +27,13 @@ Windows. One defect and one credential remain — both below.
 
 | # | Item | Blocked on |
 |---|---|---|
-| 1 | Backend Firebase service-account key | You — 2 minutes in the console |
-| 2 | `AlertStatus.RECEIVED` is never set | Nothing; parked until push delivers |
-| 3 | Run it on a real device | Item 1 |
+| 1 | `AlertStatus.RECEIVED` is never set | Nothing; parked until push delivers |
+| 2 | Run it on a real device | A phone, and for iOS a Mac |
 
 Nothing else. Everything below this table is either done, or explicitly out of
 Phase 1.
 
-### 1. The service-account key — the last credential
-
-`google-services.json` lets the **app receive**. It does nothing for **sending**:
-the backend signs its own requests to FCM with a service-account key, and
-without it `NotificationService` logs what it would have sent and returns a
-transient failure.
-
-Firebase → ⚙️ Project settings → **Service accounts → Generate new private
-key**, then into `backend/.env`:
-
-```
-FIREBASE_PROJECT_ID=<project_id from the service-account JSON>
-FIREBASE_PRIVATE_KEY_ID=…
-FIREBASE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY-----\n
-
-FIREBASE_CLIENT_EMAIL=…
-```
-
-Keep the `
-` escapes literal — the config layer converts them back. Confirm it
-took:
-
-```bash
-cd backend
-.venv/Scripts/python -c "from src.config import settings; print('firebase:', settings.firebase_enabled)"
-```
-
-This now reports `False` while the `.env` still holds the `your-project-id`
-placeholders, rather than calling them configured and letting every push fail
-at the provider instead.
-
-### 2. `RECEIVED` is never set
+### 1. `RECEIVED` is never set
 
 Alert status is only ever `SENT` or `FAILED`, but `docs/FEATURES.md` lists
 `SENT` / `RECEIVED` / `FAILED`. Closing it needs the alert row written *before*
@@ -84,7 +53,7 @@ delivers, and writing it blind is how the other three defects happened.
 | `frontend/ios/BeepMyDevice/GoogleService-Info.plist` | **In place**, bundle `com.beepmydevice.app`, gitignored |
 | Android Gradle: plugin 4.5.0, BoM 34.18.0, `minSdk 23` | Done |
 | iOS: `[FIRApp configure]` in `AppDelegate.mm`, Podfile guard | Done |
-| Backend service-account key | **Outstanding** — see above |
+| Backend service-account key | **In place** in `backend/.env`, gitignored |
 | APNs `.p8` key | Needs a paid Apple Developer account |
 
 Example files are tracked beside each real one; the real ones never are. Full
@@ -131,7 +100,7 @@ retried. Anything else is retried `PUSH_MAX_RETRIES` times with a widening gap.
 
 ### Still open: `RECEIVED` is never set
 
-Item 2 in the table above.
+Item 1 in the table above.
 
 ---
 
@@ -303,6 +272,21 @@ npm install
 npm test && npm run typecheck && npm run lint
 npm run android      # buildable now; iOS needs macOS + Xcode
 ```
+
+### Moving to a Mac
+
+Four files are gitignored, so a clone does not carry them — copy them across
+privately (`backend/.env` holds the Firebase private key):
+
+```
+backend/.env
+frontend/.env
+frontend/android/app/google-services.json
+frontend/ios/BeepMyDevice/GoogleService-Info.plist
+```
+
+Then set `API_BASE_URL` / `WS_BASE_URL` in `frontend/.env` to the Mac's LAN IP —
+on a phone, `localhost` is the phone. `cd ios && pod install` before `npm run ios`.
 
 On Windows, `localhost` resolves to `::1` first, where a WSL relay can shadow
 the port Docker published on `0.0.0.0`. The test suite pins itself to
