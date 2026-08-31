@@ -3,6 +3,10 @@ module.exports = {
   plugins: [
     // Mirrors the path aliases in tsconfig.json. Both must be kept in sync:
     // TypeScript resolves them at type-check time, Babel at bundle time.
+    //
+    // There is deliberately no '@types' alias: TypeScript reserves that
+    // specifier for DefinitelyTyped packages and rejects any import through it
+    // with TS6137. Domain types are imported as '@/types/...' instead.
     [
       'module-resolver',
       {
@@ -15,7 +19,6 @@ module.exports = {
           '@hooks': './src/hooks',
           '@context': './src/context',
           '@utils': './src/utils',
-          '@types': './src/types',
           '@styles': './src/styles',
         },
       },

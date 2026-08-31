@@ -10,7 +10,7 @@ import {StyleSheet, Text, View} from 'react-native';
 
 import {borderWidth, radius, spacing, typography} from '@styles/theme';
 import {getStatusPalette} from '@utils/helpers';
-import type {DeviceStatus} from '@types/device';
+import type {DeviceStatus} from '@/types/device';
 
 interface StatusBadgeProps {
   status: DeviceStatus;

@@ -11,7 +11,7 @@ import {Animated, StyleSheet, Text} from 'react-native';
 
 import {colors, sizes, spacing, typography} from '@styles/theme';
 import {BANNER_ANIMATION_MS, TOAST_DURATION_MS} from '@utils/constants';
-import type {ToastMessage, ToastTone} from '@types/ui';
+import type {ToastMessage, ToastTone} from '@/types/ui';
 
 interface ToastProps {
   toast: ToastMessage | null;
@@ -32,7 +32,10 @@ const TONE_COLORS: Record<ToastTone, string> = {
 
 const SLIDE_FROM = 1;
 
-export function Toast({toast, onDismiss}: ToastProps): React.JSX.Element | null {
+export function Toast({
+  toast,
+  onDismiss,
+}: ToastProps): React.JSX.Element | null {
   const slide = useRef(new Animated.Value(SLIDE_FROM)).current;
   const toastId = toast?.id ?? null;
 

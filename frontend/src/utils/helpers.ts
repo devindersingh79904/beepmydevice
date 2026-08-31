@@ -1,7 +1,7 @@
 /** Small pure helpers shared across screens and components. */
 
 import {colors} from '@styles/theme';
-import type {Device, DeviceStatus, DeviceType} from '@types/device';
+import type {Device, DeviceStatus, DeviceType} from '@/types/device';
 
 import {
   BATTERY_LOW_THRESHOLD,

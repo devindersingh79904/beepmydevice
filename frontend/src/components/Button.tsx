@@ -19,7 +19,14 @@ import {
 } from 'react-native';
 import type {StyleProp, ViewStyle} from 'react-native';
 
-import {borderWidth, colors, radius, sizes, spacing, typography} from '@styles/theme';
+import {
+  borderWidth,
+  colors,
+  radius,
+  sizes,
+  spacing,
+  typography,
+} from '@styles/theme';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outlineAccent' | 'ghost';
 export type ButtonSize = 'primary' | 'dialog' | 'card';

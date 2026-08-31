@@ -26,7 +26,7 @@ import type {AppStackParamList} from '@/navigation/AppNavigator';
 import {borderWidth, colors, spacing, typography} from '@styles/theme';
 import {APP_VERSION} from '@utils/constants';
 import {getDeviceTypeLabel} from '@utils/helpers';
-import type {Device} from '@types/device';
+import type {Device} from '@/types/device';
 
 type Navigation = NativeStackNavigationProp<AppStackParamList, 'Settings'>;
 
@@ -182,9 +182,7 @@ export function SettingsScreen(): React.JSX.Element {
           <SettingsRow label="Version" value={APP_VERSION} />
           <SettingsRow
             label="Check for updates"
-            onPress={() =>
-              showToast('success', "You're on the latest version")
-            }
+            onPress={() => showToast('success', "You're on the latest version")}
           />
 
           <SettingsSectionHeader>ABOUT</SettingsSectionHeader>

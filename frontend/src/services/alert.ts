@@ -4,8 +4,8 @@ import type {
   AlertLog,
   SendAlertRequest,
   SendAlertResponse,
-} from '@types/device';
-import type {PaginationMeta, PaginationParams} from '@types/api';
+} from '@/types/device';
+import type {PaginationMeta, PaginationParams} from '@/types/api';
 
 /**
  * Beep the target devices.
@@ -15,14 +15,14 @@ import type {PaginationMeta, PaginationParams} from '@types/api';
  * rather than a single pass/fail.
  */
 export async function sendAlert(
-  payload: SendAlertRequest,
+  _payload: SendAlertRequest,
 ): Promise<SendAlertResponse> {
   throw new Error('Not implemented');
 }
 
 /** List past alerts, newest first. */
 export async function getAlertLogs(
-  params?: PaginationParams,
+  _params?: PaginationParams,
 ): Promise<{items: AlertLog[]; pagination: PaginationMeta}> {
   throw new Error('Not implemented');
 }

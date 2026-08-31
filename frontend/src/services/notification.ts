@@ -37,6 +37,6 @@ export function stopListening(): void {
  * The platform can rotate the token at any time; the new value must be pushed
  * to the backend immediately or alerts silently stop arriving.
  */
-export function onTokenRefresh(callback: (token: string) => void): () => void {
+export function onTokenRefresh(_callback: (token: string) => void): () => void {
   throw new Error('Not implemented');
 }

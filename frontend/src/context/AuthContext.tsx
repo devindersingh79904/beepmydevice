@@ -7,7 +7,7 @@
 
 import React, {createContext, type ReactNode} from 'react';
 
-import type {AuthState, LoginRequest, RegisterRequest} from '@types/user';
+import type {AuthState, LoginRequest, RegisterRequest} from '@/types/user';
 
 export interface AuthContextValue extends AuthState {
   login: (payload: LoginRequest) => Promise<void>;
@@ -15,12 +15,16 @@ export interface AuthContextValue extends AuthState {
   logout: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | undefined>(
+  undefined,
+);
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
+export function AuthProvider({
+  children: _children,
+}: AuthProviderProps): React.JSX.Element {
   throw new Error('Not implemented');
 }

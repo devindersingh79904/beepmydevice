@@ -40,7 +40,7 @@ import {
   getDeviceIcon,
   getDeviceTypeLabel,
 } from '@utils/helpers';
-import type {Device} from '@types/device';
+import type {Device} from '@/types/device';
 
 type Navigation = NativeStackNavigationProp<AppStackParamList, 'DeviceDetail'>;
 type Route = RouteProp<AppStackParamList, 'DeviceDetail'>;

@@ -20,7 +20,10 @@ const MAX_INITIALS = 2;
 
 /** "Dev Kim" -> "DK"; "dev@example.com" -> "DE". */
 function toInitials(name: string): string {
-  const words = name.trim().split(/[\s@._-]+/).filter(Boolean);
+  const words = name
+    .trim()
+    .split(/[\s@._-]+/)
+    .filter(Boolean);
   if (words.length === 0) {
     return '?';
   }
@@ -34,7 +37,10 @@ function toInitials(name: string): string {
     .toUpperCase();
 }
 
-export function Avatar({name, size = 'default'}: AvatarProps): React.JSX.Element {
+export function Avatar({
+  name,
+  size = 'default',
+}: AvatarProps): React.JSX.Element {
   const dimension = size === 'large' ? sizes.avatarLarge : sizes.avatar;
 
   return (

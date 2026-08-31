@@ -22,7 +22,6 @@
       "@hooks/*": ["hooks/*"],
       "@context/*": ["context/*"],
       "@utils/*": ["utils/*"],
-      "@types/*": ["types/*"],
       "@styles/*": ["styles/*"]
     }
   },

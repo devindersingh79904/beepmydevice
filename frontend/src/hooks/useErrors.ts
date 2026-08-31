@@ -1,6 +1,6 @@
 /** Access the error context. */
 
-import type {ApiError} from '@types/api';
+import type {ApiError} from '@/types/api';
 
 export interface UseErrorsResult {
   errors: ApiError[];

@@ -10,7 +10,7 @@
  *              the app in a half-authenticated state.
  */
 
-import axios, {type AxiosInstance} from 'axios';
+import type {AxiosInstance} from 'axios';
 
 /** Build the shared axios instance with both interceptors installed. */
 export function createApiClient(): AxiosInstance {

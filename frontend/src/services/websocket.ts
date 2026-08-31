@@ -6,7 +6,7 @@
  * not an error worth showing the user.
  */
 
-import type {DeviceStatusUpdate} from '@types/device';
+import type {DeviceStatusUpdate} from '@/types/device';
 
 /**
  * Open the status socket.
@@ -14,7 +14,7 @@ import type {DeviceStatusUpdate} from '@types/device';
  * The JWT is sent as the first frame after the handshake, since the WebSocket
  * API cannot attach an Authorization header.
  */
-export function connect(token: string): void {
+export function connect(_token: string): void {
   throw new Error('Not implemented');
 }
 
@@ -25,14 +25,14 @@ export function disconnect(): void {
 
 /** Subscribe to status frames. Returns an unsubscribe function. */
 export function onStatusUpdate(
-  callback: (update: DeviceStatusUpdate) => void,
+  _callback: (update: DeviceStatusUpdate) => void,
 ): () => void {
   throw new Error('Not implemented');
 }
 
 /** Subscribe to connection-state changes, for the dashboard indicator. */
 export function onConnectionChange(
-  callback: (connected: boolean) => void,
+  _callback: (connected: boolean) => void,
 ): () => void {
   throw new Error('Not implemented');
 }

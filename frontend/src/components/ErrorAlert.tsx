@@ -14,7 +14,7 @@ import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {colors, sizes, spacing, typography} from '@styles/theme';
 import {BANNER_ANIMATION_MS, ERROR_AUTO_CLOSE_MS} from '@utils/constants';
-import type {ApiError} from '@types/api';
+import type {ApiError} from '@/types/api';
 
 import {Icon} from './Icon';
 

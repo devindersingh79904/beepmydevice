@@ -48,18 +48,28 @@ export function ConfirmDialog({
   onCancel,
   children,
 }: ConfirmDialogProps): React.JSX.Element {
+  // Dismissing mid-send would leave the user unsure whether the action went
+  // through, so both the back gesture and the scrim are inert while busy.
+  const dismiss = (): void => {
+    if (!isBusy) {
+      onCancel();
+    }
+  };
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={isBusy ? () => undefined : onCancel}>
+      onRequestClose={dismiss}>
       <Pressable
         style={styles.scrim}
         accessibilityRole="button"
         accessibilityLabel="Dismiss"
-        onPress={isBusy ? undefined : onCancel}>
-        <Pressable style={[styles.dialog, elevation.dialog]} onPress={() => undefined}>
+        onPress={dismiss}>
+        <Pressable
+          style={[styles.dialog, elevation.dialog]}
+          onPress={() => undefined}>
           <Text style={styles.title}>{title}</Text>
           {message !== undefined ? (
             <Text style={styles.message}>{message}</Text>
@@ -90,7 +100,6 @@ export function ConfirmDialog({
     </Modal>
   );
 }
-
 
 const styles = StyleSheet.create({
   scrim: {

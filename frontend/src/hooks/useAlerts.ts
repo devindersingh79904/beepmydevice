@@ -9,7 +9,7 @@
  * Implementation is Phase 1, like the other hooks in this directory.
  */
 
-import type {AlertDeliveryStatus} from '@types/device';
+import type {AlertDeliveryStatus} from '@/types/device';
 
 export interface UseAlertsResult {
   /** True from the moment a send starts until its response lands. */

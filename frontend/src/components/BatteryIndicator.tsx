@@ -3,7 +3,7 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
-import {colors, sizes, spacing, typography} from '@styles/theme';
+import {sizes, spacing, typography} from '@styles/theme';
 import {getBatteryColor} from '@utils/helpers';
 
 import {Icon} from './Icon';

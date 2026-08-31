@@ -1,6 +1,6 @@
 /** Device list state, kept live by the status WebSocket. */
 
-import type {Device} from '@types/device';
+import type {Device} from '@/types/device';
 
 export interface UseDevicesResult {
   devices: Device[];

@@ -1,14 +1,19 @@
 /** Authentication API calls and token persistence. */
 
-import type {AuthToken, LoginRequest, RegisterRequest, User} from '@types/user';
+import type {
+  AuthToken,
+  LoginRequest,
+  RegisterRequest,
+  User,
+} from '@/types/user';
 
 /** Register an account, persist the returned token, and return the user. */
-export async function register(payload: RegisterRequest): Promise<AuthToken> {
+export async function register(_payload: RegisterRequest): Promise<AuthToken> {
   throw new Error('Not implemented');
 }
 
 /** Log in, persist the returned token, and return it. */
-export async function login(payload: LoginRequest): Promise<AuthToken> {
+export async function login(_payload: LoginRequest): Promise<AuthToken> {
   throw new Error('Not implemented');
 }
 

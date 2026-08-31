@@ -8,7 +8,7 @@
 
 import React, {createContext, type ReactNode} from 'react';
 
-import type {ApiError} from '@types/api';
+import type {ApiError} from '@/types/api';
 
 export interface ErrorContextValue {
   errors: ApiError[];
@@ -17,12 +17,16 @@ export interface ErrorContextValue {
   fieldErrors: Record<string, string>;
 }
 
-export const ErrorContext = createContext<ErrorContextValue | undefined>(undefined);
+export const ErrorContext = createContext<ErrorContextValue | undefined>(
+  undefined,
+);
 
 interface ErrorProviderProps {
   children: ReactNode;
 }
 
-export function ErrorProvider({children}: ErrorProviderProps): React.JSX.Element {
+export function ErrorProvider({
+  children: _children,
+}: ErrorProviderProps): React.JSX.Element {
   throw new Error('Not implemented');
 }

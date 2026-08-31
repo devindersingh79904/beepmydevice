@@ -32,7 +32,11 @@ import {
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const STRENGTH_LABELS = ['', 'Weak', 'Medium', 'Strong'] as const;
-const BAR_INDEXES = [0, 1, 2] as const;
+/** One bar per strength level: [0, 1, 2]. */
+const BAR_INDEXES = Array.from(
+  {length: PASSWORD_STRENGTH_LEVELS},
+  (_unused, index) => index,
+);
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -57,10 +61,7 @@ function StrengthMeter({score}: {score: number}): React.JSX.Element {
         {BAR_INDEXES.map(index => (
           <View
             key={index}
-            style={[
-              styles.bar,
-              index < score ? styles.barOn : styles.barOff,
-            ]}
+            style={[styles.bar, index < score ? styles.barOn : styles.barOff]}
           />
         ))}
       </View>
@@ -84,7 +85,12 @@ export function RegisterScreen(): React.JSX.Element {
   const canSubmit =
     emailValid && score >= PASSWORD_STRENGTH_LEVELS - 1 && matches;
 
-  const emailHint = email.length === 0 ? undefined : emailValid ? '✓ Looks good' : 'Keep typing…';
+  const emailHint =
+    email.length === 0
+      ? undefined
+      : emailValid
+        ? '✓ Looks good'
+        : 'Keep typing…';
   const emailHintTone: FieldHintTone = emailValid ? 'positive' : 'neutral';
 
   const onSubmit = async (): Promise<void> => {

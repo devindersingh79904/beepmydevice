@@ -12,7 +12,7 @@ import {StyleSheet, Text, View} from 'react-native';
 
 import {colors, radius, sizes, spacing, typography} from '@styles/theme';
 import {getDeviceTypeLabel} from '@utils/helpers';
-import type {Device} from '@types/device';
+import type {Device} from '@/types/device';
 
 import {ConfirmDialog} from './ConfirmDialog';
 import {Icon} from './Icon';

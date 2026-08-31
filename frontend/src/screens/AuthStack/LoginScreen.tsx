@@ -149,7 +149,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.s28,
   },
   field: {marginBottom: spacing.s16},
-  forgot: {alignSelf: 'flex-end', marginTop: spacing.s8, marginBottom: spacing.s24},
+  forgot: {
+    alignSelf: 'flex-end',
+    marginTop: spacing.s8,
+    marginBottom: spacing.s24,
+  },
   link: {...typography.smallStrong, color: colors.primaryDarker},
   footer: {
     flexDirection: 'row',

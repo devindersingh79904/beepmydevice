@@ -10,7 +10,7 @@
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
 
 /** Bind the session correlation ID that every subsequent log line carries. */
-export function setCorrelationId(correlationId: string): void {
+export function setCorrelationId(_correlationId: string): void {
   throw new Error('Not implemented');
 }
 
@@ -24,7 +24,7 @@ export function getCorrelationId(): string {
  *
  * @param serviceName - Component name shown in the `[SERVICE]` field.
  */
-export function getLogger(serviceName: string): {
+export function getLogger(_serviceName: string): {
   debug: (message: string, context?: Record<string, unknown>) => void;
   info: (message: string, context?: Record<string, unknown>) => void;
   warn: (message: string, context?: Record<string, unknown>) => void;

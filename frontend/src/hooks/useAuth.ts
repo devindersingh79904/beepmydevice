@@ -1,6 +1,6 @@
 /** Access the authentication context. */
 
-import type {AuthState, LoginRequest, RegisterRequest} from '@types/user';
+import type {AuthState, LoginRequest, RegisterRequest} from '@/types/user';
 
 export interface UseAuthResult extends AuthState {
   login: (payload: LoginRequest) => Promise<void>;

@@ -7,7 +7,7 @@
 
 import React, {createContext, type ReactNode} from 'react';
 
-import type {Device} from '@types/device';
+import type {Device} from '@/types/device';
 
 export interface DeviceContextValue {
   devices: Device[];
@@ -16,12 +16,16 @@ export interface DeviceContextValue {
   sendAlert: (deviceIds: string[]) => Promise<void>;
 }
 
-export const DeviceContext = createContext<DeviceContextValue | undefined>(undefined);
+export const DeviceContext = createContext<DeviceContextValue | undefined>(
+  undefined,
+);
 
 interface DeviceProviderProps {
   children: ReactNode;
 }
 
-export function DeviceProvider({children}: DeviceProviderProps): React.JSX.Element {
+export function DeviceProvider({
+  children: _children,
+}: DeviceProviderProps): React.JSX.Element {
   throw new Error('Not implemented');
 }

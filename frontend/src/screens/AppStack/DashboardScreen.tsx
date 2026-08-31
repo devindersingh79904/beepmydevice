@@ -8,7 +8,14 @@
 import React, {useState} from 'react';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FlatList, Pressable, RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import {
   AlertModal,
@@ -29,7 +36,7 @@ import {useErrors} from '@hooks/useErrors';
 import {useToast} from '@hooks/useToast';
 import type {AppStackParamList} from '@/navigation/AppNavigator';
 import {colors, sizes, spacing, typography} from '@styles/theme';
-import type {Device} from '@types/device';
+import type {Device} from '@/types/device';
 
 const SKELETON_KEYS = ['a', 'b', 'c'] as const;
 

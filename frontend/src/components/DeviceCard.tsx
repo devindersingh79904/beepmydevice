@@ -13,8 +13,12 @@ import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {borderWidth, colors, radius, spacing, typography} from '@styles/theme';
-import {canSendAlertTo, formatRelativeTime, getDeviceTypeLabel} from '@utils/helpers';
-import type {Device} from '@types/device';
+import {
+  canSendAlertTo,
+  formatRelativeTime,
+  getDeviceTypeLabel,
+} from '@utils/helpers';
+import type {Device} from '@/types/device';
 
 import {BatteryIndicator} from './BatteryIndicator';
 import {Button} from './Button';

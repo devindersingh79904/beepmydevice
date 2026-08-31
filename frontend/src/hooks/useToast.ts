@@ -9,7 +9,7 @@
 
 import {useCallback, useState} from 'react';
 
-import type {ToastMessage, ToastTone} from '@types/ui';
+import type {ToastMessage, ToastTone} from '@/types/ui';
 
 export interface UseToastResult {
   toast: ToastMessage | null;
