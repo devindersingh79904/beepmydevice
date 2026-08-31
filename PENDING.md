@@ -44,7 +44,7 @@ Firebase → ⚙️ Project settings → **Service accounts → Generate new pri
 key**, then into `backend/.env`:
 
 ```
-FIREBASE_PROJECT_ID=beepmydevice-40933
+FIREBASE_PROJECT_ID=<project_id from the service-account JSON>
 FIREBASE_PRIVATE_KEY_ID=…
 FIREBASE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY-----\n
 
