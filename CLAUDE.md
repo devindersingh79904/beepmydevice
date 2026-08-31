@@ -12,7 +12,7 @@ product differentiator and the security model.
 **Phase 1 is all but complete.** The backend serves sixteen HTTP endpoints plus
 the status WebSocket; the frontend has every screen from the design canvas
 wired to real services, contexts and hooks, with both native projects generated
-and configured. Backend: 97 tests, ~81% coverage, `mypy` clean, `pylint` 10.00.
+and configured. Backend: 98 tests, ~81% coverage, `mypy` clean, `pylint` 10.00.
 Frontend: 161 tests, coverage thresholds met, `tsc` and `eslint` clean.
 
 Two things remain, both tracked in [`PENDING.md`](PENDING.md): the backend

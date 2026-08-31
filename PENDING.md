@@ -10,7 +10,7 @@ Last updated: 2026-08-31, after wiring Firebase for both platforms.
 ## Status
 
 ```
-backend    97 tests · 81.6% coverage · mypy clean · pylint 10.00/10 · black
+backend    98 tests · 81.6% coverage · mypy clean · pylint 10.00/10 · black
 frontend  161 tests · coverage thresholds met · tsc clean · 0 lint errors
 CI         off by design; workflows stay staged in .github/workflows.disabled/
 ```

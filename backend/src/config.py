@@ -94,15 +94,21 @@ class Settings(BaseSettings):
 
     @staticmethod
     def _configured(*values: str) -> bool:
-        """True only when every value is present and not a placeholder.
+        """True only when every value is present and none is a placeholder.
 
-        `.env.example` ships values like ``your-project-id`` so the file reads
-        as instructions. Copied to `.env` and left alone, a plain truthiness
-        check calls that configured, and the setup verification then reports
-        success while every push fails at the provider with an opaque error.
+        `.env.example` ships values like ``your-project-id`` and
+        ``YOUR_KEY_HERE`` so the file reads as instructions. Copied to `.env`
+        and left alone, a plain truthiness check calls that configured, and the
+        setup verification then reports success while every push fails at the
+        provider with an opaque error.
+
+        Markers are matched anywhere in the value, not just at the start: the
+        private-key placeholder is a real-looking PEM envelope wrapped around
+        ``YOUR_KEY_HERE``, so a prefix check sails straight past it.
         """
+        markers = ("your-", "your_", "yourkey", "xxxxx", "changeme", "placeholder", "<")
         return all(
-            value and not value.lower().startswith(("your-", "xxxxxxxxxx", "<")) for value in values
+            value and not any(marker in value.lower() for marker in markers) for value in values
         )
 
     @property

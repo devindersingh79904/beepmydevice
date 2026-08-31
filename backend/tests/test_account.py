@@ -399,6 +399,20 @@ class TestProviderConfiguration:
         assert Settings._configured("XXXXXXXXXX") is False
         assert Settings._configured("<your-key>") is False
         assert Settings._configured("") is False
+        assert Settings._configured("./secrets/AuthKey_XXXXXXXXXX.p8") is False
+        assert Settings._configured("firebase-adminsdk-xxxxx@p.iam.gserviceaccount.com") is False
+
+    def test_a_placeholder_wrapped_in_a_real_envelope_is_caught(self) -> None:
+        """The private-key placeholder looks like a genuine PEM.
+
+        Only the middle is fake, so a prefix check passes it and the app then
+        reports Firebase as configured while every send fails at the provider.
+        """
+        from src.config import Settings
+
+        pem = "-----BEGIN PRIVATE KEY----- YOUR_KEY_HERE -----END PRIVATE KEY-----"
+
+        assert Settings._configured(pem) is False
 
     def test_real_values_count_as_configured(self) -> None:
         from src.config import Settings
