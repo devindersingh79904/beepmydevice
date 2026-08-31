@@ -43,8 +43,20 @@ cause of "push just doesn't arrive".
    > right package name and re-downloading, not by starting over.
 3. **Add an iOS app** with bundle ID `com.beepmydevice.app`.
    Download `GoogleService-Info.plist` →
-   `frontend/ios/BeepMyDevice/GoogleService-Info.plist`, then add it to the
-   Xcode project (drag into the `BeepMyDevice` group, "Copy items if needed").
+   `frontend/ios/BeepMyDevice/GoogleService-Info.plist`.
+
+   > **Then add it to the Xcode project.** Copying it into the folder is not
+   > enough: a file that is not a member of the target is not in the app
+   > bundle, and `[FIRApp configure]` in `AppDelegate.mm` will raise at launch
+   > because it cannot find it. In Xcode, drag the file into the
+   > `BeepMyDevice` group, tick *Copy items if needed* and the `BeepMyDevice`
+   > target. This is the one step that cannot be done from Windows.
+
+   Firebase's own iOS page describes Swift Package Manager, a SwiftUI `@main
+   struct App` and `@UIApplicationDelegateAdaptor`. **Ignore all of it** — that
+   is for a native SwiftUI app. React Native installs Firebase through
+   CocoaPods autolinking and configures it from the Objective-C++
+   `AppDelegate.mm`, which is already done.
 4. **Project settings → Service accounts → Generate new private key.** From the
    JSON it downloads, fill `backend/.env`:
 
