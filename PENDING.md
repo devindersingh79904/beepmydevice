@@ -3,31 +3,108 @@
 Running hand-off list. Update it as items land; it is the file to read first
 when picking the project back up.
 
-Last updated: 2026-08-31, after an audit against `docs/FEATURES.md`.
+Last updated: 2026-08-31, after wiring Firebase for both platforms.
 
 ---
 
 ## Status
 
 ```
-backend    82 tests · 81% coverage · mypy clean · pylint 10.00/10 · black
+backend    94 tests · 81.6% coverage · mypy clean · pylint 10.00/10 · black
 frontend  161 tests · coverage thresholds met · tsc clean · 0 lint errors
 CI         off by design; workflows stay staged in .github/workflows.disabled/
 ```
 
 Both suites were run, not assumed. The API was booted and served real requests.
 
-**This file previously said push credentials were the only thing outstanding.
-That was wrong.** An audit against the feature specs found four behaviours that
-are specified and have code written for them, but are never called. The green
-suites did not catch them because every test asserts on freshly-written state.
+**Android is ready to build and test.** iOS is staged but cannot be built from
+Windows. One defect and one credential remain — both below.
 
 ---
 
-## Open defects
+## What is actually left in Phase 1
 
-Three of the four found in the audit are fixed, with tests that exercise the
-condition rather than a freshly-written row.
+| # | Item | Blocked on |
+|---|---|---|
+| 1 | Backend Firebase service-account key | You — 2 minutes in the console |
+| 2 | `AlertStatus.RECEIVED` is never set | Nothing; parked until push delivers |
+| 3 | Run it on a real device | Item 1 |
+
+Nothing else. Everything below this table is either done, or explicitly out of
+Phase 1.
+
+### 1. The service-account key — the last credential
+
+`google-services.json` lets the **app receive**. It does nothing for **sending**:
+the backend signs its own requests to FCM with a service-account key, and
+without it `NotificationService` logs what it would have sent and returns a
+transient failure.
+
+Firebase → ⚙️ Project settings → **Service accounts → Generate new private
+key**, then into `backend/.env`:
+
+```
+FIREBASE_PROJECT_ID=beepmydevice-40933
+FIREBASE_PRIVATE_KEY_ID=…
+FIREBASE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY-----\n
+
+FIREBASE_CLIENT_EMAIL=…
+```
+
+Keep the `
+` escapes literal — the config layer converts them back. Confirm it
+took:
+
+```bash
+cd backend
+.venv/Scripts/python -c "from src.config import settings; print('firebase:', settings.firebase_enabled)"
+```
+
+### 2. `RECEIVED` is never set
+
+Alert status is only ever `SENT` or `FAILED`, but `docs/FEATURES.md` lists
+`SENT` / `RECEIVED` / `FAILED`. Closing it needs the alert row written *before*
+the push, so `alert_id` can travel in the payload; a device-authenticated
+acknowledgement endpoint; and the app calling it when a push arrives.
+
+Parked deliberately: it is only meaningfully testable once push actually
+delivers, and writing it blind is how the other three defects happened.
+
+---
+
+## Firebase — where each piece lives
+
+| Piece | Status |
+|---|---|
+| `frontend/android/app/google-services.json` | **In place**, package `com.beepmydevice`, gitignored |
+| `frontend/ios/BeepMyDevice/GoogleService-Info.plist` | **In place**, bundle `com.beepmydevice.app`, gitignored |
+| Android Gradle: plugin 4.5.0, BoM 34.18.0, `minSdk 23` | Done |
+| iOS: `[FIRApp configure]` in `AppDelegate.mm`, Podfile guard | Done |
+| Backend service-account key | **Outstanding** — see above |
+| APNs `.p8` key | Needs a paid Apple Developer account |
+
+Example files are tracked beside each real one; the real ones never are. Full
+walkthrough in **[`docs/PUSH_SETUP.md`](docs/PUSH_SETUP.md)**.
+
+Two iOS steps cannot be done from Windows, and are not Android blockers:
+
+- **Add the plist to the Xcode target.** Copying it into the folder does not put
+  it in the app bundle, and `[FIRApp configure]` raises at launch when it cannot
+  find it.
+- **Enable the Push Notifications capability** in Signing & Capabilities.
+
+Firebase's iOS page describes Swift Package Manager and a SwiftUI `@main struct
+App`. None of it applies here — React Native autolinks Firebase through
+CocoaPods and configures it from `AppDelegate.mm`, which is already done.
+
+---
+
+## Defects found by the audit, and what happened to them
+
+An audit against `docs/FEATURES.md` found four behaviours that were specified,
+had code written for them, and were never called. Three are fixed, each with a
+test that creates the condition rather than asserting on a freshly-written
+row — which is exactly why 82 green tests had missed all of them.
 
 ### Fixed: devices now go OFFLINE
 
@@ -50,24 +127,7 @@ retried. Anything else is retried `PUSH_MAX_RETRIES` times with a widening gap.
 
 ### Still open: `RECEIVED` is never set
 
-Alert status is only ever `SENT` or `FAILED`. Closing it needs the alert row
-written before the push (so `alert_id` can travel in the payload), a new
-device-authenticated acknowledgement endpoint, and the app calling it when a
-push arrives. It is also only meaningfully testable once push actually
-delivers, so it is parked until Firebase is live.
-
----
-
-## Needs you
-
-**Push credentials.** Firebase and APNs keys, and the two credential files they
-come with. Every line of code around them is written and tested; without them
-`NotificationService` logs what it *would* have sent, so alerts still authorize,
-record and report — the target device just does not ring.
-
-Full instructions: **[`docs/PUSH_SETUP.md`](docs/PUSH_SETUP.md)**.
-
----
+Item 2 in the table above.
 
 ---
 
@@ -129,10 +189,13 @@ endpoints instead of local state and placeholders.
 
 ### Never run on a device or simulator
 
-Everything is verified by test suite and by the API serving HTTP. No screen has
-been rendered on real hardware. The native projects are freshly generated, so
-expect the usual first-run friction: `pod install` on macOS, Gradle sync, SDK
-versions. `npm run ios` needs macOS.
+Everything is verified by test suite and by the API serving HTTP. **No screen
+has been rendered on real hardware.** Android can be built now; expect ordinary
+first-run friction on a freshly generated project — Gradle sync, SDK versions,
+runtime permission prompts.
+
+Push does not work on an emulator without Google Play services, so the alert
+path needs two real phones on one WiFi to exercise properly.
 
 ### Windows and macOS are code-ready, not buildable
 
@@ -176,7 +239,7 @@ pytest
 cd frontend
 npm install
 npm test && npm run typecheck && npm run lint
-npm run android      # or ios, on macOS
+npm run android      # buildable now; iOS needs macOS + Xcode
 ```
 
 On Windows, `localhost` resolves to `::1` first, where a WSL relay can shadow
