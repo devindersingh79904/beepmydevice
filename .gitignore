@@ -122,3 +122,7 @@ frontend/android/app/google-services.json
 frontend/ios/BeepMyDevice/GoogleService-Info.plist
 backend/*.p8
 backend/AuthKey_*.p8
+# APPLE_KEY_PATH points here by default. Ignored as a whole directory, not by
+# extension: the Firebase service-account download is a .json, and .json is not
+# otherwise ignored anywhere.
+secrets/
