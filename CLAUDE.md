@@ -9,15 +9,20 @@ it is signed in to. Apple Find My and Google Find My Device group devices by
 **account**; this groups them by **network**. That one substitution is both the
 product differentiator and the security model.
 
-**Phase 1 is complete.** The backend serves fifteen endpoints plus the status
-WebSocket; the frontend has every screen from the design canvas wired to real
-services, contexts and hooks, with both native projects generated and
-configured. Backend: 82 tests, ~81% coverage, `mypy` clean, `pylint` 10.00.
+**Phase 1 is all but complete.** The backend serves sixteen HTTP endpoints plus
+the status WebSocket; the frontend has every screen from the design canvas
+wired to real services, contexts and hooks, with both native projects generated
+and configured. Backend: 97 tests, ~81% coverage, `mypy` clean, `pylint` 10.00.
 Frontend: 161 tests, coverage thresholds met, `tsc` and `eslint` clean.
 
-The only thing outstanding is push **credentials** — see
-[`docs/PUSH_SETUP.md`](docs/PUSH_SETUP.md). Everything around them is built and
-tested; without them `NotificationService` logs what it would have sent.
+Two things remain, both tracked in [`PENDING.md`](PENDING.md): the backend
+Firebase **service-account key**, without which `NotificationService` only logs
+what it would have sent (see [`docs/PUSH_SETUP.md`](docs/PUSH_SETUP.md)); and
+`AlertStatus.RECEIVED`, which is never set because there is no acknowledgement
+endpoint yet.
+
+Nothing here has been run on a phone. Both suites pass and the API serves HTTP,
+which is not the same claim.
 
 Docstrings are still the specification — where one describes behaviour, the
 code is expected to match it, and a change to either should change both.

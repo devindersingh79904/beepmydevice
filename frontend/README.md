@@ -1,7 +1,11 @@
 # BeepMyDevice — Frontend
 
-React Native app in TypeScript. One codebase for iOS, Android, macOS and
-Windows.
+React Native app in TypeScript.
+
+iOS and Android are scaffolded and configured. macOS and Windows are targets
+the code already understands -- `detectDeviceType()` handles all four and the
+API accepts them -- but neither has a native project yet, so the `run-macos`
+and `run-windows` scripts cannot succeed today.
 
 ## Quick Start
 

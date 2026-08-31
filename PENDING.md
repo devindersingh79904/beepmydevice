@@ -135,7 +135,46 @@ Item 2 in the table above.
 
 ---
 
-## What landed in this pass
+## What Phase 1 contains
+
+Cumulative, not a changelog: this is what exists today.
+
+### Backend
+
+Sixteen HTTP endpoints plus the status WebSocket. Auth (register, login, JWT,
+logout via a revocation list, change password, password reset, notification
+preferences), devices (owned and guest registration, network-scoped listing,
+heartbeat, removal), alerts (send with three-stage authorization, history,
+per-device history).
+
+The rules that carry the security model:
+
+- **The WiFi MAC is the boundary.** Alerts run three checks in order — one
+  network, sender is that network's admin, targets reachable — and any failure
+  aborts the whole request. Targets need *not* be owned by the sender; guests
+  have no owner, and alerting them is the point.
+- **A guest holds a device-scoped token** that authorises only its own
+  heartbeat. It cannot list devices, and at `/alerts/send` it gets `ALERT_005`
+  rather than an `AUTH_*` code, so the app can explain rather than bounce it to
+  a login screen.
+- **A heartbeat from a different MAC sets `UNKNOWN`**, not `ONLINE`, and
+  `UNKNOWN` devices are not alertable.
+- **Status is derived on read** from `last_heartbeat`, so a device that stopped
+  speaking stops being reported as reachable.
+- **Every blocking call** — SQLAlchemy, bcrypt, both push SDKs — goes through
+  `run_blocking`; push fan-out through `gather_with_limit`.
+
+### Frontend
+
+All eleven screens from the design canvas, on real services, contexts and
+hooks: splash, login, register, forgot password, dashboard (list, skeleton,
+empty), device detail (owned and guest), settings, profile.
+
+One axios instance owns the envelope — Bearer token and correlation ID on every
+request, `data.content` unwrapped once, `ApiError[]` thrown, and any `AUTH_*`
+code tears the session down. `DeviceProvider` applies WebSocket frames in place
+rather than refetching. `useDeviceRegistration` registers this device and runs
+the 30-second heartbeat.
 
 ### Native projects
 
@@ -153,7 +192,9 @@ Gradle files. Both were generated from the RN 0.73.2 template and configured:
   alert group's identity.
 - Android permissions: fine location, WiFi state, `POST_NOTIFICATIONS`
   (required from Android 13, silently drops notifications without it), vibrate.
-- Google Services Gradle plugin and the Firebase BoM.
+- Firebase: Google Services plugin 4.5.0, BoM 34.18.0, `minSdk 23` (BoM 33
+  dropped API 21), `[FIRApp configure]` in `AppDelegate.mm`, and a
+  `$RNFirebaseAsStaticFramework` guard in the Podfile.
 
 ### Fonts and assets
 
@@ -169,13 +210,16 @@ Gradle files. Both were generated from the RN 0.73.2 template and configured:
 - **Alert sound** generated as `assets/sounds/alert.wav` — an alternating
   two-tone pattern, which reads as "come and find me" rather than as a
   notification — and placed in `res/raw` where react-native-sound looks.
-- **New brand mark** extracted from `docs/design/logo.png` at 1x/2x/3x with a
+- **Brand mark** extracted from `docs/design/logo.png` at 1x/2x/3x with a
   transparent ground, and wired into the splash and sign-in screens via a
   `Logo` component. The export's ground turned out to be exactly `#F3F2F2`, the
   design system's background, so tile and artwork share one colour and no edge
   shows between them.
+- **Launcher icons** generated from that mark: square and round Android mipmaps
+  at all five densities, and a flattened 1024 iOS icon, because iOS rejects an
+  icon with an alpha channel.
 
-### The four missing endpoints
+### The four endpoints the UI needed
 
 | Endpoint | Note |
 |---|---|
@@ -201,12 +245,26 @@ runtime permission prompts.
 Push does not work on an emulator without Google Play services, so the alert
 path needs two real phones on one WiFi to exercise properly.
 
-### Windows and macOS are code-ready, not buildable
+### iOS needs a Mac
 
-`detectDeviceType()` handles all four platforms and `package.json` carries
-`run-macos` / `run-windows`, but only `ios/` and `android/` native projects
-exist. The feature list claims four platforms; two of them cannot be built
-today.
+Two steps cannot be done from Windows, and neither blocks Android:
+
+- **Add `GoogleService-Info.plist` to the Xcode target.** Copying it into the
+  folder does not put it in the app bundle, and `[FIRApp configure]` raises at
+  launch when it cannot find it.
+- **Enable the Push Notifications capability**, and generate the APNs `.p8`
+  key — which needs a paid Apple Developer account.
+
+### Windows and macOS builds
+
+Phase 1 asks for *platform detection* across iOS, Android, Windows and macOS,
+and `detectDeviceType()` does that — so the requirement is met. What does not
+exist is a native macOS or Windows project; only `ios/` and `android/` were
+scaffolded, and `package.json` still carries `run-macos` / `run-windows`
+scripts that cannot succeed.
+
+`frontend/README.md` now says so plainly rather than claiming four buildable
+platforms.
 
 ### Phase 2 limits, unchanged
 
