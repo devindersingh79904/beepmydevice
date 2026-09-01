@@ -9,7 +9,7 @@ import {useState} from 'react';
 import type {FormEvent, ReactElement} from 'react';
 
 import {BrandMark} from '@/components/Icon';
-import {Button, ErrorBanner, Field} from '@/components/primitives';
+import {Button, ErrorBanner, Field, PasswordInput} from '@/components/primitives';
 import {useAuth} from '@/contexts/AuthContext';
 import {useApiErrors} from '@/hooks/useApiErrors';
 import * as authService from '@/services/auth.service';
@@ -44,7 +44,10 @@ export function AuthPage(): ReactElement {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [mismatch, setMismatch] = useState(false);
-  const errors = useApiErrors();
+  // AUTH_* is shown here and nowhere else. On this screen "Invalid email or
+  // password" is the whole feedback; everywhere behind the gate it means the
+  // session ended and the user is already being sent back here.
+  const errors = useApiErrors({showAuthErrors: true});
 
   const copy = COPY[mode];
 
@@ -127,16 +130,13 @@ export function AuthPage(): ReactElement {
 
             {mode !== 'forgot' && (
               <Field label="Password" htmlFor="password" error={errors.fields.password}>
-                <input
+                <PasswordInput
                   id="password"
-                  className={
-                    errors.fields.password !== undefined ? 'input input-invalid' : 'input'
-                  }
-                  type="password"
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   required
+                  invalid={errors.fields.password !== undefined}
                   value={password}
-                  onChange={event => setPassword(event.target.value)}
+                  onChange={setPassword}
                 />
               </Field>
             )}
@@ -147,14 +147,13 @@ export function AuthPage(): ReactElement {
                 htmlFor="confirm"
                 error={mismatch ? 'The two passwords do not match.' : undefined}
               >
-                <input
+                <PasswordInput
                   id="confirm"
-                  className={mismatch ? 'input input-invalid' : 'input'}
-                  type="password"
                   autoComplete="new-password"
                   required
+                  invalid={mismatch}
                   value={confirm}
-                  onChange={event => setConfirm(event.target.value)}
+                  onChange={setConfirm}
                 />
               </Field>
             )}

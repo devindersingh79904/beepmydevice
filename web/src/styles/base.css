@@ -185,6 +185,39 @@ a:hover {
 textarea.input { min-height: 90px; resize: vertical; }
 .select { cursor: pointer; }
 
+/* A field with a control inside its right edge -- currently the password
+   reveal. The input reserves room for it so a long value scrolls under the
+   label rather than behind the button. */
+.input-wrap {
+  position: relative;
+  display: block;
+}
+.input.has-affix {
+  padding-right: 40px;
+}
+.input-reveal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+  cursor: pointer;
+}
+.input-reveal:hover {
+  color: var(--color-accent);
+}
+/* The button sits outside the tab order, so :focus-visible never fires on it;
+   the pressed state is what shows it is doing something. */
+.input-reveal[aria-pressed='true'] {
+  color: var(--color-accent);
+}
+
 /* The field is outlined when its value is what the server rejected. Colour
    never carries it alone -- the message renders under the field as well. */
 .input-invalid,

@@ -244,9 +244,16 @@ describe('TextField', () => {
       <TextField label="Password" value="secret" onChangeText={jest.fn()} secure />,
     );
 
-    expect(screen.getByText('SHOW')).toBeTruthy();
+    // Asserted through the accessibility label and the input's own masking,
+    // not through button text: the control is an icon, and the label is what a
+    // screen reader announces either way. This also keeps the test from
+    // breaking the next time the glyph changes.
+    expect(screen.getByLabelText('Password').props.secureTextEntry).toBe(true);
+
     fireEvent.press(screen.getByLabelText('Show password'));
-    expect(screen.getByText('HIDE')).toBeTruthy();
+
+    expect(screen.getByLabelText('Password').props.secureTextEntry).toBe(false);
+    expect(screen.getByLabelText('Hide password')).toBeTruthy();
   });
 });
 

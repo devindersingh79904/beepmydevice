@@ -20,6 +20,25 @@ import {isValidationError} from '@/types/api';
 import {toDisplayErrors} from '@/utils/api-client';
 import {BANNER_AUTO_DISMISS_MS} from '@/utils/constants';
 
+interface ApiErrorOptions {
+  /**
+   * Show `AUTH_*` errors instead of dropping them.
+   *
+   * Off by default, and on only for the sign-in screen. The distinction is
+   * where the user is standing:
+   *
+   *   Behind the gate, an `AUTH_*` means the session ended. The interceptor
+   *   has already cleared it and the app is navigating to sign-in, so a banner
+   *   would arrive on that screen and read as a failed sign-in attempt the
+   *   user never made.
+   *
+   *   *On* the sign-in screen, `AUTH_001` is the entire feedback — "Invalid
+   *   email or password". Dropping it leaves the form failing in silence,
+   *   which is exactly the dead end this flag exists to prevent.
+   */
+  showAuthErrors?: boolean;
+}
+
 interface ApiErrorState {
   /** Everything that is not a field error — render these in a banner. */
   banner: ApiError[];
@@ -31,7 +50,8 @@ interface ApiErrorState {
   clear: () => void;
 }
 
-export function useApiErrors(): ApiErrorState {
+export function useApiErrors(options: ApiErrorOptions = {}): ApiErrorState {
+  const {showAuthErrors = false} = options;
   const [errors, setErrors] = useState<ApiError[]>([]);
   const timerRef = useRef<number>();
 
@@ -40,13 +60,21 @@ export function useApiErrors(): ApiErrorState {
     setErrors([]);
   }, []);
 
-  const capture = useCallback((error: unknown) => {
-    // AUTH_* is dropped here rather than displayed: the interceptor has
-    // already torn the session down, and the user is on their way to the
-    // sign-in screen. An error banner about it would arrive on that screen
-    // and read as a failed sign-in.
-    setErrors(toDisplayErrors(error).filter(item => !item.code.startsWith('AUTH_')));
-  }, []);
+  const capture = useCallback(
+    (error: unknown) => {
+      const captured = toDisplayErrors(error);
+      setErrors(
+        showAuthErrors
+          ? captured
+          : // Behind the gate an AUTH_* is dropped rather than displayed: the
+            // interceptor has already torn the session down and the user is on
+            // their way to sign-in, where a banner about it would read as a
+            // failed attempt they never made.
+            captured.filter(item => !item.code.startsWith('AUTH_')),
+      );
+    },
+    [showAuthErrors],
+  );
 
   const {banner, fields} = useMemo(() => {
     const bannerErrors: ApiError[] = [];

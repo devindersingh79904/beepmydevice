@@ -30,7 +30,9 @@ export type IconName =
   | 'check'
   | 'x'
   | 'info'
-  | 'trash-2';
+  | 'trash-2'
+  | 'eye'
+  | 'eye-off';
 
 interface IconProps {
   name: IconName;

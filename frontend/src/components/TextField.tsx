@@ -1,16 +1,21 @@
 /**
  * Labelled text input.
  *
- * Owns the whole field: label, box, the SHOW/HIDE affordance on secure fields,
+ * Owns the whole field: label, box, the reveal affordance on secure fields,
  * and the message slot underneath. Screens pass an `error` (which also reddens
  * -- accents -- the border) or a neutral `hint`, never both, so a field can
  * never show a validation failure and a "looks good" message at once.
+ *
+ * The reveal is an eye rather than a SHOW/HIDE label: it reads at a glance in
+ * any language, and it does not change width when toggled, so the input does
+ * not reflow under the user's cursor mid-edit.
  */
 
 import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 import type {KeyboardTypeOptions} from 'react-native';
 
+import {Icon} from '@components/Icon';
 import {
   borderWidth,
   colors,
@@ -27,7 +32,7 @@ interface TextFieldProps {
   value: string;
   onChangeText: (value: string) => void;
   placeholder?: string;
-  /** Renders SHOW/HIDE and masks the value. */
+  /** Masks the value and renders the reveal control. */
   secure?: boolean;
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
@@ -92,10 +97,13 @@ export function TextField({
             accessibilityRole="button"
             accessibilityLabel={isRevealed ? 'Hide password' : 'Show password'}
             onPress={() => setIsRevealed(current => !current)}
+            hitSlop={spacing.s8}
             style={styles.reveal}>
-            <Text style={styles.revealLabel}>
-              {isRevealed ? 'HIDE' : 'SHOW'}
-            </Text>
+            <Icon
+              name={isRevealed ? 'eye-off' : 'eye'}
+              size={sizes.iconSm}
+              color={isRevealed ? colors.primary : colors.textSecondary}
+            />
           </Pressable>
         ) : null}
       </View>
@@ -136,11 +144,8 @@ const styles = StyleSheet.create({
   reveal: {
     paddingHorizontal: spacing.s12,
     justifyContent: 'center',
+    alignItems: 'center',
     alignSelf: 'stretch',
-  },
-  revealLabel: {
-    ...typography.captionStrong,
-    color: colors.textSecondary,
   },
   message: {
     ...typography.captionStrong,

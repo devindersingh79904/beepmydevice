@@ -10,6 +10,7 @@
  * colour or a pixel; those come from the token sheet.
  */
 
+import {useState} from 'react';
 import type {ButtonHTMLAttributes, ReactElement, ReactNode} from 'react';
 
 import {Icon} from '@/components/Icon';
@@ -85,6 +86,72 @@ export function Field({label, htmlFor, error, children}: FieldProps): ReactEleme
           {error}
         </span>
       )}
+    </div>
+  );
+}
+
+/* --- password ----------------------------------------------------------- */
+
+interface PasswordInputProps {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  /** `current-password` on sign-in, `new-password` everywhere else. */
+  autoComplete: 'current-password' | 'new-password';
+  invalid?: boolean;
+  required?: boolean;
+}
+
+/**
+ * A password field with a reveal toggle.
+ *
+ * The toggle is not a convenience. A masked field that rejects what was typed
+ * gives the user no way to tell a typo from a wrong password — they retype it
+ * blind and get the same failure, which is the worst kind of dead end. Letting
+ * them look is how that loop gets broken.
+ *
+ * It is a `button` inside the field rather than a checkbox beside it, so it
+ * cannot be tabbed into on the way from the password to the submit button —
+ * `tabIndex={-1}` keeps it out of the keyboard path while leaving it clickable
+ * and announced.
+ *
+ * State lives here rather than in the parent: nothing outside this component
+ * has any business knowing whether a password is currently visible, and a
+ * form holding that flag would have to reset it on every mode change.
+ */
+export function PasswordInput({
+  id,
+  value,
+  onChange,
+  autoComplete,
+  invalid = false,
+  required = false,
+}: PasswordInputProps): ReactElement {
+  const [revealed, setRevealed] = useState(false);
+
+  return (
+    <div className="input-wrap">
+      <input
+        id={id}
+        className={invalid ? 'input input-invalid has-affix' : 'input has-affix'}
+        type={revealed ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        required={required}
+        value={value}
+        onChange={event => onChange(event.target.value)}
+      />
+      <button
+        type="button"
+        className="input-reveal"
+        onClick={() => setRevealed(current => !current)}
+        aria-label={revealed ? 'Hide password' : 'Show password'}
+        aria-pressed={revealed}
+        // Out of the tab order: Tab should go from the password straight to
+        // Submit, not detour through a display toggle.
+        tabIndex={-1}
+      >
+        <Icon name={revealed ? 'eye-off' : 'eye'} size={ICON_SIZE.medium} />
+      </button>
     </div>
   );
 }
