@@ -42,10 +42,17 @@ cd docker && docker compose up --build  # API + PostgreSQL together
 # Frontend (from frontend/)
 npm start                               # Metro bundler
 npm run ios | npm run android
+npm run web                             # the app itself on web, port 19006
 npm test
 npm test -- hooks.test.ts               # one file
 npm test -- -t "auto-clears errors"     # one test
 npm run typecheck && npm run lint
+
+# Web dashboard (from web/)
+npm run dev                             # port 3000, proxies /api and /ws to :8000
+npm test && npm run typecheck && npm run lint
+npm run build                           # typechecks, then bundles
+docker build -t beepmydevice-web .      # its own Dockerfile; nginx serves dist/
 ```
 
 The backend refuses to start while `SECRET_KEY` is still the `.env.example`
@@ -64,12 +71,26 @@ not being that ask.
 
 ## Architecture
 
-Two deployables, one repo. Both enforce a strict one-directional layering:
+Three deployables, one repo. All enforce a strict one-directional layering:
 
 ```
 backend/    routes/ → services/ → models/      Python 3.11, FastAPI, SQLAlchemy 2.0, PostgreSQL
 frontend/   screens/ → hooks/ → services/ → api-client    React Native 0.73, TypeScript strict
+web/        pages/ → hooks+contexts/ → services/ → api-client   React 18 + Vite, TypeScript strict
 ```
+
+`web/` is the admin dashboard, built from
+`frontend/docs/design/web/Web Dashboard.dc.html`. It speaks the same sixteen
+endpoints and reuses none of the mobile code: a React Native bundle and a Vite
+bundle cannot share modules without dragging Metro's resolution into the web
+build. What must not diverge is guarded instead — `web/src/styles/tokens.test.ts`
+fails if the palette drifts from `frontend/src/styles/colors.ts`.
+
+`frontend/` also builds for the browser (`npm run web`, port 19006) via
+react-native-web and the shims in `frontend/web/shims/`. **That build cannot
+register a device or receive an alert** — no browser exposes a WiFi BSSID, and
+the BSSID is the alert group's identity. It is for reviewing the mobile screens
+on a desktop, not for use. The dashboard is the supported browser experience.
 
 Nothing calls upward. Backend services import no FastAPI symbols and raise
 domain exceptions (`LookupError`, `PermissionError`, `ValueError`) that routes
@@ -114,10 +135,21 @@ not hypothetical. Wrap them in `src.utils.concurrency.run_blocking`; use
 `src.utils.responses.success_response` / `error_response`. `errors` is always an
 array. Pagination goes under `data.pagination`.
 
-**One axios instance.** `frontend/src/utils/api-client.ts`. A second instance or
-a bare `fetch` bypasses the interceptors and sends requests with no auth token
-and no correlation ID. Every path comes from `API_ROUTES` in
-`utils/constants.ts` — no URL strings at call sites.
+**One axios instance per app.** `frontend/src/utils/api-client.ts` and
+`web/src/utils/api-client.ts` are deliberate mirrors, differing only in where
+the token is stored and where configuration comes from.
+
+Within either app there is exactly one. A second instance or a bare `fetch`
+bypasses the interceptors and sends requests with no auth token and no
+correlation ID. Every path comes from `API_ROUTES` in `utils/constants.ts` —
+no URL strings at call sites.
+
+**The design system must not fork.** The palette exists twice — as CSS custom
+properties in `web/src/styles/tokens.css` and as a TypeScript object in
+`frontend/src/styles/colors.ts`, because React Native has no `oklch()` and no
+stylesheet to read variables from. `web/src/styles/tokens.test.ts` reads the
+mobile file and fails the build if any shared value differs. Zero corner radius
+is part of that contract, not a preference.
 
 **Shared constants change in pairs.** `HEARTBEAT_INTERVAL_SECONDS` ↔
 `HEARTBEAT_INTERVAL_MS`, page sizes, and the error-code vocabulary all exist on

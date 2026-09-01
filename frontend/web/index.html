@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- The app is drawn for a phone. Locking the scale keeps a tap from
+         zooming the layout on a touch laptop, which is what the native build
+         does too. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="light" />
+    <meta name="robots" content="noindex" />
+    <title>BeepMyDevice</title>
+    <style>
+      /* react-native-web renders into a div, so the height chain has to be
+         established here — an RN <View style={{flex: 1}}> resolves to nothing
+         if its ancestors have no height. */
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background: #f3f2f2;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Vector-icon fonts are linked into the native projects by
+         react-native.config.js. On web they have to be declared, or every
+         icon renders as a blank box with nothing logged. */
+      @font-face {
+        font-family: 'MaterialCommunityIcons';
+        src: url('/fonts/MaterialCommunityIcons.ttf') format('truetype');
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'Ionicons';
+        src: url('/fonts/Ionicons.ttf') format('truetype');
+        font-display: block;
+      }
+
+      @font-face {
+        font-family: 'Archivo';
+        src: url('/fonts/Archivo-Regular.ttf') format('truetype');
+        font-weight: 400;
+      }
+      @font-face {
+        font-family: 'Archivo';
+        src: url('/fonts/Archivo-SemiBold.ttf') format('truetype');
+        font-weight: 600;
+      }
+      @font-face {
+        font-family: 'Archivo';
+        src: url('/fonts/Archivo-Bold.ttf') format('truetype');
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>BeepMyDevice needs JavaScript enabled.</noscript>
+    <script type="module" src="/index.web.tsx"></script>
+  </body>
+</html>

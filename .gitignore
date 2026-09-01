@@ -126,3 +126,11 @@ backend/AuthKey_*.p8
 # extension: the Firebase service-account download is a .json, and .json is not
 # otherwise ignored anywhere.
 secrets/
+
+# Gradle build cache. Regenerated on every build; never committed.
+frontend/android/.gradle/
+frontend/ios/build/
+
+# Web builds
+web/dist/
+frontend/web/dist/

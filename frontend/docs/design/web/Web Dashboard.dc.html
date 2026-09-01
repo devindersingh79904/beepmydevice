@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/modernist-8a49b73a-67b0-4a73-934d-f237782081ce/styles.css">
+  <script src="_ds/modernist-8a49b73a-67b0-4a73-934d-f237782081ce/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-neutral-200); }
+    :root {
+      --color-accent: oklch(0.55 0.19 255);
+      --color-accent-100: oklch(0.93 0.04 255);
+      --color-accent-200: oklch(0.87 0.07 255);
+      --color-accent-300: oklch(0.78 0.11 255);
+      --color-accent-400: oklch(0.66 0.16 255);
+      --color-accent-500: oklch(0.55 0.19 255);
+      --color-accent-600: oklch(0.48 0.17 255);
+      --color-accent-700: oklch(0.42 0.15 255);
+      --color-accent-800: oklch(0.35 0.12 255);
+      --color-accent-900: oklch(0.28 0.09 255);
+      --color-accent-2: var(--color-accent);
+      --color-accent-2-100: var(--color-accent-100);
+      --color-accent-2-300: var(--color-accent-300);
+      --color-accent-2-500: var(--color-accent-500);
+      --color-accent-2-700: var(--color-accent-700);
+      --color-accent-2-900: var(--color-accent-900);
+    }
+    a { color: var(--color-accent-700); text-decoration: none; }
+    a:hover { color: var(--color-accent); text-decoration: underline; }
+    @keyframes wd-slidein { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    @keyframes wd-fadein { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</helmet>
+<div style="display: flex; width: 100%; min-height: 100vh; font-family: var(--font-body); color: var(--color-text); background: var(--color-neutral-200);">
+
+  <!-- AUTH (login / register) -->
+  <sc-if value="{{ isAuth }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Auth" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px 24px;">
+      <div class="card elev-md" style="width: 100%; max-width: 420px; padding: 32px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 24px;">
+          <svg width="32" height="32" viewBox="0 0 120 120"><rect x="22" y="30" width="40" height="64" fill="var(--color-text)"></rect><rect x="30" y="40" width="24" height="36" fill="var(--color-bg)"></rect><path d="M72 46 A18 18 0 0 1 72 78" fill="none" stroke="var(--color-accent)" stroke-width="9"></path><path d="M84 34 A34 34 0 0 1 84 90" fill="none" stroke="var(--color-accent)" stroke-width="9" opacity="0.45"></path></svg>
+          <span style="font-family: var(--font-heading); font-weight: 700; font-size: 18px;">BeepMyDevice</span>
+        </div>
+        <div style="font-family: var(--font-heading); font-size: 26px; font-weight: 700;">{{ authTitle }}</div>
+        <div style="font-size: 14px; color: var(--color-neutral-600); margin: 4px 0 20px;">{{ authSub }}</div>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="field"><label>Email</label><input class="input" type="email" placeholder="you@example.com"></div>
+          <div class="field"><label>Password</label><input class="input" type="password" placeholder="••••••••"></div>
+          <sc-if value="{{ isRegisterView }}" hint-placeholder-val="{{ false }}">
+            <div class="field"><label>Confirm password</label><input class="input" type="password" placeholder="••••••••"></div>
+          </sc-if>
+          <sc-if value="{{ isLoginView }}" hint-placeholder-val="{{ true }}">
+            <a href="#" onClick="{{ noop }}" style="align-self: flex-end; font-size: 13px;">Forgot password?</a>
+          </sc-if>
+          <button class="btn btn-primary btn-block" style="height: 48px; justify-content: center; text-align: center;" onClick="{{ authSubmit }}">{{ authCta }}</button>
+          <div style="font-size: 14px; color: var(--color-neutral-600); text-align: center;">{{ authSwapText }} <a href="#" onClick="{{ authSwap }}">{{ authSwapLink }}</a></div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+  <!-- SIDEBAR -->
+  <div style="width: 260px; flex: 0 0 260px; background: var(--color-bg); border-right: 2px solid var(--color-divider); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;">
+    <div style="display: flex; align-items: center; gap: 10px; height: 60px; padding: 0 16px; border-bottom: 2px solid var(--color-divider);">
+      <svg width="28" height="28" viewBox="0 0 120 120"><rect x="22" y="30" width="40" height="64" fill="var(--color-text)"></rect><rect x="30" y="40" width="24" height="36" fill="var(--color-bg)"></rect><path d="M72 46 A18 18 0 0 1 72 78" fill="none" stroke="var(--color-accent)" stroke-width="9"></path><path d="M84 34 A34 34 0 0 1 84 90" fill="none" stroke="var(--color-accent)" stroke-width="9" opacity="0.45"></path></svg>
+      <span style="font-family: var(--font-heading); font-weight: 700; font-size: 16px;">BeepMyDevice</span>
+    </div>
+    <div style="display: flex; flex-direction: column; padding: 12px 0; flex: 1;">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+        <div onClick="{{ n.go }}" style="display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 44px; cursor: pointer; font-size: 15px; font-weight: {{ n.weight }}; color: {{ n.fg }}; background: {{ n.bg }}; border-left: 3px solid {{ n.edge }};" style-hover="background: var(--color-neutral-100);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="{{ n.icon }}"></path></svg>
+          <span>{{ n.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-top: 2px solid var(--color-divider);">
+      <div style="width: 36px; height: 36px; background: var(--color-text); color: var(--color-bg); display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-weight: 700; font-size: 13px;">JD</div>
+      <div style="min-width: 0;">
+        <div style="font-size: 14px; font-weight: 600;">John Doe</div>
+        <div style="font-size: 12px; color: var(--color-neutral-600); overflow: hidden; text-overflow: ellipsis;">john@example.com</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN COLUMN -->
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+    <!-- HEADER -->
+    <div style="display: flex; align-items: center; gap: 16px; height: 60px; padding: 0 24px; background: var(--color-bg); border-bottom: 2px solid var(--color-divider); position: sticky; top: 0; z-index: 20;">
+      <div style="font-family: var(--font-heading); font-size: 20px; font-weight: 700; flex: 1;">{{ viewTitle }}</div>
+      <button class="btn btn-primary" onClick="{{ openSendAlert }}">Send alert</button>
+      <button class="btn btn-ghost" onClick="{{ doLogout }}">Log out</button>
+      <div style="width: 36px; height: 36px; background: var(--color-accent); color: var(--color-bg); display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-weight: 700; font-size: 13px;">JD</div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Dashboard" style="padding: 24px; display: flex; flex-direction: column; gap: 24px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <div class="card" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">ACTIVE DEVICES</div>
+              <div style="font-family: var(--font-heading); font-size: 40px; font-weight: 700; color: var(--color-accent-700); line-height: 1.1; margin-top: 8px;">{{ onlineCount }}</div>
+              <div style="font-size: 13px; color: var(--color-neutral-600);">Online now</div>
+            </div>
+            <div style="width: 40px; height: 40px; background: var(--color-accent-100); display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-700)" stroke-width="2"><rect x="7" y="2" width="10" height="20"></rect><path d="M11 18h2"></path></svg></div>
+          </div>
+          <div class="card" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">ALERTS TODAY</div>
+              <div style="font-family: var(--font-heading); font-size: 40px; font-weight: 700; line-height: 1.1; margin-top: 8px;">5</div>
+              <div style="font-size: 13px; color: var(--color-neutral-600);">Sent today</div>
+            </div>
+            <div style="width: 40px; height: 40px; background: var(--color-neutral-200); display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
+          </div>
+          <div class="card" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">WIFI STATUS</div>
+              <div style="font-family: var(--font-heading); font-size: 24px; font-weight: 700; color: var(--color-accent-700); line-height: 1.2; margin-top: 12px;">Connected</div>
+              <div style="font-size: 13px; color: var(--color-neutral-600);">Home Network · Strong signal</div>
+            </div>
+            <div style="width: 40px; height: 40px; background: var(--color-accent-100); display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-700)" stroke-width="2"><path d="M5 12.86a10 10 0 0 1 14 0"></path><path d="M8.5 16.43a5 5 0 0 1 7 0"></path><circle cx="12" cy="20" r="1"></circle></svg></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 0;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 2px solid var(--color-divider);">
+            <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 700;">Your devices</div>
+            <a href="#" onClick="{{ goDevices }}" style="font-size: 14px;">View all</a>
+          </div>
+          <table class="table" style="width: 100%;">
+            <thead><tr><th>Device name</th><th>Type</th><th>Status</th><th>Battery</th><th>Last seen</th><th style="text-align: right;">Actions</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ deviceRows }}" as="d" hint-placeholder-count="4">
+                <tr>
+                  <td style="font-weight: 600;">{{ d.name }}</td>
+                  <td style="color: var(--color-neutral-600);">{{ d.type }}</td>
+                  <td><span style="white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; color: {{ d.statusFg }}; background: {{ d.statusBg }}; border: 1px solid {{ d.statusBorder }};"><span>●</span><span>{{ d.statusLabel }}</span></span></td>
+                  <td>{{ d.batteryPct }}</td>
+                  <td style="color: var(--color-neutral-600);">{{ d.lastSeen }}</td>
+                  <td style="text-align: right; white-space: nowrap;">
+                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;" disabled="{{ d.alertDisabled }}" onClick="{{ d.openAlert }}">Send alert</button>
+                    <button class="btn btn-ghost" style="padding: 6px 12px; font-size: 13px;" onClick="{{ goDevices }}">Details</button>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 700; margin-bottom: 16px;">Alert activity (last 7 days)</div>
+          <svg viewBox="0 0 560 170" style="width: 100%; height: auto; display: block;">
+            <line x1="20" y1="130" x2="540" y2="130" stroke="var(--color-neutral-400)" stroke-width="2"></line>
+            <line x1="20" y1="75" x2="540" y2="75" stroke="var(--color-neutral-300)" stroke-width="1"></line>
+            <line x1="20" y1="20" x2="540" y2="20" stroke="var(--color-neutral-300)" stroke-width="1"></line>
+            <polyline points="{{ chartPoints }}" fill="none" stroke="var(--color-accent)" stroke-width="3"></polyline>
+            <sc-for list="{{ chartDots }}" as="p" hint-placeholder-count="7">
+              <circle cx="{{ p.x }}" cy="{{ p.y }}" r="4" fill="var(--color-accent)"></circle>
+            </sc-for>
+            <sc-for list="{{ chartDays }}" as="p" hint-placeholder-count="7">
+              <text x="{{ p.x }}" y="152" text-anchor="middle" font-size="12" fill="var(--color-neutral-600)" font-family="Archivo, sans-serif">{{ p.label }}</text>
+            </sc-for>
+            <text x="12" y="134" text-anchor="end" font-size="11" fill="var(--color-neutral-500)" font-family="Archivo, sans-serif">0</text>
+            <text x="12" y="79" text-anchor="end" font-size="11" fill="var(--color-neutral-500)" font-family="Archivo, sans-serif">4</text>
+            <text x="12" y="24" text-anchor="end" font-size="11" fill="var(--color-neutral-500)" font-family="Archivo, sans-serif">8</text>
+          </svg>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- DEVICES -->
+    <sc-if value="{{ isDevices }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Devices" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <input class="input" style="flex: 1; min-width: 240px;" placeholder="Search devices..." value="{{ q }}" onChange="{{ setQ }}">
+          <select class="input" style="width: 160px;" value="{{ statusFilter }}" onChange="{{ setStatusFilter }}">
+            <option>All status</option><option>Online</option><option>Offline</option>
+          </select>
+          <select class="input" style="width: 180px;" value="{{ sortBy }}" onChange="{{ setSortBy }}">
+            <option>Sort by name</option><option>Sort by status</option><option>Sort by battery</option>
+          </select>
+        </div>
+        <sc-if value="{{ noDeviceResults }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="display: flex; flex-direction: column; align-items: center; padding: 64px 24px; gap: 8px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-neutral-400)" stroke-width="1.5"><rect x="7" y="2" width="10" height="20"></rect><path d="M11 18h2"></path></svg>
+            <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700;">No devices found</div>
+            <div style="font-size: 14px; color: var(--color-neutral-600);">Register your first device using the mobile app</div>
+            <button class="btn btn-secondary" style="margin-top: 8px;" onClick="{{ clearFilters }}">Clear filters</button>
+          </div>
+        </sc-if>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+          <sc-for list="{{ deviceCards }}" as="d" hint-placeholder-count="4">
+            <div class="card" style="padding: 0;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--color-neutral-300);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20"></rect><path d="M11 18h2"></path></svg>
+                <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 700; flex: 1;">{{ d.name }}</div>
+                <sc-if value="{{ d.guest }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; color: var(--color-accent-800); background: var(--color-accent-100); border: 1px solid var(--color-accent-300);">GUEST</span>
+                </sc-if>
+                <button class="btn btn-icon btn-ghost" onClick="{{ noop }}" style="font-weight: 700;">···</button>
+              </div>
+              <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; font-size: 14px;">
+                <div style="display: flex; justify-content: space-between;"><span style="color: var(--color-neutral-600);">Status</span><span style="white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; color: {{ d.statusFg }}; background: {{ d.statusBg }}; border: 1px solid {{ d.statusBorder }};"><span>●</span><span>{{ d.statusLabel }}</span></span></div>
+                <div style="display: flex; align-items: center; gap: 10px;"><span style="color: var(--color-neutral-600); width: 60px;">Battery</span><div style="flex: 1; height: 8px; background: var(--color-neutral-300);"><div style="height: 8px; background: var(--color-accent); width: {{ d.batteryPct }};"></div></div><span style="font-weight: 600; width: 36px; text-align: right;">{{ d.batteryPct }}</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="color: var(--color-neutral-600);">Last heartbeat</span><span>{{ d.lastSeen }}</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="color: var(--color-neutral-600);">WiFi MAC</span><span style="font-variant-numeric: tabular-nums;">{{ d.mac }}</span></div>
+              </div>
+              <div style="display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--color-neutral-300);">
+                <button class="btn btn-primary" style="padding: 8px 14px; font-size: 13px;" disabled="{{ d.alertDisabled }}" onClick="{{ d.openAlert }}">Send alert</button>
+                <button class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;" onClick="{{ noop }}">Details</button>
+                <div style="flex: 1;"></div>
+                <button class="btn btn-ghost" style="padding: 8px 14px; font-size: 13px; color: var(--color-accent-700);" onClick="{{ d.remove }}">Remove</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ACTIVITY -->
+    <sc-if value="{{ isActivity }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Activity" style="padding: 24px; display: flex; flex-direction: column; gap: 24px;">
+        <div class="card">
+          <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 700; margin-bottom: 16px;">Alert activity (last 7 days)</div>
+          <svg viewBox="0 0 560 170" style="width: 100%; height: auto; display: block;">
+            <line x1="20" y1="130" x2="540" y2="130" stroke="var(--color-neutral-400)" stroke-width="2"></line>
+            <line x1="20" y1="75" x2="540" y2="75" stroke="var(--color-neutral-300)" stroke-width="1"></line>
+            <line x1="20" y1="20" x2="540" y2="20" stroke="var(--color-neutral-300)" stroke-width="1"></line>
+            <polyline points="{{ chartPoints }}" fill="none" stroke="var(--color-accent)" stroke-width="3"></polyline>
+            <sc-for list="{{ chartDots }}" as="p" hint-placeholder-count="7">
+              <circle cx="{{ p.x }}" cy="{{ p.y }}" r="4" fill="var(--color-accent)"></circle>
+            </sc-for>
+            <sc-for list="{{ chartDays }}" as="p" hint-placeholder-count="7">
+              <text x="{{ p.x }}" y="152" text-anchor="middle" font-size="12" fill="var(--color-neutral-600)" font-family="Archivo, sans-serif">{{ p.label }}</text>
+            </sc-for>
+            <text x="12" y="134" text-anchor="end" font-size="11" fill="var(--color-neutral-500)" font-family="Archivo, sans-serif">0</text>
+            <text x="12" y="79" text-anchor="end" font-size="11" fill="var(--color-neutral-500)" font-family="Archivo, sans-serif">4</text>
+            <text x="12" y="24" text-anchor="end" font-size="11" fill="var(--color-neutral-500)" font-family="Archivo, sans-serif">8</text>
+          </svg>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <div class="card">
+            <div style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">ALERTS THIS WEEK</div>
+            <div style="font-family: var(--font-heading); font-size: 40px; font-weight: 700; color: var(--color-accent-700); line-height: 1.1; margin-top: 8px;">32</div>
+          </div>
+          <div class="card">
+            <div style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">DELIVERY RATE</div>
+            <div style="font-family: var(--font-heading); font-size: 40px; font-weight: 700; line-height: 1.1; margin-top: 8px;">97%</div>
+          </div>
+          <div class="card">
+            <div style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">MOST ALERTED</div>
+            <div style="font-family: var(--font-heading); font-size: 24px; font-weight: 700; line-height: 1.2; margin-top: 14px;">iPhone 15 Pro</div>
+            <div style="font-size: 13px; color: var(--color-neutral-600);">14 alerts</div>
+          </div>
+        </div>
+        <div class="card" style="padding: 0;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 2px solid var(--color-divider);">
+            <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 700;">Recent activity</div>
+            <a href="#" onClick="{{ goAlerts }}" style="font-size: 14px;">Full alert history</a>
+          </div>
+          <sc-for list="{{ activityFeed }}" as="a" hint-placeholder-count="5">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--color-neutral-300); font-size: 14px;">
+              <span style="width: 8px; height: 8px; background: {{ a.dot }}; flex: 0 0 8px;"></span>
+              <span style="flex: 1;">{{ a.text }}</span>
+              <span style="color: var(--color-neutral-600); font-size: 12px; white-space: nowrap;">{{ a.ts }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ALERTS -->
+    <sc-if value="{{ isAlerts }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Alerts" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <select class="input" style="width: 160px;"><option>Last 7 days</option><option>Last 30 days</option><option>All time</option></select>
+          <select class="input" style="width: 160px;"><option>All devices</option><option>iPhone 15 Pro</option><option>Samsung S24 Ultra</option><option>Pixel 8</option></select>
+          <select class="input" style="width: 160px;"><option>All status</option><option>Sent</option><option>Partial</option><option>Failed</option></select>
+        </div>
+        <div class="card" style="padding: 0;">
+          <table class="table" style="width: 100%;">
+            <thead><tr><th>Timestamp</th><th>Sent by</th><th>Device</th><th>Type</th><th>Status</th><th style="text-align: right;">Action</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ alertRows }}" as="a" hint-placeholder-count="3">
+                <tr>
+                  <td style="white-space: nowrap;">{{ a.ts }}</td>
+                  <td>You</td>
+                  <td>{{ a.target }}</td>
+                  <td style="color: var(--color-neutral-600);">{{ a.type }}</td>
+                  <td><span style="white-space: nowrap; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; color: {{ a.stFg }}; background: {{ a.stBg }}; border: 1px solid {{ a.stBorder }};">{{ a.status }}</span></td>
+                  <td style="text-align: right;"><button class="btn btn-ghost" style="padding: 6px 12px; font-size: 13px;" onClick="{{ a.view }}">View</button></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- SETTINGS -->
+    <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Settings" style="padding: 24px; display: flex; gap: 24px; align-items: flex-start;">
+        <div style="width: 200px; flex: 0 0 200px; display: flex; flex-direction: column; background: var(--color-bg); border: 1px solid var(--color-neutral-300);">
+          <sc-for list="{{ settingsTabs }}" as="t" hint-placeholder-count="4">
+            <div onClick="{{ t.go }}" style="padding: 12px 16px; cursor: pointer; font-size: 15px; font-weight: {{ t.weight }}; color: {{ t.fg }}; background: {{ t.bg }}; border-left: 3px solid {{ t.edge }}; border-bottom: 1px solid var(--color-neutral-300);" style-hover="background: var(--color-neutral-100);">{{ t.label }}</div>
+          </sc-for>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+
+          <sc-if value="{{ tabAccount }}" hint-placeholder-val="{{ true }}">
+            <div class="card">
+              <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 700; margin-bottom: 16px;">Profile</div>
+              <div style="display: grid; grid-template-columns: 200px 1fr; gap: 24px;">
+                <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start;">
+                  <div style="width: 100px; height: 100px; background: var(--color-text); color: var(--color-bg); display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-weight: 700; font-size: 32px;">JD</div>
+                  <button class="btn btn-secondary" style="font-size: 13px;" onClick="{{ noop }}">Upload photo</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                  <div class="field"><label>Name</label><input class="input" value="John Doe" onChange="{{ noop }}"></div>
+                  <div class="field"><label>Email</label><input class="input" value="john@example.com" readOnly="{{ true }}" style="color: var(--color-neutral-600);"></div>
+                  <div style="font-size: 13px; color: var(--color-accent-700); font-weight: 600;">✓ Email verified · <a href="#" onClick="{{ noop }}">Resend</a></div>
+                  <div style="display: flex; gap: 12px; font-size: 13px; color: var(--color-neutral-600);"><span>Created: Aug 31, 2026</span><span>Admin since: Aug 31, 2026</span></div>
+                  <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary" onClick="{{ saveProfile }}">Save</button>
+                    <button class="btn btn-secondary" onClick="{{ noop }}">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 700; margin-bottom: 12px;">Password</div>
+              <button class="btn btn-secondary" onClick="{{ openPw }}">Change password</button>
+            </div>
+            <div class="card" style="border: 1px solid var(--color-accent-300);">
+              <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 700; color: var(--color-accent-700); margin-bottom: 8px;">Danger zone</div>
+              <div style="font-size: 13px; color: var(--color-neutral-600); margin-bottom: 12px;">This action cannot be undone.</div>
+              <button class="btn" style="background: transparent; border: 1px solid var(--color-accent-700); color: var(--color-accent-700);" style-hover="background: var(--color-accent-100);" onClick="{{ noop }}">Delete account</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabDevices }}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="padding: 0;">
+              <div style="padding: 16px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-size: 16px; font-weight: 700;">Manage guests</div>
+              <sc-if value="{{ noGuests }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 24px 16px; font-size: 14px; color: var(--color-neutral-600);">No guest devices on this network</div>
+              </sc-if>
+              <sc-for list="{{ guestList }}" as="g" hint-placeholder-count="2">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--color-neutral-300);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20"></rect><path d="M11 18h2"></path></svg>
+                  <div style="flex: 1;">
+                    <div style="font-size: 15px; font-weight: 600;">{{ g.name }}</div>
+                    <div style="font-size: 12px; color: var(--color-neutral-600);">{{ g.type }} · {{ g.mac }}</div>
+                  </div>
+                  <button class="btn btn-ghost" style="color: var(--color-accent-700); font-size: 13px;" onClick="{{ g.remove }}">Remove</button>
+                </div>
+              </sc-for>
+            </div>
+            <div class="card" style="padding: 0;">
+              <div style="padding: 16px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-size: 16px; font-weight: 700;">WiFi networks</div>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.86a10 10 0 0 1 14 0"></path><path d="M8.5 16.43a5 5 0 0 1 7 0"></path><circle cx="12" cy="20" r="1"></circle></svg>
+                <div style="flex: 1;">
+                  <div style="font-size: 15px; font-weight: 600;">Home Network</div>
+                  <div style="font-size: 12px; color: var(--color-neutral-600);">Router MAC: 10:20:30:40:50:60</div>
+                </div>
+                <button class="btn btn-ghost" style="font-size: 13px;" onClick="{{ noop }}">Rename</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabNotifications }}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="padding: 0;">
+              <sc-for list="{{ notifToggles }}" as="t" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--color-neutral-300);">
+                  <div style="flex: 1;">
+                    <div style="font-size: 15px; font-weight: 600;">{{ t.label }}</div>
+                    <div style="font-size: 12px; color: var(--color-neutral-600);">{{ t.sub }}</div>
+                  </div>
+                  <div onClick="{{ t.toggle }}" style="width: 40px; height: 22px; background: {{ t.trackBg }}; position: relative; cursor: pointer; flex: 0 0 40px;">
+                    <div style="position: absolute; top: 2px; left: {{ t.knobLeft }}; width: 18px; height: 18px; background: var(--color-bg); transition: left 150ms ease;"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabAbout }}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="padding: 0;">
+              <div style="display: flex; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--color-neutral-300); font-size: 15px;"><span>Version</span><span style="color: var(--color-neutral-600);">1.0.0 (web)</span></div>
+              <div style="display: flex; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--color-neutral-300); font-size: 15px;"><span>Terms of service</span><a href="#" onClick="{{ noop }}">View</a></div>
+              <div style="display: flex; justify-content: space-between; padding: 14px 16px; font-size: 15px;"><span>Privacy policy</span><a href="#" onClick="{{ noop }}">View</a></div>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  </sc-if>
+
+  <!-- ALERT DETAIL SLIDE-OUT -->
+  <sc-if value="{{ alertDetailOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; background: rgba(32,30,29,0.4); z-index: 60; animation: wd-fadein 150ms ease;" onClick="{{ closeAlertDetail }}"></div>
+    <div class="elev-lg" style="position: fixed; top: 0; right: 0; bottom: 0; width: 380px; background: var(--color-bg); border-left: 2px solid var(--color-divider); z-index: 61; animation: wd-slidein 250ms ease-out; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 2px solid var(--color-divider);">
+        <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700;">Alert details</div>
+        <button class="btn btn-icon btn-ghost" onClick="{{ closeAlertDetail }}">✕</button>
+      </div>
+      <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+        <div style="display: flex; justify-content: space-between;"><span style="color: var(--color-neutral-600);">Alert ID</span><span style="font-variant-numeric: tabular-nums;">{{ alertDetailId }}</span></div>
+        <div style="display: flex; justify-content: space-between;"><span style="color: var(--color-neutral-600);">Timestamp</span><span>{{ alertDetailTs }}</span></div>
+        <div class="hr"></div>
+        <div style="font-weight: 700; font-size: 13px; letter-spacing: 1px; color: var(--color-neutral-600);">SENT TO</div>
+        <sc-for list="{{ alertDetailDevices }}" as="d" hint-placeholder-count="2">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--color-neutral-300);">
+            <span>{{ d.name }}</span>
+            <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; color: {{ d.stFg }}; background: {{ d.stBg }}; border: 1px solid {{ d.stBorder }};">{{ d.status }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- SEND ALERT MODAL -->
+  <sc-if value="{{ saOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; background: rgba(32,30,29,0.5); display: flex; align-items: center; justify-content: center; z-index: 70;" onClick="{{ closeSendAlert }}">
+      <div class="elev-lg" onClick="{{ stopProp }}" style="width: 90%; max-width: 440px; background: var(--color-bg); border-top: 4px solid var(--color-accent); padding: 20px; animation: wd-fadein 200ms ease;">
+        <div style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">Send alert</div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--color-divider);">
+          <div onClick="{{ saToggleAll }}" style="width: 18px; height: 18px; border: 2px solid var(--color-text); background: {{ saAllBg }}; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--color-bg); font-size: 12px; font-weight: 700;">{{ saAllMark }}</div>
+          <span style="font-size: 14px; font-weight: 600;">Select all</span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <sc-for list="{{ saDevices }}" as="d" hint-placeholder-count="4">
+            <div onClick="{{ d.toggle }}" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--color-neutral-300); cursor: {{ d.cursor }}; opacity: {{ d.opacity }};">
+              <div style="width: 18px; height: 18px; border: 2px solid var(--color-text); background: {{ d.boxBg }}; display: flex; align-items: center; justify-content: center; color: var(--color-bg); font-size: 12px; font-weight: 700;">{{ d.mark }}</div>
+              <span style="flex: 1; font-size: 14px;">{{ d.name }}</span>
+              <span style="font-size: 12px; color: var(--color-neutral-600);">{{ d.meta }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 24px; margin-top: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div onClick="{{ saToggleSound }}" style="width: 40px; height: 22px; background: {{ saSoundBg }}; position: relative; cursor: pointer;"><div style="position: absolute; top: 2px; left: {{ saSoundLeft }}; width: 18px; height: 18px; background: var(--color-bg); transition: left 150ms ease;"></div></div>
+            <span style="font-size: 14px;">Sound</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div onClick="{{ saToggleVib }}" style="width: 40px; height: 22px; background: {{ saVibBg }}; position: relative; cursor: pointer;"><div style="position: absolute; top: 2px; left: {{ saVibLeft }}; width: 18px; height: 18px; background: var(--color-bg); transition: left 150ms ease;"></div></div>
+            <span style="font-size: 14px;">Vibration</span>
+          </div>
+        </div>
+        <div class="field" style="margin-top: 14px;"><label>Custom message (optional)</label><input class="input" placeholder="e.g. Where are you?" value="{{ saMsg }}" onChange="{{ setSaMsg }}"></div>
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <button class="btn btn-secondary btn-block" style="height: 44px;" disabled="{{ saSending }}" onClick="{{ closeSendAlert }}">Cancel</button>
+          <button class="btn btn-primary btn-block" style="height: 44px;" disabled="{{ saSendDisabled }}" onClick="{{ saSend }}">{{ saSendLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- PASSWORD MODAL -->
+  <sc-if value="{{ pwOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; background: rgba(32,30,29,0.5); display: flex; align-items: center; justify-content: center; z-index: 70;" onClick="{{ closePw }}">
+      <div class="elev-lg" onClick="{{ stopProp }}" style="width: 90%; max-width: 380px; background: var(--color-bg); border-top: 4px solid var(--color-accent); padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">Change password</div>
+        <div class="field"><label>Current password</label><input class="input" type="password" placeholder="••••••••"></div>
+        <div class="field"><label>New password</label><input class="input" type="password"></div>
+        <div class="field"><label>Confirm password</label><input class="input" type="password"></div>
+        <div style="display: flex; gap: 10px; margin-top: 6px;">
+          <button class="btn btn-secondary btn-block" style="height: 44px;" onClick="{{ closePw }}">Cancel</button>
+          <button class="btn btn-primary btn-block" style="height: 44px;" onClick="{{ savePw }}">Update password</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- TOAST -->
+  <sc-if value="{{ toastOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="elev-md" style="position: fixed; top: 74px; right: 24px; z-index: 80; background: var(--color-text); color: var(--color-bg); display: flex; align-items: center; gap: 10px; padding: 12px 16px; font-size: 14px; animation: wd-fadein 200ms ease;">
+      <span style="color: {{ toastColor }}; font-weight: 700;">{{ toastIcon }}</span>
+      <span>{{ toastMsg }}</span>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1440, &quot;height&quot;: 900}, &quot;startView&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;dashboard&quot;, &quot;options&quot;: [&quot;login&quot;, &quot;register&quot;, &quot;dashboard&quot;, &quot;devices&quot;, &quot;alerts&quot;, &quot;activity&quot;, &quot;settings&quot;, &quot;send-alert&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Navigation&quot;}}">
+class Component extends DCLogic {
+  state = {
+    view: 'dashboard', settingsTab: 'account', q: '', statusFilter: 'All status', sortBy: 'Sort by name',
+    alertDetail: null, saOpen: false, saSel: {}, saSound: true, saVib: true, saMsg: '', saSending: false,
+    pwOpen: false, toast: null,
+    notif: { push: true, sound: true, email: true, daily: false },
+    devices: [
+      { id: 'iph15-233801', name: 'iPhone 15 Pro', type: 'iOS', online: true, battery: 85, lastSeen: '2 min ago', mac: 'AA:BB:CC:11:22:33' },
+      { id: 'abc123xyz789', name: 'Samsung S24 Ultra', type: 'Android', online: true, battery: 60, lastSeen: '5 min ago', mac: 'AA:BB:CC:44:55:66' },
+      { id: 'pxl8-990417', name: 'Pixel 8', type: 'Android', online: true, battery: 72, lastSeen: '12 min ago', guest: true, mac: 'AA:BB:CC:77:88:99' },
+      { id: 'mbp14-778201', name: 'MacBook Pro 14"', type: 'macOS', online: false, battery: 45, lastSeen: '1 hour ago', guest: true, mac: 'AA:BB:CC:AA:BB:CC' },
+    ],
+  };
+  componentDidMount() {
+    this._start = this.props.startView;
+    if (this._start) this.applyStart(this._start);
+  }
+  componentDidUpdate() {
+    if (this.props.startView !== this._start) { this._start = this.props.startView; this.applyStart(this._start); }
+  }
+  applyStart(v) {
+    if (v === 'send-alert') { this.setState({ view: 'dashboard' }); this.openSA(); }
+    else if (v) this.setState({ view: v, saOpen: false, alertDetail: null });
+  }
+  toast(icon, color, msg) {
+    clearTimeout(this._tt);
+    this.setState({ toast: { icon, color, msg } });
+    this._tt = setTimeout(() => this.setState({ toast: null }), 3000);
+  }
+  statusView(d) {
+    return d.online
+      ? { statusLabel: 'ONLINE', statusFg: 'var(--color-accent-800)', statusBg: 'var(--color-accent-100)', statusBorder: 'var(--color-accent-300)' }
+      : { statusLabel: 'OFFLINE', statusFg: 'var(--color-neutral-700)', statusBg: 'var(--color-neutral-200)', statusBorder: 'var(--color-neutral-400)' };
+  }
+  alertStatusView(st) {
+    if (st === 'SENT' || st === 'DELIVERED') return { stFg: 'var(--color-accent-800)', stBg: 'var(--color-accent-100)', stBorder: 'var(--color-accent-300)' };
+    if (st.indexOf('PARTIAL') === 0) return { stFg: 'var(--color-neutral-800)', stBg: 'var(--color-bg)', stBorder: 'var(--color-neutral-500)' };
+    return { stFg: 'var(--color-bg)', stBg: 'var(--color-neutral-800)', stBorder: 'var(--color-neutral-800)' };
+  }
+  openSA(preselectId) {
+    const sel = {};
+    this.state.devices.forEach(d => { if (d.online && !d.guest) sel[d.id] = true; });
+    if (preselectId) { Object.keys(sel).forEach(k => delete sel[k]); sel[preselectId] = true; }
+    this.setState({ saOpen: true, saSel: sel, saSending: false, saMsg: '' });
+  }
+  renderVals() {
+    const s = this.state;
+    const dev = d => ({
+      ...d, ...this.statusView(d), batteryPct: d.battery + '%',
+      alertDisabled: !d.online || !!d.guest,
+      openAlert: () => {
+        if (d.guest) { this.toast('ℹ', 'var(--color-accent-300)', 'Guest devices can\'t receive alerts'); return; }
+        this.openSA(d.id);
+      },
+      remove: () => {
+        this.setState(x => ({ devices: x.devices.filter(v => v.id !== d.id) }));
+        this.toast('✓', 'var(--color-accent-300)', d.guest ? 'Guest removed' : 'Device removed');
+      },
+    });
+    let cards = s.devices.map(dev);
+    const ql = s.q.trim().toLowerCase();
+    if (ql) cards = cards.filter(d => (d.name + ' ' + d.type).toLowerCase().indexOf(ql) >= 0);
+    if (s.statusFilter === 'Online') cards = cards.filter(d => d.online);
+    if (s.statusFilter === 'Offline') cards = cards.filter(d => !d.online);
+    if (s.sortBy === 'Sort by name') cards = cards.slice().sort((a, b) => a.name.localeCompare(b.name));
+    if (s.sortBy === 'Sort by status') cards = cards.slice().sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
+    if (s.sortBy === 'Sort by battery') cards = cards.slice().sort((a, b) => b.battery - a.battery);
+    const alertsData = [
+      { id: 'AL-20260831-0045', ts: 'Today 2:45 PM', target: 'All devices', type: 'All', status: 'SENT', devices: [{ name: 'iPhone 15 Pro', status: 'DELIVERED' }, { name: 'Samsung S24 Ultra', status: 'DELIVERED' }] },
+      { id: 'AL-20260831-0130', ts: 'Today 1:30 PM', target: 'iPhone 15 Pro', type: 'Single', status: 'SENT', devices: [{ name: 'iPhone 15 Pro', status: 'DELIVERED' }] },
+      { id: 'AL-20260830-0915', ts: 'Yesterday 9:15 AM', target: 'S24 Ultra, MacBook', type: 'Multiple', status: 'PARTIAL (1 failed)', devices: [{ name: 'Samsung S24 Ultra', status: 'DELIVERED' }, { name: 'MacBook Pro 14"', status: 'FAILED' }] },
+    ];
+    const navDefs = [
+      { key: 'dashboard', label: 'Dashboard', icon: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' },
+      { key: 'devices', label: 'Devices', icon: 'M7 2h10v20H7z M11 18h2' },
+      { key: 'alerts', label: 'Alerts', icon: 'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0' },
+      { key: 'activity', label: 'Activity', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
+      { key: 'settings', label: 'Settings', icon: 'M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6' },
+    ];
+    const titles = { dashboard: 'Dashboard', devices: 'Devices', alerts: 'Alert history', activity: 'Activity', settings: 'Settings' };
+    const chartData = [3, 5, 2, 7, 4, 6, 5];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const pts = chartData.map((v, i) => ({ x: Math.round(20 + i * (520 / 6)), y: Math.round(130 - (v / 8) * 110) }));
+    const selCount = Object.keys(s.saSel).filter(k => s.saSel[k]).length;
+    const eligible = s.devices.filter(d => d.online && !d.guest);
+    const allSel = eligible.length > 0 && eligible.every(d => s.saSel[d.id]);
+    const mkToggle = (on, fn) => ({ trackBg: on ? 'var(--color-accent)' : 'var(--color-neutral-400)', knobLeft: on ? '20px' : '2px', toggle: fn });
+    const notifDefs = [
+      { k: 'push', label: 'Enable notifications', sub: 'Receive alerts when devices are found' },
+      { k: 'sound', label: 'Sound alerts', sub: 'Play a sound with each alert' },
+      { k: 'email', label: 'Email alerts', sub: 'Also send alerts to your email' },
+      { k: 'daily', label: 'Daily summary email', sub: 'One digest every evening' },
+    ];
+    const ad = s.alertDetail;
+    return {
+      noop: e => { if (e && e.preventDefault) e.preventDefault(); },
+      stopProp: e => e.stopPropagation(),
+      viewTitle: titles[s.view] || 'Dashboard',
+      isDashboard: s.view === 'dashboard', isDevices: s.view === 'devices',
+      isAlerts: s.view === 'alerts', isActivity: s.view === 'activity', isSettings: s.view === 'settings',
+      isAuth: s.view === 'login' || s.view === 'register',
+      isApp: s.view !== 'login' && s.view !== 'register',
+      isLoginView: s.view === 'login', isRegisterView: s.view === 'register',
+      authTitle: s.view === 'register' ? 'Create account' : 'Welcome back',
+      authSub: s.view === 'register' ? 'Set up your admin account' : 'Sign in to manage your devices',
+      authCta: s.view === 'register' ? 'Create account' : 'Sign in',
+      authSubmit: () => this.setState({ view: 'dashboard' }),
+      authSwapText: s.view === 'register' ? 'Already have an account?' : "Don't have an account?",
+      authSwapLink: s.view === 'register' ? 'Sign in' : 'Sign up',
+      authSwap: e => { if (e && e.preventDefault) e.preventDefault(); this.setState({ view: s.view === 'register' ? 'login' : 'register' }); },
+      goAlerts: e => { if (e && e.preventDefault) e.preventDefault(); this.setState({ view: 'alerts' }); },
+      activityFeed: [
+        { dot: 'var(--color-accent)', text: 'Alert sent to all devices', ts: 'Today 2:45 PM' },
+        { dot: 'var(--color-accent)', text: 'Alert sent to iPhone 15 Pro', ts: 'Today 1:30 PM' },
+        { dot: 'var(--color-accent-300)', text: 'Pixel 8 joined as guest on Home Network', ts: 'Today 11:02 AM' },
+        { dot: 'var(--color-neutral-500)', text: 'MacBook Pro 14" went offline', ts: 'Today 9:40 AM' },
+        { dot: 'var(--color-neutral-800)', text: 'Alert to MacBook Pro 14" failed (offline)', ts: 'Yesterday 9:15 AM' },
+      ],
+      navItems: navDefs.map(n => {
+        const active = s.view === n.key;
+        return { ...n, weight: active ? 700 : 400, fg: active ? 'var(--color-accent-800)' : 'var(--color-text)', bg: active ? 'var(--color-accent-100)' : 'transparent', edge: active ? 'var(--color-accent)' : 'transparent', go: () => this.setState({ view: n.key }) };
+      }),
+      goDevices: e => { if (e && e.preventDefault) e.preventDefault(); this.setState({ view: 'devices' }); },
+      doLogout: () => this.setState({ view: 'login' }),
+      onlineCount: s.devices.filter(d => d.online).length,
+      deviceRows: s.devices.map(dev),
+      deviceCards: cards, noDeviceResults: cards.length === 0,
+      q: s.q, setQ: e => this.setState({ q: e.target.value }),
+      statusFilter: s.statusFilter, setStatusFilter: e => this.setState({ statusFilter: e.target.value }),
+      sortBy: s.sortBy, setSortBy: e => this.setState({ sortBy: e.target.value }),
+      clearFilters: () => this.setState({ q: '', statusFilter: 'All status' }),
+      chartPoints: pts.map(p => p.x + ',' + p.y).join(' '),
+      chartDots: pts,
+      chartDays: pts.map((p, i) => ({ x: p.x, label: days[i] })),
+      alertRows: alertsData.map(a => ({ ...a, ...this.alertStatusView(a.status), view: () => this.setState({ alertDetail: a }) })),
+      alertDetailOpen: !!ad,
+      alertDetailId: ad ? ad.id : '', alertDetailTs: ad ? ad.ts : '',
+      alertDetailDevices: ad ? ad.devices.map(d => ({ ...d, ...this.alertStatusView(d.status) })) : [],
+      closeAlertDetail: () => this.setState({ alertDetail: null }),
+      openSendAlert: () => this.openSA(),
+      closeSendAlert: () => this.setState({ saOpen: false }),
+      saOpen: s.saOpen,
+      saDevices: s.devices.map(d => {
+        const disabled = !d.online || !!d.guest;
+        const checked = !!s.saSel[d.id] && !disabled;
+        return {
+          name: d.name,
+          meta: disabled ? (d.guest ? 'GUEST — can\'t receive alerts' : 'OFFLINE') : ('ONLINE, ' + d.battery + '%'),
+          cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.45 : 1,
+          boxBg: checked ? 'var(--color-accent)' : 'var(--color-bg)', mark: checked ? '✓' : '',
+          toggle: () => { if (disabled) return; this.setState(x => ({ saSel: { ...x.saSel, [d.id]: !x.saSel[d.id] } })); },
+        };
+      }),
+      saAllBg: allSel ? 'var(--color-accent)' : 'var(--color-bg)', saAllMark: allSel ? '✓' : '',
+      saToggleAll: () => {
+        const sel = {};
+        if (!allSel) eligible.forEach(d => sel[d.id] = true);
+        this.setState({ saSel: sel });
+      },
+      ...(() => { const t = mkToggle(s.saSound, () => this.setState(x => ({ saSound: !x.saSound }))); return { saSoundBg: t.trackBg, saSoundLeft: t.knobLeft, saToggleSound: t.toggle }; })(),
+      ...(() => { const t = mkToggle(s.saVib, () => this.setState(x => ({ saVib: !x.saVib }))); return { saVibBg: t.trackBg, saVibLeft: t.knobLeft, saToggleVib: t.toggle }; })(),
+      saMsg: s.saMsg, setSaMsg: e => this.setState({ saMsg: e.target.value }),
+      saSending: s.saSending,
+      saSendDisabled: s.saSending || selCount === 0,
+      saSendLabel: s.saSending ? 'Sending…' : (selCount > 1 ? 'Send alert (' + selCount + ')' : 'Send alert'),
+      saSend: () => {
+        this.setState({ saSending: true });
+        setTimeout(() => {
+          this.setState({ saOpen: false, saSending: false });
+          this.toast('✓', 'var(--color-accent-300)', 'Device alert sent!');
+        }, 900);
+      },
+      settingsTabs: ['Account', 'Devices', 'Notifications', 'About'].map(label => {
+        const key = label.toLowerCase();
+        const active = s.settingsTab === key;
+        return { label, weight: active ? 700 : 400, fg: active ? 'var(--color-accent-800)' : 'var(--color-text)', bg: active ? 'var(--color-accent-100)' : 'transparent', edge: active ? 'var(--color-accent)' : 'transparent', go: () => this.setState({ settingsTab: key }) };
+      }),
+      tabAccount: s.settingsTab === 'account', tabDevices: s.settingsTab === 'devices',
+      tabNotifications: s.settingsTab === 'notifications', tabAbout: s.settingsTab === 'about',
+      saveProfile: () => this.toast('✓', 'var(--color-accent-300)', 'Profile saved'),
+      openPw: () => this.setState({ pwOpen: true }), closePw: () => this.setState({ pwOpen: false }),
+      pwOpen: s.pwOpen,
+      savePw: () => { this.setState({ pwOpen: false }); this.toast('✓', 'var(--color-accent-300)', 'Password updated'); },
+      noGuests: s.devices.filter(d => d.guest).length === 0,
+      guestList: s.devices.filter(d => d.guest).map(dev),
+      notifToggles: notifDefs.map(n => ({ ...n, ...mkToggle(s.notif[n.k], () => this.setState(x => ({ notif: { ...x.notif, [n.k]: !x.notif[n.k] } }))) })),
+      toastOpen: !!s.toast,
+      toastIcon: s.toast ? s.toast.icon : '', toastColor: s.toast ? s.toast.color : '', toastMsg: s.toast ? s.toast.msg : '',
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,512 @@
+/*
+ * The dashboard chrome: the sidebar, the top bar and the page grid.
+ *
+ * The canvas lays this out as a two-column flex row with a *sticky* sidebar —
+ * not a fixed one. That distinction matters: a `position: fixed` sidebar is
+ * removed from the flow, so the main column has to be pushed back with a
+ * matching `margin-left`, and the two numbers then have to be kept equal by
+ * hand forever. A sticky flex child stays in the flow and reserves its own
+ * width, so there is one number and nothing to keep in step.
+ */
+
+.shell {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--color-neutral-200);
+}
+
+/* --- sidebar ----------------------------------------------------------- */
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  background: var(--color-bg);
+  /* A 2px rule: the sidebar and the content are different sections. */
+  border-right: var(--rule-section) solid var(--color-divider);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-4);
+  border-bottom: var(--rule-row) solid var(--color-divider);
+}
+
+/* The mark is a square ink tile — no radius, per the system. */
+.brand-tile {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+.brand-name {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 10px var(--space-4);
+  font-size: 14px;
+  color: var(--color-text);
+  text-decoration: none;
+  border: 0;
+  border-left: 3px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.nav-item:hover {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  text-decoration: none;
+  color: var(--color-text);
+}
+/* The active item is marked by an accent bar on the leading edge and a tinted
+   ground — two signals, so it does not rely on colour alone. */
+.nav-item.is-active {
+  border-left-color: var(--color-accent);
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+  font-weight: 600;
+}
+.nav-item svg { flex: none; }
+
+.sidebar-foot {
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--rule-section) solid var(--color-divider);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 13px;
+}
+
+/* Long emails truncate rather than widening the sidebar. */
+.identity-text {
+  min-width: 0;
+  overflow: hidden;
+}
+.identity-email {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+
+/* --- main column ------------------------------------------------------- */
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: var(--topbar-height);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 var(--space-6);
+  background: var(--color-bg);
+  border-bottom: var(--rule-section) solid var(--color-divider);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar-title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 18px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Live/stale indicator for the status socket. A word accompanies the dot, so
+   the state is legible without colour. */
+.conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  background: var(--color-neutral-400);
+}
+.conn.is-live .conn-dot { background: var(--color-accent); }
+
+.page {
+  flex: 1;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1400px;
+  width: 100%;
+}
+
+/* --- page furniture ---------------------------------------------------- */
+
+/* Equal-width cells. The grid is meant to show. */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.stat {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg);
+  border: 1px solid var(--color-neutral-300);
+  border-top: var(--rule-section) solid var(--color-divider);
+}
+.stat-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+.stat-value {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 34px;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+.stat-value-sm { font-size: 20px; }
+.stat-note {
+  font-size: 12px;
+  margin-top: 4px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+}
+.stat-icon-muted {
+  background: var(--color-neutral-200);
+  color: var(--color-neutral-700);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.toolbar-spacer { flex: 1; }
+.toolbar .select,
+.toolbar .input { width: auto; min-width: 160px; }
+
+.row-title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 14px;
+}
+.row-sub {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+/* --- battery ------------------------------------------------------------
+   Two tiers only, matching the canvas: low is called out in the accent,
+   everything else is plain ink. A "medium" colour is information the design
+   deliberately drops. */
+.battery {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.battery-track {
+  width: 72px;
+  height: 8px;
+  flex: none;
+  background: var(--color-neutral-300);
+}
+.battery-fill { height: 100%; background: var(--color-text); }
+.battery-fill.is-low { background: var(--color-accent); }
+.battery-text { font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* --- empty / loading ---------------------------------------------------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+}
+.empty-title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 16px;
+}
+.empty-body {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+
+.skeleton {
+  background: var(--color-neutral-300);
+  animation: dc-pulse 1.4s ease-in-out infinite;
+}
+@keyframes dc-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* --- banner -------------------------------------------------------------
+   Errors are accent-toned, per the system's one-accent rule. The banner is
+   never the only signal: field errors also outline their field. */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent-100);
+  border: 1px solid var(--color-accent-300);
+  border-left: 4px solid var(--color-accent);
+  color: var(--color-accent-800);
+  font-size: 13px;
+}
+.banner-list { margin: 0; padding: 0; list-style: none; flex: 1; }
+.banner-list li + li { margin-top: 4px; }
+.banner-code {
+  font-size: 11px;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- auth screen -------------------------------------------------------- */
+
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-6);
+  background: var(--color-neutral-200);
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-8);
+  background: var(--color-bg);
+  border-top: 4px solid var(--color-accent);
+  box-shadow: var(--shadow-md);
+}
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-4);
+}
+
+/* --- settings ----------------------------------------------------------- */
+
+.settings {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+.settings-nav {
+  width: 200px;
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  border: 1px solid var(--color-neutral-300);
+}
+.settings-nav .nav-item { padding: 10px var(--space-3); }
+.settings-panels {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: var(--rule-row) solid var(--color-divider);
+}
+.setting-row:last-child { border-bottom: 0; }
+.setting-name { font-size: 14px; }
+.setting-note {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  margin-top: 2px;
+}
+
+/* --- toggle -------------------------------------------------------------
+   Square, like everything else. The knob is the ground colour punched out of
+   the track, so the control reads as a slot rather than a pill. */
+.toggle {
+  width: 40px;
+  height: 22px;
+  flex: none;
+  position: relative;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background: var(--color-neutral-400);
+  transition: background 150ms ease;
+}
+.toggle.is-on { background: var(--color-accent); }
+.toggle:disabled { opacity: 0.45; cursor: not-allowed; }
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: var(--color-bg);
+  transition: left 150ms ease;
+}
+.toggle.is-on .toggle-knob { left: 20px; }
+
+/* --- checkbox ----------------------------------------------------------- */
+
+.check {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  border: 2px solid var(--color-text);
+  background: transparent;
+  color: var(--color-bg);
+}
+.check.is-on { background: var(--color-text); }
+.check:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* --- chart --------------------------------------------------------------
+   Hand-drawn SVG bars rather than a charting library: the design is seven
+   flat columns with a 1px baseline, and every library ships rounded caps,
+   its own type and a palette this system does not have. */
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: 160px;
+  padding: var(--space-4);
+}
+.chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  height: 100%;
+  justify-content: flex-end;
+}
+.chart-bar { background: var(--color-accent); min-height: 2px; }
+.chart-bar.is-empty { background: var(--color-neutral-300); }
+.chart-label {
+  font-size: 11px;
+  text-align: center;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.chart-value {
+  font-size: 11px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- narrow viewports ---------------------------------------------------
+   The dashboard is desktop-first by design. Below the sidebar's own width
+   plus a usable column it collapses to a stacked layout rather than pretending
+   to be the mobile app -- that app exists, and this is not it. */
+@media (max-width: 860px) {
+  .shell { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    flex: none;
+    height: auto;
+    position: static;
+    border-right: 0;
+    border-bottom: var(--rule-section) solid var(--color-divider);
+  }
+  .sidebar-nav { display: flex; overflow-x: auto; padding: 0; }
+  .nav-item {
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+  }
+  .nav-item.is-active { border-left-color: transparent; border-bottom-color: var(--color-accent); }
+  .page { padding: var(--space-4); }
+  .settings { flex-direction: column; }
+  .settings-nav { width: 100%; flex: none; }
+}

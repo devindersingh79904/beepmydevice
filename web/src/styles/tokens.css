@@ -1,0 +1,98 @@
+/*
+ * Design tokens — the Modernist system from
+ * `frontend/docs/design/web/_ds/modernist-.../styles.css`, with the blue
+ * accent the BeepMyDevice canvas overrides it with.
+ *
+ * The shipped `_ds` sheet carries the system's stock red (#ec3013). The
+ * canvas file redefines `--color-accent*` inline to an OKLCH blue ramp, and
+ * that override — not the stock red — is the product's accent. The values
+ * below are that ramp already converted to sRGB, so they are byte-identical
+ * to `frontend/src/styles/colors.ts`. React Native has no `oklch()`, so the
+ * mobile app has to hold hex; keeping the web sheet in hex too means one
+ * number to compare, and `src/styles/tokens.test.ts` fails the build if the
+ * two ever drift.
+ *
+ * Nothing outside this file may write a colour literal.
+ */
+
+:root {
+  /* --- Ground ---------------------------------------------------------- */
+  --color-bg: #f3f2f2;
+  --color-surface: #eae9e9;
+  --color-text: #201e1d;
+  /* 40% ink over the ground, resolved. The canvas writes it as a color-mix();
+     it is flattened here so the mobile palette can hold the same literal. */
+  --color-divider: #9f9d9d;
+
+  /* --- Neutral ramp: ink to paper -------------------------------------- */
+  --color-neutral-100: #f8f4f4;
+  --color-neutral-200: #eae7e7;
+  --color-neutral-300: #d7d3d3;
+  --color-neutral-400: #bab6b6;
+  --color-neutral-500: #9b9797;
+  --color-neutral-600: #7d7979;
+  --color-neutral-700: #605d5d;
+  --color-neutral-800: #444141;
+  --color-neutral-900: #2d2b2b;
+
+  /* --- The single accent ------------------------------------------------
+     One hue carries the primary action, the ONLINE badge, the guest badge and
+     error text alike. A second hue (a green "online", a red "error") breaks
+     the system; if one is ever wanted, it changes here, not at a call site. */
+  --color-accent: #006edc;
+  --color-accent-100: #d7eaff;
+  --color-accent-200: #b6d7ff;
+  --color-accent-300: #87bafd;
+  --color-accent-400: #4693f1;
+  --color-accent-500: #006edc;
+  --color-accent-600: #005aba;
+  --color-accent-700: #004a9c;
+  --color-accent-800: #003977;
+  --color-accent-900: #012854;
+
+  /* The system ships a second accent role. This is a mono scheme, so it is
+     aliased to the first rather than given a hue of its own — both sets
+     resolve, and `.tag-accent-2` reads the same as `.tag-accent`. */
+  --color-accent-2: var(--color-accent);
+  --color-accent-2-100: var(--color-accent-100);
+  --color-accent-2-800: var(--color-accent-800);
+
+  /* --- Type ------------------------------------------------------------- */
+  --font-heading: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-heading-weight: 700;
+  --font-body: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* --- Space ------------------------------------------------------------
+     Named after their value. The canvas is not on a strict 4pt grid — it uses
+     2, 6, 10, 14 and 18 as well — so a t-shirt scale would have to lie about
+     which number it maps to. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* --- Radius -----------------------------------------------------------
+     All zero. Modernist is a square-cornered system: the flat corner is the
+     look, not an oversight. Rounding one control makes it look foreign. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+
+  /* --- Elevation --------------------------------------------------------
+     Tuned to this ground. Use these rather than ad-hoc box-shadows. */
+  --shadow-sm: 0 1px 2px rgba(45, 43, 43, 0.14);
+  --shadow-md: 0 3px 10px rgba(45, 43, 43, 0.16);
+  --shadow-lg: 0 12px 32px rgba(45, 43, 43, 0.22);
+
+  /* --- Rules ------------------------------------------------------------
+     2pt separates *sections*; 1pt separates *rows* within one. Softening a
+     section rule to a hairline is the fastest way to lose the structure. */
+  --rule-section: 2px;
+  --rule-row: 1px;
+
+  /* Chrome the dashboard adds on top of the canvas system. */
+  --sidebar-width: 260px;
+  --topbar-height: 60px;
+}

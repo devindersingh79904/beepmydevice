@@ -12,6 +12,7 @@ Last updated: 2026-08-31, after the backend service-account key landed.
 ```
 backend    98 tests · 81.6% coverage · mypy clean · pylint 10.00/10 · black
 frontend  161 tests · coverage thresholds met · tsc clean · 0 lint errors
+web        34 tests · tsc clean · 0 lint errors · production build clean
 CI         off by design; workflows stay staged in .github/workflows.disabled/
 ```
 
@@ -32,6 +33,20 @@ remains, below.
 
 Nothing else. Everything below this table is either done, or explicitly out of
 Phase 1.
+
+### The web dashboard
+
+`web/` implements every screen of `frontend/docs/design/web/Web Dashboard.dc.html`
+— Auth, Dashboard, Devices, Activity, Alerts, Settings — against the same
+sixteen endpoints, with live status over the WebSocket. It has its own
+Dockerfile, nginx config and `.env`, and its own README listing the controls
+that are drawn but disabled because no endpoint backs them yet (profile edit,
+avatar, network rename, account deletion, custom alert message).
+
+`frontend/` additionally builds for the browser at port 19006 through
+react-native-web. It renders the mobile screens and cannot do the product's job:
+a browser has no WiFi BSSID, so that build cannot join an alert group, register
+a device, or be alerted. See `frontend/web/shims/README.md`.
 
 ### 1. `RECEIVED` is never set
 

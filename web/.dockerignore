@@ -1,0 +1,19 @@
+# Keep the build context small and keep secrets out of the image.
+#
+# .env matters most: Vite would read it during the build and bake whatever it
+# holds into the bundle. Configuration is passed as --build-arg instead, so
+# what a given image contains is visible in the build command.
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
+coverage
+.vite
+
+*.log
+.DS_Store
+.git
+.gitignore
+README.md

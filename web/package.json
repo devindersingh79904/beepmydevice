@@ -1,0 +1,39 @@
+{
+  "name": "beepmydevice-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BeepMyDevice web dashboard — the admin interface from frontend/docs/design/web/Web Dashboard.dc.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 0"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.21.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.6",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20.19.43",
+    "@types/react": "^18.2.46",
+    "@types/react-dom": "^18.2.18",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "jsdom": "^23.2.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.1.3"
+  }
+}

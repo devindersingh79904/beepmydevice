@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/modernist-8a49b73a-67b0-4a73-934d-f237782081ce/styles.css">
+  <script src="_ds/modernist-8a49b73a-67b0-4a73-934d-f237782081ce/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-neutral-200); }
+    :root {
+      --color-accent: oklch(0.55 0.19 255);
+      --color-accent-100: oklch(0.93 0.04 255);
+      --color-accent-200: oklch(0.87 0.07 255);
+      --color-accent-300: oklch(0.78 0.11 255);
+      --color-accent-400: oklch(0.66 0.16 255);
+      --color-accent-500: oklch(0.55 0.19 255);
+      --color-accent-600: oklch(0.48 0.17 255);
+      --color-accent-700: oklch(0.42 0.15 255);
+      --color-accent-800: oklch(0.35 0.12 255);
+      --color-accent-900: oklch(0.28 0.09 255);
+      --color-accent-2: var(--color-accent);
+      --color-accent-2-100: var(--color-accent-100);
+      --color-accent-2-300: var(--color-accent-300);
+      --color-accent-2-500: var(--color-accent-500);
+      --color-accent-2-700: var(--color-accent-700);
+      --color-accent-2-900: var(--color-accent-900);
+    }
+
+    a { color: var(--color-accent-700); text-decoration: none; }
+    a:hover { color: var(--color-accent); text-decoration: underline; }
+  </style>
+</helmet>
+<div style="padding: 48px; font-family: var(--font-body); color: var(--color-text);">
+  <div style="border-bottom: 2px solid var(--color-divider); padding-bottom: 16px; margin-bottom: 32px;">
+    <div style="font-family: var(--font-heading); font-size: 34px; font-weight: 700; letter-spacing: -0.5px;">BeepMyDevice — all screens</div>
+    <div style="font-size: 14px; color: var(--color-neutral-600); margin-top: 4px;">Every screen is live and clickable. For the full flow, open BeepMyDevice.dc.html.</div>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start;">
+    <sc-for list="{{ screens }}" as="s" hint-placeholder-count="8">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: baseline; gap: 8px;">
+          <div style="font-family: var(--font-heading); font-size: 13px; font-weight: 700; background: var(--color-text); color: var(--color-bg); padding: 2px 8px;">{{ s.num }}</div>
+          <div style="font-family: var(--font-heading); font-size: 15px; font-weight: 700;">{{ s.label }}</div>
+        </div>
+        <dc-import name="BeepMyDevice" start-screen="{{ s.id }}" hold-splash="{{ s.hold }}" show-skeletons="{{ s.skeleton }}" empty-demo="{{ s.empty }}" hint-size="500px,950px" style="width: 500px; height: 950px;"></dc-import>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      screens: [
+        { num: '01', label: 'Splash', id: 'splash', skeleton: false, empty: false, hold: true },
+        { num: '02', label: 'Login', id: 'login', skeleton: false, empty: false },
+        { num: '03', label: 'Register', id: 'register', skeleton: false, empty: false },
+        { num: '04', label: 'Dashboard', id: 'dashboard', skeleton: false, empty: false },
+        { num: '05', label: 'Alert confirmation', id: 'alert', skeleton: false, empty: false },
+        { num: '06', label: 'Device detail', id: 'detail', skeleton: false, empty: false },
+        { num: '06b', label: 'Device detail · guest', id: 'detail-guest', skeleton: false, empty: false },
+        { num: '07', label: 'Settings', id: 'settings', skeleton: false, empty: false },
+        { num: '08', label: 'States & feedback', id: 'errors', skeleton: false, empty: false },
+        { num: '04b', label: 'Dashboard · loading', id: 'dashboard', skeleton: true, empty: false },
+        { num: '04c', label: 'Dashboard · empty', id: 'dashboard', skeleton: false, empty: true },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

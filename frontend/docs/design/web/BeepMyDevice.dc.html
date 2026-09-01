@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/modernist-8a49b73a-67b0-4a73-934d-f237782081ce/styles.css">
+  <script src="_ds/modernist-8a49b73a-67b0-4a73-934d-f237782081ce/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-neutral-200); }
+    :root {
+      --color-accent: oklch(0.55 0.19 255);
+      --color-accent-100: oklch(0.93 0.04 255);
+      --color-accent-200: oklch(0.87 0.07 255);
+      --color-accent-300: oklch(0.78 0.11 255);
+      --color-accent-400: oklch(0.66 0.16 255);
+      --color-accent-500: oklch(0.55 0.19 255);
+      --color-accent-600: oklch(0.48 0.17 255);
+      --color-accent-700: oklch(0.42 0.15 255);
+      --color-accent-800: oklch(0.35 0.12 255);
+      --color-accent-900: oklch(0.28 0.09 255);
+      --color-accent-2: var(--color-accent);
+      --color-accent-2-100: var(--color-accent-100);
+      --color-accent-2-300: var(--color-accent-300);
+      --color-accent-2-500: var(--color-accent-500);
+      --color-accent-2-700: var(--color-accent-700);
+      --color-accent-2-900: var(--color-accent-900);
+    }
+
+    a { color: var(--color-accent-700); text-decoration: none; }
+    a:hover { color: var(--color-accent); text-decoration: underline; }
+    @keyframes bm-spin { to { transform: rotate(360deg); } }
+    @keyframes bm-pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+    @keyframes bm-slideup { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes bm-slidedown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+  </style>
+</helmet>
+<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px; font-family: var(--font-body);">
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="430px,880px">
+<div style="position: relative; width: 100%; height: 100%; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- 1 · SPLASH -->
+  <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Splash" style="position: absolute; inset: 0; background: var(--color-accent); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 32px; gap: 20px;">
+      <div style="width: 96px; height: 96px; background: var(--color-bg); display: flex; align-items: center; justify-content: center;">
+        <svg width="64" height="64" viewBox="0 0 120 120"><rect x="22" y="30" width="40" height="64" fill="var(--color-text)"></rect><rect x="30" y="40" width="24" height="36" fill="var(--color-bg)"></rect><rect x="38" y="84" width="8" height="4" fill="var(--color-bg)"></rect><path d="M72 46 A18 18 0 0 1 72 78" fill="none" stroke="var(--color-accent)" stroke-width="7"></path><path d="M82 36 A32 32 0 0 1 82 88" fill="none" stroke="var(--color-accent)" stroke-width="7" opacity="0.55"></path><path d="M92 26 A46 46 0 0 1 92 98" fill="none" stroke="var(--color-accent)" stroke-width="7" opacity="0.3"></path></svg>
+      </div>
+      <div style="font-family: var(--font-heading); font-size: 34px; font-weight: 700; color: var(--color-bg); letter-spacing: -0.5px;">BeepMyDevice</div>
+      <div style="font-size: 14px; color: var(--color-accent-200);">Find any device on your WiFi</div>
+      <div style="width: 22px; height: 22px; border: 2px solid var(--color-accent-300); border-top-color: var(--color-bg); border-radius: 50%; animation: bm-spin 1s linear infinite; margin-top: 12px;"></div>
+    </div>
+  </sc-if>
+
+  <!-- 2 · LOGIN -->
+  <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Login" style="flex: 1; display: flex; flex-direction: column; padding: 54px 20px 24px; overflow-y: auto;">
+      <div style="width: 56px; height: 56px; background: var(--color-bg); border: 2px solid var(--color-text); display: flex; align-items: center; justify-content: center; margin: 24px 0 20px;">
+        <svg width="38" height="38" viewBox="0 0 120 120"><rect x="22" y="30" width="40" height="64" fill="var(--color-text)"></rect><rect x="30" y="40" width="24" height="36" fill="var(--color-bg)"></rect><rect x="38" y="84" width="8" height="4" fill="var(--color-bg)"></rect><path d="M72 46 A18 18 0 0 1 72 78" fill="none" stroke="var(--color-accent)" stroke-width="9"></path><path d="M84 34 A34 34 0 0 1 84 90" fill="none" stroke="var(--color-accent)" stroke-width="9" opacity="0.45"></path></svg>
+      </div>
+      <div style="font-family: var(--font-heading); font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Welcome back</div>
+      <div style="font-size: 15px; color: var(--color-neutral-600); margin: 6px 0 28px;">Sign in to reach your devices</div>
+      <div class="field" style="margin-bottom: 16px;">
+        <label>Email</label>
+        <input class="input" type="email" placeholder="you@example.com" value="{{ loginEmail }}" onChange="{{ setLoginEmail }}">
+        <sc-if value="{{ loginEmailErr }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--color-accent-700); font-size: 12px;">✗ Enter a valid email address</div>
+        </sc-if>
+      </div>
+      <div class="field" style="margin-bottom: 8px;">
+        <label>Password</label>
+        <div style="position: relative;">
+          <input class="input" style="width: 100%; box-sizing: border-box; padding-right: 56px;" placeholder="••••••••" type="{{ loginPwType }}" value="{{ loginPw }}" onChange="{{ setLoginPw }}">
+          <button onClick="{{ toggleLoginPw }}" style="position: absolute; right: 0; top: 0; bottom: 0; border: none; background: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--color-neutral-600); padding: 0 12px; font-family: var(--font-body);" style-hover="color: var(--color-accent-700);">{{ loginPwToggleLabel }}</button>
+        </div>
+        <sc-if value="{{ loginPwErr }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--color-accent-700); font-size: 12px;">✗ Password is required</div>
+        </sc-if>
+      </div>
+      <a href="#" onClick="{{ noop }}" style="align-self: flex-end; font-size: 13px; margin-bottom: 24px;">Forgot password?</a>
+      <button class="btn btn-primary btn-block" style="height: 48px; justify-content: center; text-align: center;" onClick="{{ doLogin }}">Sign in</button><div style="margin-top: 16px; font-size: 14px; color: var(--color-neutral-600); text-align: center;">Don't have an account? <a href="#" onClick="{{ goRegister }}">Sign up</a></div>
+    </div>
+  </sc-if>
+
+  <!-- 3 · REGISTER -->
+  <sc-if value="{{ isRegister }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Register" style="flex: 1; display: flex; flex-direction: column; padding: 54px 20px 24px; overflow-y: auto;">
+      <div style="font-family: var(--font-heading); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-top: 16px;">Create account</div>
+      <div style="font-size: 15px; color: var(--color-neutral-600); margin: 6px 0 28px;">One account, all your devices</div>
+      <div class="field" style="margin-bottom: 16px;">
+        <label>Email</label>
+        <input class="input" type="email" placeholder="you@example.com" value="{{ regEmail }}" onChange="{{ setRegEmail }}">
+        <sc-if value="{{ regEmailChecked }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top: 4px; font-size: 12px; font-weight: 600; color: {{ regEmailColor }};">{{ regEmailMsg }}</div>
+        </sc-if>
+      </div>
+      <div class="field" style="margin-bottom: 16px;">
+        <label>Password</label>
+        <input class="input" type="password" placeholder="8+ characters" value="{{ regPw }}" onChange="{{ setRegPw }}">
+        <sc-if value="{{ regPwTouched }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+            <div style="flex: 1; display: flex; gap: 4px;">
+              <div style="flex: 1; height: 4px; background: {{ strengthBar1 }};"></div>
+              <div style="flex: 1; height: 4px; background: {{ strengthBar2 }};"></div>
+              <div style="flex: 1; height: 4px; background: {{ strengthBar3 }};"></div>
+            </div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--color-neutral-700); min-width: 52px;">{{ strengthLabel }}</div>
+          </div>
+        </sc-if>
+      </div>
+      <div class="field" style="margin-bottom: 24px;">
+        <label>Confirm password</label>
+        <input class="input" type="password" placeholder="Repeat password" value="{{ regPw2 }}" onChange="{{ setRegPw2 }}">
+        <sc-if value="{{ regPw2Touched }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top: 4px; font-size: 12px; font-weight: 600; color: {{ matchColor }};">{{ matchMsg }}</div>
+        </sc-if>
+      </div>
+      <button class="btn btn-primary btn-block" style="height: 48px; justify-content: center; text-align: center;" onClick="{{ doRegister }}">Create account</button>
+      <div style="margin-top: 16px; font-size: 14px; color: var(--color-neutral-600); text-align: center;">Already have an account? <a href="#" onClick="{{ goLogin }}">Sign in</a></div>
+    </div>
+  </sc-if>
+
+  <!-- 4 · DASHBOARD -->
+  <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Dashboard" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 54px;">
+      <div style="height: 56px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 2px solid var(--color-divider); background: var(--color-bg);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2.5"><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.86a10 10 0 0 1 14 0"></path><path d="M8.5 16.43a5 5 0 0 1 7 0"></path><circle cx="12" cy="20" r="1.5" fill="var(--color-accent)"></circle></svg>
+          <div>
+            <div style="font-size: 13px; font-weight: 700; font-family: var(--font-heading);">{{ wifiName }}</div>
+            <div style="font-size: 11px; color: var(--color-neutral-600);">{{ deviceCountLabel }}</div>
+          </div>
+        </div>
+        <div onClick="{{ goSettings }}" style="width: 40px; height: 40px; background: var(--color-text); color: var(--color-bg); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; cursor: pointer; font-family: var(--font-heading);" style-hover="background: var(--color-accent);">DK</div>
+      </div>
+      <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <sc-if value="{{ showSkeletons }}" hint-placeholder-val="{{ false }}">
+          <sc-for list="{{ skeletonList }}" as="s" hint-placeholder-count="3">
+            <div style="border: 1px solid var(--color-neutral-300); background: var(--color-bg); padding: 16px; animation: bm-pulse 1.5s ease-in-out infinite;">
+              <div style="height: 16px; width: 55%; background: var(--color-neutral-300); margin-bottom: 10px;"></div>
+              <div style="height: 12px; width: 35%; background: var(--color-neutral-300); margin-bottom: 14px;"></div>
+              <div style="height: 40px; width: 100%; background: var(--color-neutral-300);"></div>
+            </div>
+          </sc-for>
+        </sc-if>
+        <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; padding: 24px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-neutral-500)" stroke-width="1.5"><rect x="5" y="2" width="14" height="20"></rect><path d="M12 18h.01"></path></svg>
+            <div style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">No devices found</div>
+            <div style="font-size: 14px; color: var(--color-neutral-600);">Make sure your devices are connected to the same WiFi network.</div>
+            <button class="btn btn-secondary" onClick="{{ doRefresh }}">Refresh</button>
+          </div>
+        </sc-if>
+        <sc-for list="{{ deviceCards }}" as="d" hint-placeholder-count="4">
+          <div style="border: 1px solid var(--color-neutral-300); background: var(--color-bg); padding: 16px;">
+            <div onClick="{{ d.open }}" style="cursor: pointer;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 700;">{{ d.name }}</div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <sc-if value="{{ d.guest }}" hint-placeholder-val="{{ false }}">
+                    <div style="white-space: nowrap; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; color: var(--color-accent-800); background: var(--color-accent-100); border: 1px solid var(--color-accent-300);">GUEST</div>
+                  </sc-if>
+                  <div style="white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; color: {{ d.statusFg }}; background: {{ d.statusBg }}; border: 1px solid {{ d.statusBorder }};"><span>●</span><span>{{ d.statusLabel }}</span></div>
+                </div>
+              </div>
+              <div style="font-size: 14px; color: var(--color-neutral-600); margin-top: 2px;">{{ d.type }}</div>
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 14px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="16" height="10"></rect><line x1="22" y1="11" x2="22" y2="13"></line></svg>
+                <span>Battery: {{ d.batteryPct }}</span>
+              </div>
+              <div style="font-size: 12px; color: var(--color-neutral-600); margin-top: 4px;">Last seen {{ d.lastSeen }}</div>
+            </div>
+            <div style="margin-top: 12px;">
+              <button class="btn btn-primary btn-block" style="height: 40px;" disabled="{{ d.alertDisabled }}" onClick="{{ d.askAlert }}">{{ d.alertLabel }}</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 6 · DEVICE DETAIL -->
+  <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Device Detail" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 54px;">
+      <div style="height: 56px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 2px solid var(--color-divider);">
+        <button onClick="{{ goDashboard }}" style="border: none; background: none; cursor: pointer; padding: 8px 8px 8px 0; display: flex; color: var(--color-text);" style-hover="color: var(--color-accent);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"></path></svg></button>
+        <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700;">{{ detail.name }}</div>
+      </div>
+      <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <div style="width: 72px; height: 72px; background: var(--color-neutral-200); border: 1px solid var(--color-neutral-300); display: flex; align-items: center; justify-content: center;">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-text)" stroke-width="1.5"><rect x="5" y="2" width="14" height="20"></rect><path d="M12 18h.01"></path></svg>
+          </div>
+          <div>
+            <div style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">{{ detail.name }}</div>
+            <div style="font-size: 15px; color: var(--color-neutral-600);">{{ detail.type }}</div>
+            <div style="font-size: 13px; color: var(--color-neutral-600);">{{ detail.os }}</div>
+          </div>
+        </div>
+        <div class="hr"></div>
+        <div>
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600); margin-bottom: 8px;">STATUS</div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; color: {{ detail.statusFg }}; background: {{ detail.statusBg }}; border: 1px solid {{ detail.statusBorder }};"><span>●</span><span>{{ detail.statusLabel }}</span></div>
+            <sc-if value="{{ detail.guest }}" hint-placeholder-val="{{ false }}">
+              <div style="white-space: nowrap; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; color: var(--color-accent-800); background: var(--color-accent-100); border: 1px solid var(--color-accent-300);">GUEST</div>
+            </sc-if>
+          </div>
+          <sc-if value="{{ detail.guest }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 13px; color: var(--color-neutral-600); margin-top: 6px;">Guest device — alerts are disabled until the owner approves it.</div>
+          </sc-if>
+          <div style="font-size: 14px; color: var(--color-neutral-600); margin-top: 8px;">Connected at: {{ wifiName }}</div>
+          <div style="font-size: 14px; color: var(--color-neutral-600); margin-top: 2px;">Last seen: {{ detail.lastSeen }}</div>
+        </div>
+        <div class="hr"></div>
+        <div>
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600); margin-bottom: 8px;">BATTERY</div>
+          <div style="font-size: 16px; font-weight: 700; font-family: var(--font-heading);">{{ detail.batteryPct }}</div>
+          <div style="height: 8px; background: var(--color-neutral-300); margin-top: 8px;">
+            <div style="height: 100%; background: {{ detail.batteryColor }}; width: {{ detail.battery }}%;"></div>
+          </div>
+          <div style="font-size: 12px; color: var(--color-neutral-600); margin-top: 6px;">{{ detail.batteryNote }}</div>
+        </div>
+        <div class="hr"></div>
+        <div style="font-size: 12px; color: var(--color-neutral-600); display: flex; flex-direction: column; gap: 2px;">
+          <sc-if value="{{ detail.guest }}" hint-placeholder-val="{{ false }}">
+            <div>Device joined: {{ detail.joined }}</div>
+          </sc-if>
+          <div>Registered: Aug 30, 2026</div>
+          <div>Device ID: {{ detail.id }}</div>
+        </div>
+        <div class="hr"></div>
+        <div>
+          <div style="font-family: var(--font-heading); font-size: 17px; font-weight: 700; margin-bottom: 8px;">Alert history</div>
+          <sc-if value="{{ historyEmpty }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size: 14px; color: var(--color-neutral-600);">No alerts sent yet</div>
+          </sc-if>
+          <sc-for list="{{ detailHistory }}" as="h" hint-placeholder-count="0">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-neutral-300);">
+              <div style="font-size: 12px; color: var(--color-neutral-600);">{{ h.time }}</div>
+              <div style="font-size: 13px; font-weight: 600; color: {{ h.color }};">{{ h.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ detail.notGuest }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ removeDevice }}" style="border: none; background: none; color: var(--color-accent-700); font-size: 14px; font-weight: 600; cursor: pointer; padding: 12px; margin-top: 16px; font-family: var(--font-body); align-self: center;" style-hover="color: var(--color-accent);">Remove device</button>
+        </sc-if>
+      </div>
+      <div style="flex: none; padding: 12px 16px 16px; border-top: 2px solid var(--color-divider); background: var(--color-bg);">
+        <sc-if value="{{ detail.guest }}" hint-placeholder-val="{{ false }}">
+          <button class="btn btn-block" style="height: 44px; margin-bottom: 8px; background: transparent; border: 1px solid var(--color-accent-700); color: var(--color-accent-700);" style-hover="background: var(--color-accent-100);" onClick="{{ removeGuest }}">Remove guest</button>
+        </sc-if>
+        <button class="btn btn-primary btn-block" style="height: 48px;" disabled="{{ detail.alertDisabled }}" onClick="{{ detailAskAlert }}">{{ detail.alertLabel }}</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 7 · SETTINGS -->
+  <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Settings" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 54px;">
+      <div style="height: 56px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 2px solid var(--color-divider);">
+        <button onClick="{{ goDashboard }}" style="border: none; background: none; cursor: pointer; padding: 8px 8px 8px 0; display: flex; color: var(--color-text);" style-hover="color: var(--color-accent);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"></path></svg></button>
+        <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700;">Settings</div>
+      </div>
+      <div style="flex: 1; overflow-y: auto;">
+        <div style="padding: 10px 16px; background: var(--color-neutral-200); font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">ACCOUNT</div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer;" style-hover="background: var(--color-neutral-100);">
+          <div style="width: 44px; height: 44px; background: var(--color-text); color: var(--color-bg); display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: var(--font-heading); flex: none;">DK</div>
+          <div style="flex: 1;">
+            <div style="font-size: 15px; font-weight: 700; font-family: var(--font-heading);">Dev Kim</div>
+            <div style="font-size: 13px; color: var(--color-neutral-600);">dev@example.com</div>
+          </div>
+          <div style="color: var(--color-neutral-500);">›</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; font-size: 15px;" style-hover="background: var(--color-neutral-100);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <div style="flex: 1;">Change password</div><div style="color: var(--color-neutral-500);">›</div>
+        </div>
+        <div style="padding: 10px 16px; background: var(--color-neutral-200); font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">DEVICES</div>
+        <div onClick="{{ goDashboard }}" style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; font-size: 15px;" style-hover="background: var(--color-neutral-100);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20"></rect><path d="M12 18h.01"></path></svg>
+          <div style="flex: 1;">Manage devices</div>
+          <div style="background: var(--color-accent); color: var(--color-bg); font-size: 11px; font-weight: 700; padding: 2px 7px;">{{ deviceCount }}</div>
+          <div style="color: var(--color-neutral-500);">›</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 56px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer;" style-hover="background: var(--color-neutral-100);" onClick="{{ noop }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+          <div style="flex: 1;">Manage guests</div>
+          <div style="font-size: 12px; font-weight: 700; padding: 2px 8px; background: var(--color-accent); color: var(--color-bg);">{{ guestCount }}</div>
+          <div style="color: var(--color-neutral-500);">›</div>
+        </div>
+        <div onClick="{{ showErrorStates }}" style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; font-size: 15px;" style-hover="background: var(--color-neutral-100);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>
+          <div style="flex: 1;">How to register a device?</div><div style="color: var(--color-neutral-500);">›</div>
+        </div>
+        <div style="padding: 10px 16px; background: var(--color-neutral-200); font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">GUEST MANAGEMENT</div>
+        <sc-if value="{{ noGuests }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 14px 16px; border-bottom: 1px solid var(--color-neutral-300); font-size: 14px; color: var(--color-neutral-600);">No guest devices on this network</div>
+        </sc-if>
+        <sc-for list="{{ guestList }}" as="g" hint-placeholder-count="1">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--color-neutral-300);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20"></rect><path d="M12 18h.01"></path></svg>
+            <div style="flex: 1;">
+              <div style="font-size: 15px;">{{ g.name }}</div>
+              <div style="font-size: 12px; color: var(--color-neutral-600);">{{ g.type }}</div>
+            </div>
+            <button class="btn btn-ghost" style="color: var(--color-accent-700); font-size: 13px;" onClick="{{ g.remove }}">Remove</button>
+          </div>
+        </sc-for>
+        <div style="padding: 10px 16px; background: var(--color-neutral-200); font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">NOTIFICATIONS</div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--color-neutral-300);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          <div style="flex: 1;">
+            <div style="font-size: 15px;">Push notifications</div>
+            <div style="font-size: 12px; color: var(--color-neutral-600);">Receive alerts when devices are found</div>
+          </div>
+          <div onClick="{{ togglePush }}" style="width: 44px; height: 24px; flex: none; cursor: pointer; background: {{ pushBg }}; position: relative; transition: background 150ms;">
+            <div style="position: absolute; top: 3px; width: 18px; height: 18px; background: var(--color-bg); transition: left 150ms; left: {{ pushKnob }}px;"></div>
+          </div>
+        </div>
+        <sc-if value="{{ pushOn }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); font-size: 15px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+            <div style="flex: 1;">Sound</div>
+            <div onClick="{{ toggleSound }}" style="width: 44px; height: 24px; flex: none; cursor: pointer; background: {{ soundBg }}; position: relative; transition: background 150ms;">
+              <div style="position: absolute; top: 3px; width: 18px; height: 18px; background: var(--color-bg); transition: left 150ms; left: {{ soundKnob }}px;"></div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); font-size: 15px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 8 2 2-2 2 2 2-2 2"></path><path d="m22 8-2 2 2 2-2 2 2 2"></path><rect x="8" y="5" width="8" height="14"></rect></svg>
+            <div style="flex: 1;">Vibration</div>
+            <div onClick="{{ toggleVib }}" style="width: 44px; height: 24px; flex: none; cursor: pointer; background: {{ vibBg }}; position: relative; transition: background 150ms;">
+              <div style="position: absolute; top: 3px; width: 18px; height: 18px; background: var(--color-bg); transition: left 150ms; left: {{ vibKnob }}px;"></div>
+            </div>
+          </div>
+        </sc-if>
+        <div style="padding: 10px 16px; background: var(--color-neutral-200); font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">APP</div>
+        <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); font-size: 15px;">
+          <div style="flex: 1;">Version</div><div style="font-size: 14px; color: var(--color-neutral-600);">1.0.0</div>
+        </div>
+        <div onClick="{{ checkUpdates }}" style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; font-size: 15px;" style-hover="background: var(--color-neutral-100);">
+          <div style="flex: 1;">Check for updates</div><div style="color: var(--color-neutral-500);">›</div>
+        </div>
+        <div style="padding: 10px 16px; background: var(--color-neutral-200); font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600);">ABOUT</div>
+        <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; font-size: 15px;" style-hover="background: var(--color-neutral-100);">
+          <div style="flex: 1;">Terms of service</div><div style="color: var(--color-neutral-500);">›</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; font-size: 15px;" style-hover="background: var(--color-neutral-100);">
+          <div style="flex: 1;">Privacy policy</div><div style="color: var(--color-neutral-500);">›</div>
+        </div>
+        <div style="padding: 24px 16px 32px;">
+          <button onClick="{{ askLogout }}" style="width: 100%; height: 48px; background: none; border: 1px solid var(--color-accent); color: var(--color-accent-700); font-size: 15px; font-weight: 700; cursor: pointer; text-align: left; padding: 0 16px; font-family: var(--font-heading);" style-hover="background: var(--color-accent-100);">Log out</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 8 · ERROR STATES -->
+  <sc-if value="{{ isErrors }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Error States" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 54px;">
+      <div style="height: 56px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 2px solid var(--color-divider);">
+        <button onClick="{{ goSettings }}" style="border: none; background: none; cursor: pointer; padding: 8px 8px 8px 0; display: flex; color: var(--color-text);" style-hover="color: var(--color-accent);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"></path></svg></button>
+        <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700;">States &amp; feedback</div>
+      </div>
+      <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 20px;">
+        <div style="font-size: 13px; color: var(--color-neutral-600);">Tap each to preview live.</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button class="btn btn-secondary btn-block" onClick="{{ demoBanner }}">Error banner (top)</button>
+          <button class="btn btn-secondary btn-block" onClick="{{ demoToastSuccess }}">Toast · success</button>
+          <button class="btn btn-secondary btn-block" onClick="{{ demoToastError }}">Toast · error</button>
+          <button class="btn btn-secondary btn-block" onClick="{{ demoToastInfo }}">Toast · info</button>
+          <button class="btn btn-secondary btn-block" onClick="{{ demoSkeleton }}">Skeleton loaders (dashboard)</button>
+        </div>
+        <div class="hr"></div>
+        <div>
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--color-neutral-600); margin-bottom: 8px;">FIELD ERROR</div>
+          <div class="field">
+            <label>Email</label>
+            <input class="input" value="not-an-email" readOnly style="border-color: var(--color-accent);">
+            <div style="margin-top: 4px; color: var(--color-accent-700); font-size: 12px;">✗ Enter a valid email address</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 5 · ALERT CONFIRMATION MODAL -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(32,30,29,0.5); display: flex; align-items: center; justify-content: center; z-index: 40;" onClick="{{ cancelModal }}">
+      <div class="elev-lg" onClick="{{ stopProp }}" style="width: 82%; max-width: 340px; background: var(--color-bg); padding: 20px; animation: bm-slideup 300ms ease-out; border-top: 4px solid var(--color-accent);">
+        <div style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">Send alert?</div>
+        <div style="background: var(--color-neutral-200); padding: 12px; margin-top: 14px; display: flex; gap: 12px; align-items: center;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-text)" stroke-width="1.5"><rect x="5" y="2" width="14" height="20"></rect><path d="M12 18h.01"></path></svg>
+          <div>
+            <div style="font-size: 15px; font-weight: 700; font-family: var(--font-heading);">{{ modal.name }}</div>
+            <div style="font-size: 13px; color: var(--color-neutral-600);">{{ modal.type }}</div>
+            <div style="font-size: 13px; color: var(--color-neutral-700); font-weight: 600;">{{ wifiName }} ✓</div>
+          </div>
+        </div>
+        <div style="font-size: 13px; color: var(--color-neutral-600); margin-top: 12px;">This device will beep and vibrate at full volume.</div>
+        <sc-if value="{{ modalError }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--color-accent-700);">✗ Failed to reach device. Try again.</div>
+        </sc-if>
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <div style="flex: 1;"><button class="btn btn-secondary btn-block" style="height: 44px;" disabled="{{ modalSending }}" onClick="{{ cancelModal }}">Cancel</button></div>
+          <div style="flex: 1;"><button class="btn btn-primary btn-block" style="height: 44px;" disabled="{{ modalSending }}" onClick="{{ confirmAlert }}">{{ modalSendLabel }}</button></div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- REMOVE GUEST MODAL -->
+  <sc-if value="{{ removeGuestOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(32,30,29,0.5); display: flex; align-items: center; justify-content: center; z-index: 40;" onClick="{{ cancelRemoveGuest }}">
+      <div class="elev-lg" onClick="{{ stopProp }}" style="width: 82%; max-width: 340px; background: var(--color-bg); padding: 20px; animation: bm-slideup 300ms ease-out; border-top: 4px solid var(--color-accent);">
+        <div style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">Remove guest?</div>
+        <div style="font-size: 13px; color: var(--color-neutral-600); margin-top: 8px;">This guest will no longer receive alerts.</div>
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <button class="btn btn-secondary btn-block" style="height: 44px;" onClick="{{ cancelRemoveGuest }}">Cancel</button>
+          <button class="btn btn-primary btn-block" style="height: 44px;" onClick="{{ confirmRemoveGuest }}">Remove</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- LOGOUT MODAL -->
+  <sc-if value="{{ logoutOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(32,30,29,0.5); display: flex; align-items: center; justify-content: center; z-index: 40;" onClick="{{ cancelLogout }}">
+      <div class="elev-lg" onClick="{{ stopProp }}" style="width: 82%; max-width: 340px; background: var(--color-bg); padding: 20px; animation: bm-slideup 300ms ease-out; border-top: 4px solid var(--color-accent);">
+        <div style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">Log out?</div>
+        <div style="font-size: 13px; color: var(--color-neutral-600); margin-top: 8px;">You'll stop receiving device alerts on this phone.</div>
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <div style="flex: 1;"><button class="btn btn-secondary btn-block" style="height: 44px;" onClick="{{ cancelLogout }}">Cancel</button></div>
+          <div style="flex: 1;"><button class="btn btn-primary btn-block" style="height: 44px;" onClick="{{ doLogout }}">Log out</button></div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ERROR BANNER -->
+  <sc-if value="{{ bannerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; top: 110px; left: 0; right: 0; z-index: 50; background: var(--color-accent); color: var(--color-bg); display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 13px; font-weight: 600; animation: bm-slidedown 200ms ease-out;">
+      <div style="flex: 1;">{{ bannerMsg }}</div>
+      <button onClick="{{ closeBanner }}" style="border: none; background: none; color: var(--color-bg); cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1;">✕</button>
+    </div>
+  </sc-if>
+
+  <!-- TOASTS -->
+  <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="0">
+    <div style="position: absolute; bottom: 44px; left: 16px; right: 16px; z-index: 50; background: var(--color-text); color: var(--color-bg); padding: 10px 14px; font-size: 13px; display: flex; align-items: center; gap: 8px; animation: bm-slideup 200ms ease-out;">
+      <span style="color: {{ t.iconColor }}; font-weight: 700;">{{ t.icon }}</span> {{ t.msg }}
+    </div>
+  </sc-for>
+
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 520, &quot;height&quot;: 960}, &quot;startScreen&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;splash&quot;, &quot;options&quot;: [&quot;splash&quot;, &quot;login&quot;, &quot;register&quot;, &quot;dashboard&quot;, &quot;alert&quot;, &quot;detail&quot;, &quot;settings&quot;, &quot;errors&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Navigation&quot;}, &quot;wifiName&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Home-WiFi&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo data&quot;}, &quot;offlineDemo&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State previews&quot;}, &quot;emptyDemo&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State previews&quot;}, &quot;showSkeletons&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State previews&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'splash',
+    loginEmail: '', loginPw: '', loginPwShow: false, loginEmailErr: false, loginPwErr: false,
+    regEmail: '', regPw: '', regPw2: '',
+    devices: [
+      { id: 'abc123xyz789', name: 'Samsung S24 Ultra', type: 'Android Phone', os: 'Android 14', online: true, battery: 85, lastSeen: '2 min ago' },
+      { id: 'mbp14-778201', name: 'MacBook Pro 14"', type: 'Mac Laptop', os: 'macOS 15', online: false, battery: 45, lastSeen: '1 hour ago', guest: true, joined: 'Aug 29, 2026 at 5:12 PM' },
+      { id: 'iph15-405112', name: 'iPhone 15', type: 'iOS Phone', os: 'iOS 18', online: false, battery: 42, lastSeen: '3 hours ago' },
+      { id: 'pxl8-990417', name: 'Pixel 8', type: 'Android Phone', os: 'Android 15', online: true, battery: 72, lastSeen: '12 min ago', guest: true, joined: 'Aug 30, 2026 at 2:30 PM' },
+    ],
+    detailId: null, modalId: null, modalSending: false, modalError: false, removeGuestOpen: false,
+    logoutOpen: false, bannerOpen: false, bannerMsg: '',
+    toasts: [], history: {}, skeleton: false,
+    push: true, sound: true, vib: false,
+  };
+  applyStart(scr) {
+    if (scr === 'alert') this.setState({ screen: 'dashboard', modalId: 'abc123xyz789' });
+    else if (scr === 'detail-guest') this.setState({ screen: 'detail', detailId: 'pxl8-990417', modalId: null });
+    else this.setState({ screen: scr, modalId: null });
+  }
+  componentDidMount() {
+    this._start = this.props.startScreen;
+    if (this._start && this._start !== 'splash') this.applyStart(this._start);
+    if ((!this._start || this._start === 'splash') && !this.props.holdSplash) {
+      this._t = setTimeout(() => { if (this.state.screen === 'splash' && (!this.props.startScreen || this.props.startScreen === 'splash')) this.setState({ screen: 'login' }); }, 2000);
+    }
+  }
+  componentDidUpdate() {
+    if (this.props.startScreen !== this._start) {
+      this._start = this.props.startScreen;
+      this.applyStart(this._start);
+    }
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+  toast(icon, iconColor, msg) {
+    const t = { id: Date.now() + Math.random(), icon, iconColor, msg };
+    this.setState(s => ({ toasts: [...s.toasts, t] }));
+    setTimeout(() => this.setState(s => ({ toasts: s.toasts.filter(x => x.id !== t.id) })), 3000);
+  }
+  statusView(d) {
+    return d.online
+      ? { statusLabel: 'ONLINE', statusFg: 'var(--color-accent-700)', statusBg: 'var(--color-accent-100)', statusBorder: 'var(--color-accent-300)' }
+      : { statusLabel: 'OFFLINE', statusFg: 'var(--color-neutral-600)', statusBg: 'var(--color-neutral-200)', statusBorder: 'var(--color-neutral-400)' };
+  }
+  openModal(d) {
+    if (d.guest) { this.toast('ℹ', 'var(--color-neutral-400)', 'Guest devices can\'t receive alerts'); return; }
+    if (!d.online) { this.toast('ℹ', 'var(--color-neutral-400)', 'Device is offline'); return; }
+    this.setState({ modalId: d.id, modalSending: false, modalError: false });
+  }
+  renderVals() {
+    const s = this.state;
+    const wifiName = this.props.wifiName ?? 'Home-WiFi';
+    const forceOffline = this.props.offlineDemo ?? false;
+    const emptyDemo = this.props.emptyDemo ?? false;
+    const devices = emptyDemo ? [] : s.devices.map(d => forceOffline ? { ...d, online: false } : d);
+    const strength = s.regPw.length >= 12 ? 3 : s.regPw.length >= 8 ? 2 : s.regPw.length > 0 ? 1 : 0;
+    const sBarOn = 'var(--color-accent)';
+    const sBarOff = 'var(--color-neutral-300)';
+    const emailTaken = s.regEmail.trim().toLowerCase() === 'dev@example.com';
+    const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.regEmail.trim());
+    const detail = devices.find(d => d.id === s.detailId) || devices[0] || s.devices[0];
+    const modal = devices.find(d => d.id === s.modalId) || detail;
+    const hist = (s.history[detail.id] || []);
+    const go = scr => () => this.setState({ screen: scr });
+    return {
+      wifiName,
+      isSplash: s.screen === 'splash', isLogin: s.screen === 'login', isRegister: s.screen === 'register',
+      isDashboard: s.screen === 'dashboard', isDetail: s.screen === 'detail', isSettings: s.screen === 'settings', isErrors: s.screen === 'errors',
+      noop: e => e.preventDefault(),
+      stopProp: e => e.stopPropagation(),
+      goLogin: e => { e && e.preventDefault && e.preventDefault(); this.setState({ screen: 'login' }); },
+      goRegister: e => { e && e.preventDefault && e.preventDefault(); this.setState({ screen: 'register' }); },
+      goDashboard: go('dashboard'), goSettings: go('settings'), showErrorStates: go('errors'),
+      loginEmail: s.loginEmail, loginPw: s.loginPw,
+      setLoginEmail: e => this.setState({ loginEmail: e.target.value, loginEmailErr: false }),
+      setLoginPw: e => this.setState({ loginPw: e.target.value, loginPwErr: false }),
+      loginPwType: s.loginPwShow ? 'text' : 'password',
+      loginPwToggleLabel: s.loginPwShow ? 'HIDE' : 'SHOW',
+      toggleLoginPw: () => this.setState(x => ({ loginPwShow: !x.loginPwShow })),
+      loginEmailErr: s.loginEmailErr, loginPwErr: s.loginPwErr,
+      doLogin: () => {
+        const okEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.loginEmail.trim());
+        const okPw = s.loginPw.length > 0;
+        if (!okEmail || !okPw) { this.setState({ loginEmailErr: !okEmail, loginPwErr: !okPw }); return; }
+        this.setState({ screen: 'dashboard', skeleton: true });
+        setTimeout(() => this.setState({ skeleton: false }), 1400);
+      },
+      regEmail: s.regEmail, regPw: s.regPw, regPw2: s.regPw2,
+      setRegEmail: e => this.setState({ regEmail: e.target.value }),
+      setRegPw: e => this.setState({ regPw: e.target.value }),
+      setRegPw2: e => this.setState({ regPw2: e.target.value }),
+      regEmailChecked: s.regEmail.length > 3,
+      regEmailColor: emailTaken ? 'var(--color-accent-700)' : emailValid ? 'var(--color-neutral-700)' : 'var(--color-neutral-600)',
+      regEmailMsg: emailTaken ? '✗ Email already used' : emailValid ? '✓ Available' : 'Keep typing…',
+      regPwTouched: s.regPw.length > 0,
+      strengthBar1: strength >= 1 ? sBarOn : sBarOff,
+      strengthBar2: strength >= 2 ? sBarOn : sBarOff,
+      strengthBar3: strength >= 3 ? sBarOn : sBarOff,
+      strengthLabel: ['', 'Weak', 'Medium', 'Strong'][strength],
+      regPw2Touched: s.regPw2.length > 0,
+      matchColor: s.regPw === s.regPw2 ? 'var(--color-neutral-700)' : 'var(--color-accent-700)',
+      matchMsg: s.regPw === s.regPw2 ? '✓ Passwords match' : '✗ Passwords don\'t match',
+      doRegister: () => {
+        if (!emailValid || emailTaken || strength < 2 || s.regPw !== s.regPw2) {
+          this.setState({ bannerOpen: true, bannerMsg: 'Fix the highlighted fields to continue' });
+          setTimeout(() => this.setState({ bannerOpen: false }), 5000);
+          return;
+        }
+        this.setState({ screen: 'dashboard', skeleton: true });
+        setTimeout(() => this.setState({ skeleton: false }), 1400);
+      },
+      deviceCount: devices.length,
+      deviceCountLabel: devices.filter(d => d.online).length + ' of ' + devices.length + ' devices online',
+      showSkeletons: (this.props.showSkeletons ?? false) || s.skeleton,
+      skeletonList: [1, 2, 3],
+      showEmpty: devices.length === 0 && !s.skeleton,
+      doRefresh: () => { this.setState({ skeleton: true }); setTimeout(() => this.setState({ skeleton: false }), 1400); },
+      deviceCards: ((this.props.showSkeletons ?? false) || s.skeleton) ? [] : devices.map(d => ({
+        ...d, ...this.statusView(d), offline: !d.online, batteryPct: d.battery + '%', guest: !!d.guest, alertDisabled: !d.online || !!d.guest, alertLabel: d.guest ? 'Alerts disabled for guests' : 'Send alert',
+        open: () => this.setState({ detailId: d.id, screen: 'detail' }),
+        askAlert: () => this.openModal(d),
+      })),
+      detail: { ...detail, ...this.statusView(detail), offline: !detail.online, batteryPct: detail.battery + '%', guest: !!detail.guest, alertDisabled: !detail.online || !!detail.guest, alertLabel: detail.guest ? 'Alerts disabled for guests' : 'Send alert', notGuest: !detail.guest,
+        batteryColor: detail.battery <= 20 ? 'var(--color-accent)' : 'var(--color-text)',
+        batteryNote: detail.battery >= 100 ? 'Fully charged' : detail.online ? 'Fully charged in ~2 hours' : 'Last reported level' },
+      detailAskAlert: () => this.openModal(detail),
+      detailHistory: hist.map(h => ({ time: h.time, label: h.ok ? '✓ Delivered' : '✗ Failed', color: h.ok ? 'var(--color-neutral-700)' : 'var(--color-accent-700)' })),
+      historyEmpty: hist.length === 0,
+      removeDevice: () => {
+        this.setState(x => ({ devices: x.devices.filter(d => d.id !== detail.id), screen: 'dashboard' }));
+        this.toast('✓', 'var(--color-accent-300)', 'Device removed');
+      },
+      modalOpen: s.modalId !== null, modal, modalSending: s.modalSending, modalError: s.modalError,
+      modalSendLabel: s.modalSending ? 'Sending…' : 'Send alert',
+      cancelModal: () => { if (!s.modalSending) this.setState({ modalId: null }); },
+      confirmAlert: () => {
+        this.setState({ modalSending: true, modalError: false });
+        setTimeout(() => {
+          const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · today';
+          this.setState(x => ({
+            modalId: null, modalSending: false,
+            history: { ...x.history, [modal.id]: [{ time, ok: true }, ...(x.history[modal.id] || [])] },
+          }));
+          this.toast('✓', 'var(--color-accent-300)', 'Device alert sent!');
+        }, 1200);
+      },
+      logoutOpen: s.logoutOpen,
+      askLogout: () => this.setState({ logoutOpen: true }),
+      cancelLogout: () => this.setState({ logoutOpen: false }),
+      doLogout: () => this.setState({ logoutOpen: false, screen: 'login', loginPw: '' }),
+      bannerOpen: s.bannerOpen, bannerMsg: s.bannerMsg,
+      closeBanner: () => this.setState({ bannerOpen: false }),
+      demoBanner: () => { this.setState({ bannerOpen: true, bannerMsg: 'Connection lost. Check your WiFi.' }); setTimeout(() => this.setState({ bannerOpen: false }), 5000); },
+      demoToastSuccess: () => this.toast('✓', 'var(--color-accent-300)', 'Device alert sent!'),
+      demoToastError: () => this.toast('✗', 'var(--color-accent-300)', 'Failed to send alert'),
+      demoToastInfo: () => this.toast('ℹ', 'var(--color-neutral-400)', 'Device is offline'),
+      demoSkeleton: () => { this.setState({ screen: 'dashboard', skeleton: true }); setTimeout(() => this.setState({ skeleton: false }), 2500); },
+      toasts: s.toasts,
+      pushOn: s.push,
+      pushBg: s.push ? 'var(--color-accent)' : 'var(--color-neutral-400)', pushKnob: s.push ? 23 : 3,
+      soundBg: s.sound ? 'var(--color-accent)' : 'var(--color-neutral-400)', soundKnob: s.sound ? 23 : 3,
+      vibBg: s.vib ? 'var(--color-accent)' : 'var(--color-neutral-400)', vibKnob: s.vib ? 23 : 3,
+      togglePush: () => this.setState(x => ({ push: !x.push })),
+      toggleSound: () => this.setState(x => ({ sound: !x.sound })),
+      toggleVib: () => this.setState(x => ({ vib: !x.vib })),
+      checkUpdates: () => this.toast('✓', 'var(--color-accent-300)', 'You\'re on the latest version'),
+      noGuests: devices.filter(d => d.guest).length === 0,
+      guestCount: devices.filter(d => d.guest).length,
+      removeGuest: () => this.setState({ removeGuestOpen: true }),
+      removeGuestOpen: s.removeGuestOpen,
+      cancelRemoveGuest: () => this.setState({ removeGuestOpen: false }),
+      confirmRemoveGuest: () => {
+        const id = this.state.detailId;
+        this.setState(x => ({ devices: x.devices.filter(v => v.id !== id), screen: 'dashboard', removeGuestOpen: false }));
+        this.toast('✓', 'var(--color-accent-300)', 'Guest removed');
+      },
+      guestList: devices.filter(d => d.guest).map(d => ({
+        ...d,
+        remove: () => {
+          this.setState(x => ({ devices: x.devices.filter(v => v.id !== d.id) }));
+          this.toast('✓', 'var(--color-accent-300)', 'Guest removed');
+        },
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

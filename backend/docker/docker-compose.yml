@@ -33,5 +33,30 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  web:
+    # The admin dashboard. Its own Dockerfile lives beside its source in
+    # web/ -- it is a separate deployable with a separate toolchain, and
+    # keeping the build file with the thing it builds is what lets it be
+    # built and shipped without this compose file at all:
+    #
+    #   docker build -t beepmydevice-web ./web
+    build:
+      context: ../../web
+      dockerfile: Dockerfile
+      # Left unset on purpose. Vite inlines VITE_* at build time, and the
+      # defaults are same-origin paths (/api/v1, /ws/status) which the
+      # container's own nginx proxies to `api` below. Passing an absolute URL
+      # here would bake one host into the image.
+      args: {}
+    container_name: beepmydevice-web
+    ports:
+      # 8080 rather than 80: the host's port 80 is usually taken, and a
+      # dashboard that will not start because of that is a confusing first
+      # experience.
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   postgres_data:
