@@ -12,9 +12,18 @@
 # so one image serves any environment: compose passes the service name, a
 # deployment passes a real host.
 #
-#   API_UPSTREAM=api:8000              (docker compose — the service name)
-#   API_UPSTREAM=10.0.0.4:8000         (a private address on your network)
-#   API_UPSTREAM=api.example.com:443   (see the note on TLS below)
+#   API_UPSTREAM=api:8000                    (docker compose — the service name)
+#   API_UPSTREAM=project_api-service:8000    (a platform's internal DNS name)
+#   API_UPSTREAM=10.0.0.4:8000               (a private address on your network)
+#
+# Always an address on the internal network, never the API's PUBLIC hostname.
+# `proxy_pass` below is `http://`, so a public host fails either way round: on
+# :443 nginx sends cleartext at a TLS port, and on :80 the platform's edge
+# proxy answers 301-to-HTTPS, which this container forwards to the browser as
+# a redirect instead of the JSON it asked for. Reaching a public host would
+# mean `proxy_pass https://`, `proxy_ssl_server_name on` and a `Host` header
+# pinned to that name — and even then it would leave the machine and come back
+# through the edge proxy for every call. Use the internal address.
 #
 # NGINX_ENVSUBST_FILTER is set to ^API_ in the Dockerfile so ONLY these
 # variables are replaced. Without that filter envsubst would also eat nginx's
