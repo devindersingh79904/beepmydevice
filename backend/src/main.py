@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
 from src.config import settings
@@ -43,7 +44,78 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs" if not settings.is_production else None,
     redoc_url="/redoc" if not settings.is_production else None,
+    # Gated too, and easily missed: openapi_url has its own default, so setting
+    # only docs_url/redoc_url takes away the two viewers while leaving the
+    # machine-readable spec they read from served at /openapi.json. That
+    # publishes every route, parameter and schema to anyone who asks.
+    openapi_url="/openapi.json" if not settings.is_production else None,
 )
+
+# Declared so Swagger renders an Authorize button and every protected endpoint
+# can actually be exercised from /docs.
+#
+# It has to be spelled out here because authentication is a plain dependency
+# reading the Authorization header off the Request (see middleware/
+# auth_middleware.py), not one of FastAPI's security classes -- so FastAPI has
+# nothing to infer a scheme from, and without this the spec carries no
+# securitySchemes at all. Every protected endpoint then 401s in the UI with no
+# field to paste a token into, which reads as a broken API rather than a
+# missing button.
+_BEARER_SCHEME = {
+    "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": (
+            "Paste the `token` returned by POST /auth/login or /auth/register. "
+            "A guest device token is accepted only at the heartbeat endpoint."
+        ),
+    }
+}
+
+
+def custom_openapi() -> dict[str, Any]:
+    """Return the OpenAPI schema with the bearer scheme applied globally.
+
+    Cached on the app, which is what FastAPI's own generator does -- the schema
+    is rebuilt on every call otherwise, and /docs requests it on every load.
+    """
+    if app.openapi_schema is not None:
+        return app.openapi_schema
+
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    schema.setdefault("components", {})["securitySchemes"] = _BEARER_SCHEME
+    # Applied at the document level rather than per-route: all but four
+    # endpoints require a token, so listing the exceptions is shorter and
+    # cannot drift as routes are added. The public ones override it below.
+    schema["security"] = [{"BearerAuth": []}]
+
+    # The endpoints that genuinely take no credential. /devices/register is the
+    # interesting one: a token is optional there, and its presence is what
+    # decides whether an owned device or a guest is created.
+    public = {
+        ("/auth/register", "post"),
+        ("/auth/login", "post"),
+        ("/auth/forgot-password", "post"),
+        ("/auth/reset-password", "post"),
+        ("/devices/register", "post"),
+        ("/health", "get"),
+    }
+    for path, method in public:
+        operation = schema.get("paths", {}).get(path, {}).get(method)
+        if operation is not None:
+            operation["security"] = []
+
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi  # type: ignore[method-assign]
 
 # Order matters: logging is added last so it wraps everything and sees the
 # final status code, including responses short-circuited by CORS.
