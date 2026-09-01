@@ -103,9 +103,25 @@ ENV NGINX_ENVSUBST_FILTER="^API_"
 
 EXPOSE 80
 
-# `wget --spider` rather than curl: curl is not in nginx:alpine, and a health
-# check that fails because its own binary is missing is worse than none.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+# `wget` rather than curl: curl is not in nginx:alpine, and a health check that
+# fails because its own binary is missing is worse than none.
+#
+# Three details here are each a way this has actually gone wrong:
+#
+#   127.0.0.1, not localhost — `localhost` resolves to ::1 first. The base
+#   image's 10-listen-on-ipv6 script normally adds `listen [::]:80`, but it
+#   skips that when the config's checksum is unexpected, and then every check
+#   fails against a port nothing is bound to on that family.
+#
+#   -O /dev/null, not --spider — --spider is a GNU wget option. Alpine ships
+#   BusyBox wget, whose support for it varies by version; a plain GET that
+#   discards the body works on every build.
+#
+#   A generous start-period and retries — an orchestrator kills an unhealthy
+#   task and starts another. If the probe is wrong, that is an endless restart
+#   loop of containers whose own logs show a clean start and no error, which
+#   is a genuinely hard thing to read.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=5 \
+  CMD wget --quiet --tries=1 -O /dev/null http://127.0.0.1:80/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
