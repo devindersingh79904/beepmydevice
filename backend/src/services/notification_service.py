@@ -73,6 +73,12 @@ class PushOutcome(str, Enum):
     DELIVERED = "DELIVERED"
     TOKEN_INVALID = "TOKEN_INVALID"
     TRANSIENT_FAILURE = "TRANSIENT_FAILURE"
+    # Not sent because the owner asked not to be. Distinct from TOKEN_INVALID
+    # because the caller *clears the push token* on that one: reporting a
+    # switched-off preference as a dead token deletes a perfectly good token
+    # and marks the device offline, so turning notifications back on would
+    # never restore delivery.
+    SUPPRESSED = "SUPPRESSED"
 
 
 class NotificationService:
@@ -262,7 +268,7 @@ class NotificationService:
         owner = device.user
         if owner is not None and not owner.notifications_enabled:
             logger.info(f"Skipping push to {device.device_id}: owner has notifications off")
-            return PushOutcome.TOKEN_INVALID
+            return PushOutcome.SUPPRESSED
 
         outcome = PushOutcome.TRANSIENT_FAILURE
         for attempt in range(PUSH_MAX_RETRIES):

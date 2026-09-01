@@ -367,6 +367,42 @@ class TestSendAlert:
         assert alert is not None
         assert alert.status == AlertStatus.SENT.value
 
+    def test_notifications_off_does_not_clear_the_push_token(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+        db: Session,
+        mock_push: PushRecorder,
+    ) -> None:
+        """Switching notifications off must not destroy the device's token.
+
+        The suppressed push used to be reported as TOKEN_INVALID, which the
+        route treats as "the provider disowned this token" -- so it cleared the
+        token and marked the device OFFLINE. Turning notifications back on then
+        restored nothing, because there was no longer a token to push to.
+        """
+        registered = register_device(client, auth_headers, push_token="keep-me")
+        device_id = uuid.UUID(registered["device_id"])
+        client.put(
+            "/auth/preferences",
+            json={"notifications_enabled": False},
+            headers=auth_headers,
+        )
+
+        client.post(
+            "/alerts/send",
+            json={"device_ids": [registered["device_id"]]},
+            headers=auth_headers,
+        )
+
+        db.expire_all()
+        device = db.get(Device, device_id)
+        assert device is not None
+        assert device.push_token == "keep-me"
+        assert device.status == DeviceStatus.ONLINE.value
+        # Nothing was actually sent, either -- the preference still holds.
+        assert mock_push.all_tokens == []
+
     def test_clears_stale_push_token_on_unregistered_error(
         self, client: TestClient, auth_headers: dict[str, str], db: Session
     ) -> None:
