@@ -20,6 +20,7 @@ import {
   ErrorBanner,
   Field,
   GuestTag,
+  PasswordInput,
   StatusTag,
   Toggle,
 } from '@/components/primitives';
@@ -167,28 +168,24 @@ function PasswordSection(): ReactElement {
         htmlFor="current-password"
         error={errors.fields.current_password}
       >
-        <input
+        <PasswordInput
           id="current-password"
-          className={
-            errors.fields.current_password !== undefined ? 'input input-invalid' : 'input'
-          }
-          type="password"
           autoComplete="current-password"
           required
+          invalid={errors.fields.current_password !== undefined}
           value={current}
-          onChange={event => setCurrent(event.target.value)}
+          onChange={setCurrent}
         />
       </Field>
 
       <Field label="New password" htmlFor="new-password" error={errors.fields.new_password}>
-        <input
+        <PasswordInput
           id="new-password"
-          className={errors.fields.new_password !== undefined ? 'input input-invalid' : 'input'}
-          type="password"
           autoComplete="new-password"
           required
+          invalid={errors.fields.new_password !== undefined}
           value={next}
-          onChange={event => setNext(event.target.value)}
+          onChange={setNext}
         />
       </Field>
 
@@ -197,14 +194,13 @@ function PasswordSection(): ReactElement {
         htmlFor="confirm-password"
         error={mismatch ? 'The two passwords do not match.' : undefined}
       >
-        <input
+        <PasswordInput
           id="confirm-password"
-          className={mismatch ? 'input input-invalid' : 'input'}
-          type="password"
           autoComplete="new-password"
           required
+          invalid={mismatch}
           value={confirm}
-          onChange={event => setConfirm(event.target.value)}
+          onChange={setConfirm}
         />
       </Field>
 
