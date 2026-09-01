@@ -125,11 +125,20 @@ describe('alert eligibility', () => {
     expect(canReceiveAlert('UNKNOWN')).toBe(false);
   });
 
-  it('a guest can receive alerts but its button is still disabled', () => {
+  it('an ONLINE guest is alertable, exactly like an owned device', () => {
+    // Guests are the point of the product: a visitor's phone on your network
+    // is precisely what you need to be able to beep. The rule that mentions
+    // guests is about the *sender* -- a guest holds no user token and is
+    // refused at the alert endpoint with ALERT_005 -- and says nothing about
+    // who may be a target.
     const guest = buildDevice({is_guest: true, status: 'ONLINE'});
 
     expect(canReceiveAlert(guest.status)).toBe(true);
-    expect(canSendAlertTo(guest)).toBe(false);
+    expect(canSendAlertTo(guest)).toBe(true);
+  });
+
+  it('an OFFLINE guest is not alertable, for the usual reason', () => {
+    expect(canSendAlertTo(buildDevice({is_guest: true, status: 'OFFLINE'}))).toBe(false);
   });
 
   it('an owned ONLINE device can be alerted', () => {

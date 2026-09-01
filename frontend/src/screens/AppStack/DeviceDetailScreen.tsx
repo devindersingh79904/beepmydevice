@@ -238,7 +238,7 @@ export function DeviceDetailScreen(): React.JSX.Element {
           />
         ) : null}
         <Button
-          label={device.is_guest ? 'Alerts disabled for guests' : 'Send alert'}
+          label={canAlert ? 'Send alert' : 'Device is not reachable'}
           disabled={!canAlert}
           onPress={() => setAlertOpen(true)}
         />

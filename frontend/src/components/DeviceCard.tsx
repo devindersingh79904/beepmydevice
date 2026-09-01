@@ -39,11 +39,10 @@ export function DeviceCard({
   const canAlert = canSendAlertTo(device);
   const name = device.device_name ?? getDeviceTypeLabel(device.device_type);
 
-  // A greyed control with no reason reads as a bug, so the guest case says why
-  // on the button itself rather than leaving it blank and disabled.
-  const alertLabel = device.is_guest
-    ? 'Alerts disabled for guests'
-    : 'Send alert';
+  // A greyed control with no reason reads as a bug, so an unreachable device
+  // says why on the button itself rather than leaving it blank and disabled.
+  // Guests are not a case here: a guest is alertable like anything else.
+  const alertLabel = canAlert ? 'Send alert' : 'Device is not reachable';
 
   return (
     <View style={styles.card}>

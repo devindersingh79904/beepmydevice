@@ -98,7 +98,9 @@ describe('DeviceCard', () => {
       />,
     );
 
-    expect(screen.getByRole('button', {name: 'Send alert'})).toBeDisabled();
+    expect(
+      screen.getByRole('button', {name: 'Device is not reachable'}),
+    ).toBeDisabled();
   });
 
   it('disables the alert button for an UNKNOWN device', () => {
@@ -110,7 +112,9 @@ describe('DeviceCard', () => {
       />,
     );
 
-    expect(screen.getByRole('button', {name: 'Send alert'})).toBeDisabled();
+    expect(
+      screen.getByRole('button', {name: 'Device is not reachable'}),
+    ).toBeDisabled();
   });
 
   it('hides the battery indicator when battery_level is null', () => {
@@ -157,17 +161,37 @@ describe('DeviceCard', () => {
     expect(onSendAlert).toHaveBeenCalledWith('device-1');
   });
 
-  it('disables the alert button for a guest and says why', () => {
+  it('badges a guest but still lets the admin alert it', () => {
+    // Finding a visitor's phone is what guest registration is for. The badge
+    // is the whole of the guest treatment here; the restriction that mentions
+    // guests applies to the sender's credential, not to the target.
+    const onSendAlert = jest.fn();
     render(
       <DeviceCard
-        device={buildDevice({is_guest: true})}
+        device={buildDevice({is_guest: true, status: 'ONLINE'})}
+        onPress={jest.fn()}
+        onSendAlert={onSendAlert}
+      />,
+    );
+
+    expect(screen.getByText('GUEST')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', {name: 'Send alert'}));
+
+    expect(onSendAlert).toHaveBeenCalledWith('device-1');
+  });
+
+  it('still refuses to alert an OFFLINE guest', () => {
+    render(
+      <DeviceCard
+        device={buildDevice({is_guest: true, status: 'OFFLINE'})}
         onPress={jest.fn()}
         onSendAlert={jest.fn()}
       />,
     );
 
-    expect(screen.getByText('Alerts disabled for guests')).toBeTruthy();
-    expect(screen.getByText('GUEST')).toBeTruthy();
+    expect(
+      screen.getByRole('button', {name: 'Device is not reachable'}),
+    ).toBeDisabled();
   });
 });
 

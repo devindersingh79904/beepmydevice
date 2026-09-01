@@ -162,12 +162,20 @@ export function canReceiveAlert(status: DeviceStatus): boolean {
 /**
  * Whether the alert button should be enabled for this device.
  *
- * False for a guest, whose button renders greyed out with a "Guest" badge
- * explaining why. This is presentation only: the server rejects a guest send
- * regardless, since a guest holds no user token.
+ * Reachability only. A guest is a perfectly valid *target* — finding a
+ * visitor's phone on your network is what guest registration exists for, and
+ * `AlertService` deliberately does not require targets to be owned by the
+ * sender.
+ *
+ * The rule this used to enforce is a different one, about the *sender*: a
+ * guest cannot send, because it holds a device token rather than a user token
+ * and `get_sending_user_id` rejects it with ALERT_005. That is enforced on the
+ * server against the caller's credential; it says nothing about who may be
+ * beeped, and applying it here disabled the admin's button over every guest on
+ * the network.
  */
 export function canSendAlertTo(device: Device): boolean {
-  return canReceiveAlert(device.status) && !device.is_guest;
+  return canReceiveAlert(device.status);
 }
 
 /** Normalise a MAC to uppercase colon-separated form, matching the backend. */

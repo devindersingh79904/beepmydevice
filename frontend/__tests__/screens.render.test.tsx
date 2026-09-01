@@ -159,8 +159,8 @@ describe('DeviceDetailScreen', () => {
     expect(screen.getByText('72%')).toBeTruthy();
   });
 
-  it('offers Remove guest and explains the disabled alert for a guest', async () => {
-    mockList([buildDevice({is_guest: true})]);
+  it('offers Remove guest, and still offers to alert the guest', async () => {
+    mockList([buildDevice({is_guest: true, status: 'ONLINE'})]);
 
     render(
       <Providers>
@@ -169,7 +169,9 @@ describe('DeviceDetailScreen', () => {
     );
 
     expect(await screen.findByText('Remove guest')).toBeTruthy();
-    expect(screen.getByText('Alerts disabled for guests')).toBeTruthy();
+    // A guest is an ordinary alert target -- beeping a visitor's phone is the
+    // reason guest registration exists.
+    expect(screen.getByText('Send alert')).toBeTruthy();
     // A guest has no owner, so the owner-only action must not be offered.
     expect(screen.queryByText('Remove device')).toBeNull();
   });
