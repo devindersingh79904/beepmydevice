@@ -14,7 +14,7 @@ from src.services.device_service import (
     is_alertable,
     owned_network_id,
 )
-from src.utils.constants import AlertStatus, DeviceStatus
+from src.utils.constants import DeviceStatus
 from src.utils.logger import get_logger
 
 logger = get_logger("alert_service")
@@ -39,7 +39,7 @@ class NoReachableTargetsError(ValueError):
 
 
 class AlertService:
-    """Decides whether an alert may be sent, then sends and records it.
+    """Decides whether an alert may be sent, and records that it was.
 
     This is the security-critical service. Every send runs three checks in
     order and any failure aborts the whole request rather than partially
@@ -65,38 +65,6 @@ class AlertService:
         """
         self._db = db
 
-    def send_alert(
-        self,
-        admin_user_id: uuid.UUID,
-        device_ids: list[uuid.UUID],
-    ) -> uuid.UUID:
-        """Authorize, deliver and log an alert.
-
-        An empty device_ids list targets every device on the sender network,
-        guests included.
-
-        Args:
-            admin_user_id: The user requesting the alert. Must be the admin of
-                the network the targets are on.
-            device_ids: Target devices, or empty for all on the network. May
-                include guest devices, which have no owner.
-
-        Returns:
-            The ID of the recorded alert.
-
-        Raises:
-            PermissionError: If the targets span multiple networks, or the
-                sender is not the admin of the target network.
-            ValueError: If there are no reachable targets.
-        """
-        wifi_id, targets = self.resolve_targets(admin_user_id, device_ids)
-        return self.log_alert(
-            admin_user_id,
-            wifi_id,
-            [target.device_id for target in targets],
-            AlertStatus.SENT.value,
-        )
-
     def resolve_targets(
         self,
         admin_user_id: uuid.UUID,
@@ -104,9 +72,10 @@ class AlertService:
     ) -> tuple[uuid.UUID, list[Device]]:
         """Run the three authorization checks and return the approved targets.
 
-        Split out from :meth:`send_alert` so the route can push to the approved
-        devices and report per-device delivery without authorizing twice.
-        Authorization is all-or-nothing; only *push* outcomes are per-device.
+        Separate from :meth:`log_alert` so the route can authorize once, push to
+        the approved devices, and record the outcome -- without authorizing
+        twice. Authorization is all-or-nothing; only *push* outcomes are
+        per-device.
 
         Returns:
             The network the alert is scoped to, and the devices to beep.
@@ -216,22 +185,6 @@ class AlertService:
             select(WiFiNetwork.user_id).where(WiFiNetwork.wifi_id == wifi_id)
         ).scalar_one_or_none()
         return owner_id is not None and owner_id == user_id
-
-    def verify_same_wifi(self, device_ids: list[uuid.UUID]) -> bool:
-        """Return True if every target device shares one wifi_id.
-
-        This is the proximity guarantee, and with guest devices in the mix it
-        is the *only* membership check -- a guest has no owner to verify
-        against, so shared network membership carries the whole boundary.
-        """
-        if not device_ids:
-            return True
-        distinct_networks = self._db.execute(
-            select(func.count(func.distinct(Device.wifi_id))).where(
-                Device.device_id.in_(device_ids)
-            )
-        ).scalar_one()
-        return distinct_networks == 1
 
     def get_alert_logs(
         self,
