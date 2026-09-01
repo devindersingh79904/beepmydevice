@@ -80,9 +80,9 @@ export function DeviceProvider({children}: {children: ReactNode}): ReactElement 
   /**
    * Apply one status frame in place.
    *
-   * Only the two fields the frame carries are touched. Replacing the row
-   * wholesale would blank `last_heartbeat`, `is_guest` and the name, none of
-   * which the socket sends.
+   * Only the fields the frame carries are touched. Replacing the row wholesale
+   * would blank `is_guest`, the name and the type, none of which the socket
+   * sends.
    *
    * A frame for a device not in the list is ignored rather than inserted: the
    * frame has no name or type, so inserting it would render an empty row. A
@@ -91,13 +91,24 @@ export function DeviceProvider({children}: {children: ReactNode}): ReactElement 
   const applyFrame = useCallback((frame: DeviceStatusFrame) => {
     logger.debug('Status frame', {
       device: frame.device_id,
-      status: frame.status,
-      battery: frame.battery_level ?? 'unknown',
+      status: frame.status ?? 'unchanged',
+      battery: frame.battery ?? 'unchanged',
     });
     setDevices(current =>
       current.map(device =>
         device.device_id === frame.device_id
-          ? {...device, status: frame.status, battery_level: frame.battery_level}
+          ? {
+              ...device,
+              // `?? device.x`, not a bare assignment: a null field on the frame
+              // means "unchanged", so overwriting with it blanks a value the
+              // socket never claimed had changed.
+              status: frame.status ?? device.status,
+              battery_level: frame.battery ?? device.battery_level,
+              // The frame is proof of a heartbeat, so the timestamp is the
+              // freshest "last seen" there is. Without this the table keeps
+              // ageing a device that is demonstrably talking to the server.
+              last_heartbeat: frame.timestamp,
+            }
           : device,
       ),
     );

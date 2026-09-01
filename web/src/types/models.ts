@@ -104,8 +104,20 @@ export interface NotificationPreferences {
  */
 export interface DeviceStatusFrame {
   device_id: string;
-  status: DeviceStatus;
-  battery_level: number | null;
+  /** Null means "unchanged", not "cleared". */
+  status: DeviceStatus | null;
+  /**
+   * The battery level, named `battery` — NOT `battery_level`.
+   *
+   * The server sends `battery` on this frame while the device *record* calls
+   * the same value `battery_level`. Reading `battery_level` here compiles
+   * (the frame is cast straight out of `JSON.parse`) and yields `undefined`
+   * at runtime, which then gets written over a perfectly good reading.
+   *
+   * Null means "unchanged", not "cleared": a desktop that reports no battery
+   * sends null, and must not blank a level already on screen.
+   */
+  battery: number | null;
   timestamp: string;
 }
 
