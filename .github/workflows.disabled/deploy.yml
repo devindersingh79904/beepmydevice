@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build image
-        run: docker build -f backend/docker/Dockerfile -t beepmydevice-backend:${{ github.sha }} backend/
+        run: docker build -f backend/Dockerfile -t beepmydevice-backend:${{ github.sha }} backend/
 
       # Configure a registry and a deploy target before enabling the steps
       # below. Left explicit rather than guessed at.

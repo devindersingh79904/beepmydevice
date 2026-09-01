@@ -77,6 +77,11 @@ docker compose up -d --build
 docker compose exec api python -m alembic upgrade head
 ```
 
+The image builds from `backend/Dockerfile` with `backend/` as its context.
+That is the conventional location on purpose: a platform building from the
+repo (EasyPanel, Railway, Render) is pointed at build path `backend` and finds
+`Dockerfile` with no further configuration.
+
 **Migrations run as a separate step, not on container start.** An automatic
 migration on boot means a crash-looping container attempts the same migration
 on every restart.

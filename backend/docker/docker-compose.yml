@@ -23,7 +23,12 @@ services:
   api:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      # backend/Dockerfile, the conventional location. Platforms that build
+      # from a repo (EasyPanel, Railway, Render) look for `Dockerfile` at the
+      # build path by default, and a Dockerfile tucked in a subdirectory is a
+      # setting each of them spells differently -- or, on some, cannot express
+      # at all. The entrypoint and this compose file stay in docker/.
+      dockerfile: Dockerfile
     container_name: beepmydevice-api
     env_file:
       - ../.env
