@@ -51,8 +51,26 @@ docker compose -f docker/docker-compose.yml up --build
 # API        http://localhost:8000
 ```
 
-`nginx.conf` serves the bundle and proxies `/api` and `/ws` to the `api`
-container, which is why the same-origin defaults work in production too.
+`templates/default.conf.template` serves the bundle and proxies `/api/v1` and
+`/ws` to the API, which is why the same-origin defaults work in production too.
+It is a template rather than a finished config because nginx:alpine runs
+`envsubst` over it at container start, so **one image works against any API
+host**:
+
+```bash
+docker run -p 8080:80 -e API_UPSTREAM=10.0.0.4:8000 beepmydevice-web
+```
+
+`API_UPSTREAM` defaults to `api:8000`, the compose service name. Only variables
+starting `API_` are substituted (`NGINX_ENVSUBST_FILTER`) — without that filter
+envsubst would also replace nginx's own `$host` and `$remote_addr` with empty
+strings, which looks like a broken backend rather than a broken config.
+
+The `/api/v1` prefix is stripped by the trailing slash on `proxy_pass`. The
+backend mounts its routers at the root; the prefix exists only so the browser
+can tell an endpoint from this dashboard's own `/devices` and `/alerts` pages.
+
+See [`docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md) for a full deployment.
 
 ## Layout
 

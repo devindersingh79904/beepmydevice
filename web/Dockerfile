@@ -1,3 +1,18 @@
+# check=skip=SecretsUsedInArgOrEnv
+#
+# That check fires on the VITE_FIREBASE_* build args below, because their names
+# contain API_KEY and VAPID_KEY. They are not secrets and cannot be: Vite
+# inlines every VITE_* variable into the JavaScript bundle, so all of them are
+# readable by anyone who loads the page. A Firebase web apiKey identifies the
+# project to Google and is restricted by a domain allow-list, not by being
+# hidden.
+#
+# Skipped deliberately rather than left to warn on every build — a warning
+# nobody can action is one people learn to scroll past, including the time it
+# is real. The actual secrets (the Firebase service-account private key, the
+# JWT signing key, the APNs .p8) live in backend/.env and never reach a
+# browser or this image.
+
 # BeepMyDevice web dashboard.
 #
 # Two stages: Node builds the bundle, nginx serves it. The runtime image
@@ -62,7 +77,20 @@ FROM nginx:1.25-alpine AS serve
 
 # nginx:alpine already runs worker processes as the unprivileged `nginx` user.
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Into templates/, not conf.d/: the base image runs envsubst over this on every
+# start, so the API address is a deployment setting rather than something baked
+# into the image at build time.
+COPY templates/ /etc/nginx/templates/
+
+# Where the API lives, as host:port. The default is the compose service name.
+ENV API_UPSTREAM=api:8000
+
+# Substitute ONLY variables starting API_. nginx's config is full of its own
+# $-variables ($host, $remote_addr, $proxy_add_x_forwarded_for); without this
+# filter envsubst replaces them with empty strings and every proxied request
+# arrives with blank headers.
+ENV NGINX_ENVSUBST_FILTER="^API_"
 
 EXPOSE 80
 

@@ -6,10 +6,23 @@
 # CORS preflight, no cross-origin cookie rules, and a wss:// socket that
 # inherits the page's TLS rather than needing its own certificate.
 
+# The API address is substituted at container start, not baked in.
+#
+# nginx:alpine runs envsubst over /etc/nginx/templates/*.template on startup,
+# so one image serves any environment: compose passes the service name, a
+# deployment passes a real host.
+#
+#   API_UPSTREAM=api:8000              (docker compose — the service name)
+#   API_UPSTREAM=10.0.0.4:8000         (a private address on your network)
+#   API_UPSTREAM=api.example.com:443   (see the note on TLS below)
+#
+# NGINX_ENVSUBST_FILTER is set to ^API_ in the Dockerfile so ONLY these
+# variables are replaced. Without that filter envsubst would also eat nginx's
+# own $host, $remote_addr and $proxy_add_x_forwarded_for, blanking every
+# proxy header — a failure that looks like a broken backend, not a broken
+# config.
 upstream beepmydevice_api {
-    # `api` is the service name in docker/docker-compose.yml. Change it when
-    # running the container against an API somewhere else.
-    server api:8000;
+    server ${API_UPSTREAM};
 }
 
 server {

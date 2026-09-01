@@ -26,6 +26,15 @@ services:
       - ../.env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-beepmydevice}:${POSTGRES_PASSWORD:-beepmydevice}@db:5432/${POSTGRES_DB:-beepmydevice_dev}
+      # Empty: log to stdout only, which is where `docker logs` and every
+      # hosting platform read from. A log file inside a container is written to
+      # a layer that is discarded when the container is replaced, so the lines
+      # you most want after a crash are the ones guaranteed to be gone.
+      LOG_FILE_PATH: ""
+      # Compose is the "just bring it up" path, so it migrates on start. A
+      # production deploy leaves this unset and runs the step explicitly --
+      # see docs/DEPLOYMENT.md for why that distinction is kept.
+      RUN_MIGRATIONS: "true"
     ports:
       - "8000:8000"
     depends_on:

@@ -29,6 +29,21 @@ COPY src/ ./src/
 COPY migrations/ ./migrations/
 COPY alembic.ini ./
 
+# Copied before dropping to appuser: the chmod needs root, and a non-executable
+# entrypoint fails with "permission denied" at container start rather than at
+# build time, which is a slow way to find a one-bit mistake.
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# /app is root-owned after the COPYs above, and the process runs as appuser.
+# Anything the app writes at runtime therefore fails with EACCES — which is how
+# a configured LOG_FILE_PATH took the container down on its first start, with
+# "Permission denied: 'logs'" repeating behind a healthcheck that never passed.
+#
+# Prefer stdout in a container (see docker-compose.yml); this makes a file path
+# work when someone sets one anyway.
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
+
 # Never run the API as root.
 USER appuser
 
@@ -55,4 +70,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 #   not a glitch.
 #
 # Scaling this image horizontally is therefore not safe yet. Run one instance.
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

@@ -12,16 +12,23 @@ Internet
    |  HTTPS 443 / WSS
    v
 Nginx  (TLS termination, reverse proxy, WebSocket upgrade)
-   |  HTTP 8000
-   v
-Uvicorn  (Docker container)
-   |
+   |                        |
+   |  HTTP 8000             |  HTTP 80
+   v                        v
+Uvicorn                   Dashboard  (nginx serving web/dist)
+   |                        |
+   |                        '--> proxies /api/v1 and /ws back to Uvicorn
    v
 PostgreSQL 15
 ```
 
 Uvicorn never faces the internet directly. Nginx terminates TLS, handles the
 WebSocket upgrade, and applies connection limits.
+
+The dashboard is a third deployable (`web/`, its own Dockerfile). It carries
+its own nginx, which serves the static bundle and proxies the two API paths, so
+the browser sees one origin and needs no CORS entry. Putting it on a separate
+origin also works -- see **Dashboard** below.
 
 ---
 
@@ -68,9 +75,27 @@ docker compose up -d --build
 docker compose exec api python -m alembic upgrade head
 ```
 
-Migrations run as a separate step, not on container start — an automatic
-migration on boot means a crash-looping container can attempt the same
-migration repeatedly.
+**Migrations run as a separate step, not on container start.** An automatic
+migration on boot means a crash-looping container attempts the same migration
+on every restart.
+
+The image's entrypoint *can* run them, gated behind `RUN_MIGRATIONS=true`. The
+compose file sets it, because a `docker compose up` against an empty volume
+otherwise starts an API with no tables -- which reports healthy and then 500s
+on the first query, with the real cause (`relation "users" does not exist`)
+buried in a stack trace. Leave it unset for a real deploy and keep the explicit
+step above.
+
+Two container settings worth knowing:
+
+- **`LOG_FILE_PATH` should be empty in a container.** Logs then go to stdout,
+  where `docker logs` and every hosting platform read them. A log file inside a
+  container is written to a layer discarded when the container is replaced, so
+  the lines you most want after a crash are the ones guaranteed to be gone.
+- The image runs as a non-root user, and `/app` is chowned to it so a
+  configured log path still works. Without that, a set `LOG_FILE_PATH` fails
+  with `Permission denied: 'logs'` in a restart loop, behind a healthcheck that
+  never passes.
 
 ### Verify
 
@@ -134,11 +159,22 @@ Renewal is automatic; confirm with `sudo certbot renew --dry-run`.
 
 Run **one** Uvicorn worker for now.
 
-`WebSocketManager` keeps connections in process memory, so with multiple workers
-a heartbeat handled by worker A never reaches a dashboard connected to worker B
-— the status display silently stops updating for some users. Redis-backed
-pub/sub is the Phase 2 fix; until then, a single worker is a correctness
-requirement, not a performance choice.
+Two structures live in process memory, and both break silently when there is
+more than one process -- whether that is a second worker or a second replica
+behind a load balancer.
+
+`WebSocketManager` keeps connections in process memory, so a heartbeat handled
+by worker A never reaches a dashboard connected to worker B — the status
+display silently stops updating for some users while continuing to look live.
+
+**The revoked-token set is the sharper one.** A token revoked by logout on one
+process is still accepted by the other, so signing out does not end the
+session. That is a security defect, not a degraded experience.
+
+Redis-backed pub/sub is the Phase 2 fix for both. Until then a single worker is
+a correctness requirement, not a performance choice, and `--workers 1` is
+written into the image's `CMD` so it is not left to a default. If your platform
+has a replicas or min-instances setting, it must be 1.
 
 ---
 
@@ -157,6 +193,59 @@ the connection count grows past what `DB_POOL_SIZE` comfortably covers.
 
 ---
 
+## Dashboard
+
+Its own image, with its own nginx:
+
+```bash
+docker build -t beepmydevice-web ./web
+docker run -p 8080:80 -e API_UPSTREAM=127.0.0.1:8000 beepmydevice-web
+```
+
+`API_UPSTREAM` is substituted at container **start**, not baked in, so one
+image serves any environment. Only variables beginning `API_` are substituted
+(`NGINX_ENVSUBST_FILTER`); without that filter envsubst would also replace
+nginx's own `$host` and `$remote_addr` with empty strings, which presents as a
+broken backend rather than a broken config.
+
+The browser calls `/api/v1/*`, and nginx strips the prefix via the trailing
+slash on `proxy_pass`. The backend mounts its routers at the root; the prefix
+exists only so the browser can tell an endpoint from the dashboard's own
+`/devices` and `/alerts` pages, which would otherwise be ambiguous on a shared
+origin. **Dropping that trailing slash 404s every request.**
+
+To serve the dashboard from a different origin instead, bake absolute URLs in
+at build time — Vite inlines them:
+
+```bash
+docker build -t beepmydevice-web \
+  --build-arg VITE_API_BASE_URL=https://api.beepmydevice.com \
+  --build-arg VITE_WS_URL=wss://api.beepmydevice.com/ws/status ./web
+```
+
+Then add that origin to `CORS_ORIGINS` on the API, or every browser call fails
+preflight. `CORS_ORIGINS` defaults to an empty list — nothing is allowed
+until it is set.
+
+---
+
+## A PostgreSQL gotcha
+
+**`initdb` only runs on an empty volume.** Changing `POSTGRES_USER` or
+`POSTGRES_PASSWORD` in the compose file does nothing to a volume that already
+exists: the old role stays, and the API fails with `password authentication
+failed for user ...`, which reads like a wrong password rather than a stale
+volume.
+
+A fresh host never hits this. On a machine that has run an earlier
+configuration, either match the existing credentials or destroy the volume:
+
+```bash
+docker compose -f docker/docker-compose.yml down -v   # destroys the data
+```
+
+---
+
 ## Mobile releases
 
 ### Android
@@ -169,6 +258,12 @@ npm run build:android
 
 Sign with your upload key and publish through the Google Play Console. Ship the
 production `google-services.json`, which is gitignored.
+
+**A release build requires HTTPS.** Android 9+ blocks cleartext HTTP, and
+`usesCleartextTraffic` is set only in the *debug* variant
+(`android/app/src/debug/AndroidManifest.xml`). A release APK pointed at an
+`http://` API fails every request; against `https://` it works and that flag
+stops mattering.
 
 ### iOS
 
@@ -206,7 +301,10 @@ DEBUG_MODE=false
 - [ ] Push tested end-to-end on a real iOS device and a real Android device
 - [ ] Database backup taken and a restore rehearsed
 - [ ] Frontend `.env` pointing at production
-- [ ] Single Uvicorn worker confirmed
+- [ ] Single Uvicorn worker confirmed, and replicas set to 1
+- [ ] `LOG_FILE_PATH` empty so logs reach stdout
+- [ ] Dashboard reachable, and a client route (`/devices`) survives a reload
+- [ ] `API_UPSTREAM` or `VITE_API_BASE_URL` pointing at the real API
 
 ---
 
