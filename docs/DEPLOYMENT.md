@@ -62,6 +62,20 @@ APPLE_USE_SANDBOX=False
 
 `ENVIRONMENT=production` disables `/docs` and `/redoc` automatically.
 
+**The scheme must be `postgresql://`, not `postgres://`.** Managed-database
+panels (EasyPanel, Heroku, Render) hand you a URL beginning `postgres://`.
+SQLAlchemy 2.0 removed that alias, so pasting it verbatim fails at import with
+`Can't load plugin: sqlalchemy.dialects:postgres` — before the app logs
+anything of its own. Rewrite the scheme; the rest of the URL, `?sslmode=`
+included, is passed through to psycopg2 unchanged.
+
+On a platform where you set variables in a form rather than a file, the same
+values apply, and two are easy to miss: `LOG_FILE_PATH=` (empty, see below) and
+`RUN_MIGRATIONS=true` on the first deploy, since there is no volume to have
+been migrated already. If neither `DATABASE_URL` nor `SECRET_KEY` is set at
+all, the container exits at import with a pydantic `2 validation errors for
+Settings` — that is the guard working, not a build problem.
+
 `APPLE_USE_SANDBOX=False` is easy to forget and fails silently — sandbox tokens
 are rejected by the production APNs endpoint, so alerts simply never arrive.
 
