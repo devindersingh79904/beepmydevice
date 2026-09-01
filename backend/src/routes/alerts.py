@@ -107,7 +107,16 @@ async def send_alert(
 
     # One device failing does not make the alert a failure; every device
     # failing does.
-    overall = AlertStatus.SENT if any(result for result in results) else AlertStatus.FAILED
+    #
+    # Compared against DELIVERED explicitly. PushOutcome subclasses str, so
+    # every member is truthy -- a bare `any(results)` is True whenever anything
+    # was targeted at all, which recorded a wholly undelivered alert as SENT
+    # and told the user "Alert sent".
+    overall = (
+        AlertStatus.SENT
+        if any(result is PushOutcome.DELIVERED for result in results)
+        else AlertStatus.FAILED
+    )
     alert_id = await run_blocking(
         service.log_alert,
         user_id,

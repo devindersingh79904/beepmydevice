@@ -314,6 +314,59 @@ class TestSendAlert:
         assert alert.target_devices == [device["device_id"]]
         assert alert.status == AlertStatus.SENT.value
 
+    def test_records_failed_when_no_device_was_reached(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+        db: Session,
+        mock_push: PushRecorder,
+    ) -> None:
+        """An alert nothing received is FAILED, in the log and in the message.
+
+        PushOutcome subclasses str, so every member is truthy. A bare
+        ``any(results)`` therefore reported SENT for an alert where every push
+        failed -- the audit row said the beep went out, and the user was told
+        "Alert sent" while no device made a sound.
+        """
+        first = register_device(client, auth_headers, push_token="dud-one")
+        second = register_device(client, auth_headers, push_token="dud-two")
+        mock_push.fail("dud-one")
+        mock_push.fail("dud-two")
+
+        response = client.post(
+            "/alerts/send",
+            json={"device_ids": [first["device_id"], second["device_id"]]},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        assert response.json()["message"] == "Alert could not be delivered"
+        alert = db.get(AlertLog, uuid.UUID(_content(response)["alert_id"]))
+        assert alert is not None
+        assert alert.status == AlertStatus.FAILED.value
+
+    def test_records_sent_when_only_some_devices_were_reached(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+        db: Session,
+        mock_push: PushRecorder,
+    ) -> None:
+        """One device failing does not make the whole alert a failure."""
+        good = register_device(client, auth_headers, push_token="reachable")
+        bad = register_device(client, auth_headers, push_token="unreachable")
+        mock_push.fail("unreachable")
+
+        response = client.post(
+            "/alerts/send",
+            json={"device_ids": [good["device_id"], bad["device_id"]]},
+            headers=auth_headers,
+        )
+
+        alert = db.get(AlertLog, uuid.UUID(_content(response)["alert_id"]))
+        assert alert is not None
+        assert alert.status == AlertStatus.SENT.value
+
     def test_clears_stale_push_token_on_unregistered_error(
         self, client: TestClient, auth_headers: dict[str, str], db: Session
     ) -> None:
