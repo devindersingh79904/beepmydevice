@@ -40,4 +40,19 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -fsS http://localhost:8000/health || exit 1
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --workers 1 is stated explicitly, not left to Uvicorn's default.
+#
+# Two structures live in process memory until Redis pub/sub lands in Phase 2:
+# WebSocketManager's connection registry, and the revoked-token set. A second
+# worker — or a second replica behind a load balancer — breaks both, and
+# neither failure is loud:
+#
+#   Device status silently stops updating for whichever users landed on the
+#   other process, and the dashboard shows stale state while looking live.
+#
+#   A token revoked by logout on one process is still accepted by the other,
+#   so signing out does not end the session. That one is a security defect,
+#   not a glitch.
+#
+# Scaling this image horizontally is therefore not safe yet. Run one instance.
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
