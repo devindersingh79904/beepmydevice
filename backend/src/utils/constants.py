@@ -64,6 +64,15 @@ ALERT_NOTIFICATION_TITLE: Final[str] = "BeepMyDevice"
 ALERT_NOTIFICATION_BODY: Final[str] = "Someone is looking for this device!"
 
 # ---------------------------------------------------------------------------
+# WebSocket
+# ---------------------------------------------------------------------------
+# How long a freshly accepted socket may take to send its auth frame. The
+# handshake completes before the token arrives, so without a bound an
+# unauthenticated client can hold a connection open indefinitely by simply
+# never speaking -- and each one costs a socket and a slot in the registry.
+WS_AUTH_TIMEOUT_SECONDS: Final[int] = 10
+
+# ---------------------------------------------------------------------------
 # HTTP headers
 # ---------------------------------------------------------------------------
 CORRELATION_ID_HEADER: Final[str] = "X-Correlation-ID"
