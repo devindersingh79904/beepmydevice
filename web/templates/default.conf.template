@@ -12,18 +12,31 @@
 # so one image serves any environment: compose passes the service name, a
 # deployment passes a real host.
 #
-#   API_UPSTREAM=api:8000                    (docker compose — the service name)
-#   API_UPSTREAM=project_api-service:8000    (a platform's internal DNS name)
-#   API_UPSTREAM=10.0.0.4:8000               (a private address on your network)
+# Three variables, because reaching the API over TLS needs more than an
+# address. API_SCHEME picks http or https; API_HOST is the name sent as the
+# `Host` header and as the TLS SNI name, which for an https upstream must be
+# the certificate's name rather than this dashboard's own $host.
 #
-# Always an address on the internal network, never the API's PUBLIC hostname.
-# `proxy_pass` below is `http://`, so a public host fails either way round: on
-# :443 nginx sends cleartext at a TLS port, and on :80 the platform's edge
-# proxy answers 301-to-HTTPS, which this container forwards to the browser as
-# a redirect instead of the JSON it asked for. Reaching a public host would
-# mean `proxy_pass https://`, `proxy_ssl_server_name on` and a `Host` header
-# pinned to that name — and even then it would leave the machine and come back
-# through the edge proxy for every call. Use the internal address.
+#   internal, plaintext (preferred — compose):
+#     API_UPSTREAM=api:8000        API_SCHEME=http    API_HOST=api
+#
+#   internal, plaintext (a platform's own DNS name):
+#     API_UPSTREAM=project_api-service:8000
+#     API_SCHEME=http              API_HOST=project_api-service
+#
+#   the API's public hostname, over TLS:
+#     API_UPSTREAM=api.example.com:443
+#     API_SCHEME=https             API_HOST=api.example.com
+#
+# The internal address is the better default: it stays on the container
+# network, needs no DNS beyond the platform's own, and costs no second TLS
+# handshake. The public form works and is sometimes simpler to reason about,
+# but every dashboard API call then leaves the machine, resolves through
+# public DNS and comes back in through the edge proxy to reach a container on
+# the same bridge. Both are supported; pick deliberately.
+#
+# The proxy_ssl_* directives below are ignored when API_SCHEME is http, so one
+# config serves both without branching.
 #
 # NGINX_ENVSUBST_FILTER is set to ^API_ in the Dockerfile so ONLY these
 # variables are replaced. Without that filter envsubst would also eat nginx's
@@ -76,20 +89,28 @@ server {
     # this dashboard's own `/devices` and `/alerts` pages. Drop the slash and
     # every request 404s.
     location /api/v1/ {
-        proxy_pass http://beepmydevice_api/;
+        proxy_pass ${API_SCHEME}://beepmydevice_api/;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
+        # The upstream's name, not this dashboard's $host. An https upstream
+        # behind a shared edge proxy is routed by Host, and its certificate is
+        # issued for that name -- sending app.example.com would be routed to
+        # the wrong service, or fail the certificate check.
+        proxy_set_header Host ${API_HOST};
+        proxy_ssl_server_name on;
+        proxy_ssl_name ${API_HOST};
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location /ws/ {
-        proxy_pass http://beepmydevice_api;
+        proxy_pass ${API_SCHEME}://beepmydevice_api;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
+        proxy_set_header Host ${API_HOST};
+        proxy_ssl_server_name on;
+        proxy_ssl_name ${API_HOST};
         # The status socket is long-lived and mostly idle -- a device that is
         # simply not moving sends nothing for minutes at a time. nginx's 60s
         # default would drop it and force a reconnect on a working connection.

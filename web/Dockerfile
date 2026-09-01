@@ -83,8 +83,17 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # into the image at build time.
 COPY templates/ /etc/nginx/templates/
 
-# Where the API lives, as host:port. The default is the compose service name.
+# Where the API lives. The defaults are the compose service, reached in
+# plaintext on the container network.
+#
+# API_HOST is separate from API_UPSTREAM because the two answer different
+# questions: API_UPSTREAM is where to open the socket (host:port), API_HOST is
+# whose name to put in the Host header and the TLS SNI. They are the same
+# string for a plaintext internal hop and diverge the moment a port is
+# involved -- see templates/default.conf.template for the public-hostname form.
 ENV API_UPSTREAM=api:8000
+ENV API_SCHEME=http
+ENV API_HOST=api
 
 # Substitute ONLY variables starting API_. nginx's config is full of its own
 # $-variables ($host, $remote_addr, $proxy_add_x_forwarded_for); without this
