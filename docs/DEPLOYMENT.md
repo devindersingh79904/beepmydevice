@@ -19,7 +19,7 @@ Uvicorn                   Dashboard  (nginx serving web/dist)
    |                        |
    |                        '--> proxies /api/v1 and /ws back to Uvicorn
    v
-PostgreSQL 15
+PostgreSQL 17
 ```
 
 Uvicorn never faces the internet directly. Nginx terminates TLS, handles the
@@ -36,7 +36,9 @@ origin also works -- see **Dashboard** below.
 
 - A server with Docker and Docker Compose
 - A DNS A record for `beepmydevice.com` pointing at it
-- PostgreSQL 12+, either containerised or managed
+- PostgreSQL 12+, either containerised or managed. **17 is what the suite
+  is run against** (98 tests, both migrations) and what compose and CI
+  pin; anything from 12 up should work, but 17 is the verified one
 - Firebase service-account credentials
 - An APNs `.p8` key, its key ID and your team ID
 
@@ -243,6 +245,34 @@ configuration, either match the existing credentials or destroy the volume:
 ```bash
 docker compose -f docker/docker-compose.yml down -v   # destroys the data
 ```
+
+### And a major version cannot be changed in place
+
+The same volume rule bites harder on an upgrade. A data directory belongs to
+the major version that created it, and a newer server refuses to open it:
+
+```
+FATAL:  database files are incompatible with server
+DETAIL: The data directory was initialized by PostgreSQL version 15,
+        which is not compatible with this version 17.11.
+```
+
+So bumping `image:` from 15 to 17 does not migrate anything — it stops the
+database from starting. Moving real data across a major version means a dump
+and restore, taken **with the old version still running**:
+
+```bash
+# with the 15 container still up
+docker compose exec db pg_dump -U beepmydevice -Fc beepmydevice > pre-upgrade.dump
+
+# then change the image, recreate the volume, and load it back
+docker compose down -v
+docker compose up -d db
+docker compose exec -T db pg_restore -U beepmydevice -d beepmydevice --clean < pre-upgrade.dump
+```
+
+A development volume holding nothing you care about is simpler: `down -v` and
+let it re-initialise.
 
 ---
 

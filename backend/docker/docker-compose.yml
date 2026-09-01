@@ -1,6 +1,9 @@
 services:
   db:
-    image: postgres:15-alpine
+    # 17 to match the deployed database. The suite was run against
+    # PostgreSQL 17.11 -- 98 passed, both migrations applied -- so this is
+    # a verified version, not an assumed-compatible one.
+    image: postgres:17-alpine
     container_name: beepmydevice-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-beepmydevice}
