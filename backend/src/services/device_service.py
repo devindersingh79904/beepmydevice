@@ -189,17 +189,27 @@ class DeviceService:
 
         Ownership must match: a re-registration never converts an owned device
         into a guest or vice versa, since ownership is what authorises sending.
+        It is matched in SQL rather than after the fetch, because (wifi_id,
+        push_token) is not unique: the same install registering once signed in
+        and once signed out legitimately leaves an owned row and a guest row
+        side by side. Filtering in Python meant fetching both and failing the
+        next registration with MultipleResultsFound -- a 500 out of the one
+        endpoint that has to work before a client can do anything else.
+
+        Newest first, so a client that somehow holds two matching rows keeps
+        updating the one it most recently created rather than an older ghost.
         """
-        device = self._db.execute(
-            select(Device).where(
+        ownership = Device.user_id.is_(None) if user_id is None else Device.user_id == user_id
+        return self._db.execute(
+            select(Device)
+            .where(
                 Device.wifi_id == wifi_id,
                 Device.push_token == push_token,
+                ownership,
             )
+            .order_by(Device.created_at.desc())
+            .limit(1)
         ).scalar_one_or_none()
-
-        if device is None or device.user_id != user_id:
-            return None
-        return device
 
     @staticmethod
     def _apply_device_info(device: Device, device_info: dict[str, Any]) -> None:
@@ -336,10 +346,6 @@ class DeviceService:
         if wifi_id is None:
             raise LookupError("User has no registered network")
         return wifi_id
-
-    def get_device_status(self, device_id: uuid.UUID) -> str:
-        """Return the current status, derived from the last heartbeat time."""
-        return effective_status(self.get_device(device_id))
 
     # -- mutations ----------------------------------------------------------
 
