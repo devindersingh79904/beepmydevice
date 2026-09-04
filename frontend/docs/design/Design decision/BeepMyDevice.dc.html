@@ -47,7 +47,7 @@
   <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ true }}">
     <div data-screen-label="Splash" style="position: absolute; inset: 0; background: var(--color-accent); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 32px; gap: 20px;">
       <div style="width: 96px; height: 96px; background: var(--color-bg); display: flex; align-items: center; justify-content: center;">
-        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2.5"><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.86a10 10 0 0 1 14 0"></path><path d="M8.5 16.43a5 5 0 0 1 7 0"></path><circle cx="12" cy="20" r="1.5" fill="var(--color-accent)"></circle></svg>
+        <svg width="64" height="64" viewBox="0 0 120 120"><rect x="22" y="30" width="40" height="64" fill="var(--color-text)"></rect><rect x="30" y="40" width="24" height="36" fill="var(--color-bg)"></rect><rect x="38" y="84" width="8" height="4" fill="var(--color-bg)"></rect><path d="M72 46 A18 18 0 0 1 72 78" fill="none" stroke="var(--color-accent)" stroke-width="7"></path><path d="M82 36 A32 32 0 0 1 82 88" fill="none" stroke="var(--color-accent)" stroke-width="7" opacity="0.55"></path><path d="M92 26 A46 46 0 0 1 92 98" fill="none" stroke="var(--color-accent)" stroke-width="7" opacity="0.3"></path></svg>
       </div>
       <div style="font-family: var(--font-heading); font-size: 34px; font-weight: 700; color: var(--color-bg); letter-spacing: -0.5px;">BeepMyDevice</div>
       <div style="font-size: 14px; color: var(--color-accent-200);">Find any device on your WiFi</div>
@@ -58,8 +58,8 @@
   <!-- 2 · LOGIN -->
   <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
     <div data-screen-label="Login" style="flex: 1; display: flex; flex-direction: column; padding: 54px 20px 24px; overflow-y: auto;">
-      <div style="width: 56px; height: 56px; background: var(--color-accent); display: flex; align-items: center; justify-content: center; margin: 24px 0 20px;">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--color-bg)" stroke-width="2.5"><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.86a10 10 0 0 1 14 0"></path><path d="M8.5 16.43a5 5 0 0 1 7 0"></path><circle cx="12" cy="20" r="1.5" fill="var(--color-bg)"></circle></svg>
+      <div style="width: 56px; height: 56px; background: var(--color-bg); border: 2px solid var(--color-text); display: flex; align-items: center; justify-content: center; margin: 24px 0 20px;">
+        <svg width="38" height="38" viewBox="0 0 120 120"><rect x="22" y="30" width="40" height="64" fill="var(--color-text)"></rect><rect x="30" y="40" width="24" height="36" fill="var(--color-bg)"></rect><rect x="38" y="84" width="8" height="4" fill="var(--color-bg)"></rect><path d="M72 46 A18 18 0 0 1 72 78" fill="none" stroke="var(--color-accent)" stroke-width="9"></path><path d="M84 34 A34 34 0 0 1 84 90" fill="none" stroke="var(--color-accent)" stroke-width="9" opacity="0.45"></path></svg>
       </div>
       <div style="font-family: var(--font-heading); font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Welcome back</div>
       <div style="font-size: 15px; color: var(--color-neutral-600); margin: 6px 0 28px;">Sign in to reach your devices</div>
@@ -118,7 +118,14 @@
           <div style="margin-top: 4px; font-size: 12px; font-weight: 600; color: {{ matchColor }};">{{ matchMsg }}</div>
         </sc-if>
       </div>
-      <button class="btn btn-primary btn-block" style="height: 48px; justify-content: center; text-align: center;" onClick="{{ doRegister }}">Create account</button>
+      <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px;">
+        <div onClick="{{ togglePolicy }}" style="width: 20px; height: 20px; flex: 0 0 20px; margin-top: 1px; border: 2px solid {{ policyBoxBorder }}; background: {{ policyBoxBg }}; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--color-bg); font-size: 13px; font-weight: 700;">{{ policyMark }}</div>
+        <div style="font-size: 14px; line-height: 1.5; color: var(--color-text);">I agree to the <a href="#" onClick="{{ goPrivacy }}" style="text-decoration: underline;">Privacy policy</a></div>
+      </div>
+      <sc-if value="{{ policyError }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size: 12px; font-weight: 600; color: var(--color-accent-700); margin: -12px 0 16px;">✗ You must agree to the Privacy policy</div>
+      </sc-if>
+      <button class="btn btn-primary btn-block" style="height: 48px; justify-content: center; text-align: center;" disabled="{{ regDisabled }}" onClick="{{ doRegister }}">Create account</button>
       <div style="margin-top: 16px; font-size: 14px; color: var(--color-neutral-600); text-align: center;">Already have an account? <a href="#" onClick="{{ goLogin }}">Sign in</a></div>
     </div>
   </sc-if>
@@ -258,6 +265,43 @@
     </div>
   </sc-if>
 
+  <!-- 7b · PRIVACY POLICY -->
+  <sc-if value="{{ isPrivacy }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Privacy Policy" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 54px;">
+      <div style="height: 56px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 2px solid var(--color-divider); background: var(--color-bg); z-index: 10;">
+        <button onClick="{{ goSettings }}" style="border: none; background: none; cursor: pointer; padding: 8px 8px 8px 0; display: flex; color: var(--color-text);" style-hover="color: var(--color-accent);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg></button>
+        <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700;">Privacy policy</div>
+      </div>
+      <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 12px; color: var(--color-neutral-600);">Last updated: September 4, 2026</div>
+        <div class="hr" style="margin: 8px 0;"></div>
+        <div style="font-size: 15px; line-height: 1.6;">BeepMyDevice helps you find and alert your devices on your own WiFi network. We built it to work with as little of your data as possible — this page explains exactly what we collect and why.</div>
+        <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700; margin-top: 16px;">Information we collect</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.5;">
+          <div style="display: flex; gap: 10px;"><span style="color: var(--color-accent-700); font-weight: 700;">✓</span><span>Your account email and display name</span></div>
+          <div style="display: flex; gap: 10px;"><span style="color: var(--color-accent-700); font-weight: 700;">✓</span><span>Device names, types and battery level you register</span></div>
+          <div style="display: flex; gap: 10px;"><span style="color: var(--color-accent-700); font-weight: 700;">✓</span><span>WiFi network name (SSID) — only to match devices on the same network</span></div>
+          <div style="display: flex; gap: 10px;"><span style="color: var(--color-accent-700); font-weight: 700;">✓</span><span>Alert history (timestamps and delivery status)</span></div>
+        </div>
+        <div style="border-bottom: 1px solid var(--color-neutral-300); margin: 12px 0 4px;"></div>
+        <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700; margin-top: 8px;">How we use information</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.5;">
+          <div style="display: flex; gap: 10px;"><span style="color: var(--color-accent-700); font-weight: 700;">✓</span><span>To deliver beep and vibration alerts to your devices</span></div>
+          <div style="display: flex; gap: 10px;"><span style="color: var(--color-accent-700); font-weight: 700;">✓</span><span>To show device status (online, battery, last seen)</span></div>
+          <div style="display: flex; gap: 10px;"><span style="color: var(--color-accent-700); font-weight: 700;">✓</span><span>To keep your account secure</span></div>
+          <div style="display: flex; gap: 10px;"><span style="color: var(--color-accent-700); font-weight: 700;">✓</span><span>We never sell your data or use it for advertising</span></div>
+        </div>
+        <div style="border-bottom: 1px solid var(--color-neutral-300); margin: 12px 0 4px;"></div>
+        <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700; margin-top: 8px;">Data security</div>
+        <div style="font-size: 15px; line-height: 1.6;">All traffic between your devices and our servers is encrypted in transit. Alert commands stay on your local network whenever possible. You can delete your account and all associated data at any time from Settings.</div>
+        <div style="border-bottom: 1px solid var(--color-neutral-300); margin: 12px 0 4px;"></div>
+        <div style="font-family: var(--font-heading); font-size: 18px; font-weight: 700; margin-top: 8px;">Contact us</div>
+        <div style="font-size: 15px; line-height: 1.6;">Questions about this policy? Write to <a href="mailto:privacy@beepmydevice.com" style="text-decoration: underline;">privacy@beepmydevice.com</a>.</div>
+        <div style="text-align: center; font-size: 12px; color: var(--color-neutral-500); padding: 24px 0 8px;">v1.0.0</div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- 7 · SETTINGS -->
   <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
     <div data-screen-label="Settings" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 54px;">
@@ -348,7 +392,7 @@
         <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; font-size: 15px;" style-hover="background: var(--color-neutral-100);">
           <div style="flex: 1;">Terms of service</div><div style="color: var(--color-neutral-500);">›</div>
         </div>
-        <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; font-size: 15px;" style-hover="background: var(--color-neutral-100);">
+        <div onClick="{{ goPrivacy }}" style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; font-size: 15px;" style-hover="background: var(--color-neutral-100);">
           <div style="flex: 1;">Privacy policy</div><div style="color: var(--color-neutral-500);">›</div>
         </div>
         <div style="padding: 24px 16px 32px;">
@@ -459,7 +503,7 @@
 </x-import>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 520, &quot;height&quot;: 960}, &quot;startScreen&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;splash&quot;, &quot;options&quot;: [&quot;splash&quot;, &quot;login&quot;, &quot;register&quot;, &quot;dashboard&quot;, &quot;alert&quot;, &quot;detail&quot;, &quot;settings&quot;, &quot;errors&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Navigation&quot;}, &quot;wifiName&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Home-WiFi&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo data&quot;}, &quot;offlineDemo&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State previews&quot;}, &quot;emptyDemo&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State previews&quot;}, &quot;showSkeletons&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State previews&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 520, &quot;height&quot;: 960}, &quot;startScreen&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;splash&quot;, &quot;options&quot;: [&quot;splash&quot;, &quot;login&quot;, &quot;register&quot;, &quot;dashboard&quot;, &quot;alert&quot;, &quot;detail&quot;, &quot;settings&quot;, &quot;privacy&quot;, &quot;errors&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Navigation&quot;}, &quot;wifiName&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Home-WiFi&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo data&quot;}, &quot;offlineDemo&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State previews&quot;}, &quot;emptyDemo&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State previews&quot;}, &quot;showSkeletons&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State previews&quot;}}">
 class Component extends DCLogic {
   state = {
     screen: 'splash',
@@ -528,12 +572,12 @@ class Component extends DCLogic {
     return {
       wifiName,
       isSplash: s.screen === 'splash', isLogin: s.screen === 'login', isRegister: s.screen === 'register',
-      isDashboard: s.screen === 'dashboard', isDetail: s.screen === 'detail', isSettings: s.screen === 'settings', isErrors: s.screen === 'errors',
+      isDashboard: s.screen === 'dashboard', isDetail: s.screen === 'detail', isSettings: s.screen === 'settings', isErrors: s.screen === 'errors', isPrivacy: s.screen === 'privacy',
       noop: e => e.preventDefault(),
       stopProp: e => e.stopPropagation(),
       goLogin: e => { e && e.preventDefault && e.preventDefault(); this.setState({ screen: 'login' }); },
       goRegister: e => { e && e.preventDefault && e.preventDefault(); this.setState({ screen: 'register' }); },
-      goDashboard: go('dashboard'), goSettings: go('settings'), showErrorStates: go('errors'),
+      goDashboard: go('dashboard'), goSettings: go('settings'), showErrorStates: go('errors'), goPrivacy: go('privacy'),
       loginEmail: s.loginEmail, loginPw: s.loginPw,
       setLoginEmail: e => this.setState({ loginEmail: e.target.value, loginEmailErr: false }),
       setLoginPw: e => this.setState({ loginPw: e.target.value, loginPwErr: false }),
@@ -563,7 +607,14 @@ class Component extends DCLogic {
       regPw2Touched: s.regPw2.length > 0,
       matchColor: s.regPw === s.regPw2 ? 'var(--color-neutral-700)' : 'var(--color-accent-700)',
       matchMsg: s.regPw === s.regPw2 ? '✓ Passwords match' : '✗ Passwords don\'t match',
+      togglePolicy: () => this.setState(x => ({ agreePolicy: !x.agreePolicy, policyError: false })),
+      policyBoxBorder: s.agreePolicy ? 'var(--color-accent)' : 'var(--color-text)',
+      policyBoxBg: s.agreePolicy ? 'var(--color-accent)' : 'var(--color-bg)',
+      policyMark: s.agreePolicy ? '✓' : '',
+      policyError: !!s.policyError,
+      regDisabled: !s.agreePolicy,
       doRegister: () => {
+        if (!s.agreePolicy) { this.setState({ policyError: true }); return; }
         if (!emailValid || emailTaken || strength < 2 || s.regPw !== s.regPw2) {
           this.setState({ bannerOpen: true, bannerMsg: 'Fix the highlighted fields to continue' });
           setTimeout(() => this.setState({ bannerOpen: false }), 5000);
