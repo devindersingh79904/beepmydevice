@@ -38,6 +38,9 @@ const TITLES: Record<string, string> = {
   [ROUTES.ACTIVITY]: 'Activity',
   [ROUTES.ALERTS]: 'Alerts',
   [ROUTES.SETTINGS]: 'Settings',
+  // Reached from Settings, not from the sidebar -- it is a document, not a
+  // section of the product.
+  [ROUTES.PRIVACY]: 'Privacy policy',
 };
 
 /** The mark inside the 36px sidebar tile, inset so the tile reads as a frame. */

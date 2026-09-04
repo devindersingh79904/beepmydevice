@@ -7,13 +7,20 @@
 
 import {useState} from 'react';
 import type {FormEvent, ReactElement} from 'react';
+import {Link} from 'react-router-dom';
 
 import {BrandMark} from '@/components/Icon';
-import {Button, ErrorBanner, Field, PasswordInput} from '@/components/primitives';
+import {
+  Button,
+  Checkbox,
+  ErrorBanner,
+  Field,
+  PasswordInput,
+} from '@/components/primitives';
 import {useAuth} from '@/contexts/AuthContext';
 import {useApiErrors} from '@/hooks/useApiErrors';
 import * as authService from '@/services/auth.service';
-import {AUTH_MARK_SIZE} from '@/utils/constants';
+import {AUTH_MARK_SIZE, ROUTES} from '@/utils/constants';
 
 type Mode = 'login' | 'register' | 'forgot';
 
@@ -44,6 +51,7 @@ export function AuthPage(): ReactElement {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [mismatch, setMismatch] = useState(false);
+  const [hasAgreed, setAgreed] = useState(false);
   // AUTH_* is shown here and nowhere else. On this screen "Invalid email or
   // password" is the whole feedback; everywhere behind the gate it means the
   // session ended and the user is already being sent back here.
@@ -56,6 +64,10 @@ export function AuthPage(): ReactElement {
     setSent(false);
     setMismatch(false);
     setConfirm('');
+    // Agreement was given to submit *this* form. Leaving it ticked behind a
+    // mode switch means the box is already checked when the user comes back,
+    // which is consent nobody gave on the form they are now looking at.
+    setAgreed(false);
     errors.clear();
   };
 
@@ -142,26 +154,52 @@ export function AuthPage(): ReactElement {
             )}
 
             {mode === 'register' && (
-              <Field
-                label="Confirm password"
-                htmlFor="confirm"
-                error={mismatch ? 'The two passwords do not match.' : undefined}
-              >
-                <PasswordInput
-                  id="confirm"
-                  autoComplete="new-password"
-                  required
-                  invalid={mismatch}
-                  value={confirm}
-                  onChange={setConfirm}
-                />
-              </Field>
+              <>
+                <Field
+                  label="Confirm password"
+                  htmlFor="confirm"
+                  error={mismatch ? 'The two passwords do not match.' : undefined}
+                >
+                  <PasswordInput
+                    id="confirm"
+                    autoComplete="new-password"
+                    required
+                    invalid={mismatch}
+                    value={confirm}
+                    onChange={setConfirm}
+                  />
+                </Field>
+
+                <div className="consent">
+                  <Checkbox
+                    checked={hasAgreed}
+                    onChange={setAgreed}
+                    label="I agree to the Privacy policy"
+                    tone="accent"
+                  />
+                  <span>
+                    I agree to the{' '}
+                    <Link to={ROUTES.PRIVACY} className="consent-link">
+                      Privacy policy
+                    </Link>
+                  </span>
+                </div>
+              </>
             )}
           </div>
         )}
 
         {!sent && (
-          <Button type="submit" variant="primary" className="btn-block" disabled={busy}>
+          <Button
+            type="submit"
+            variant="primary"
+            className="btn-block"
+            /* The canvas draws an error message for submitting without
+               agreeing *and* draws the button disabled until the box is
+               ticked. A disabled button cannot be pressed, so that message can
+               never appear; the disabled state is the one that ships. */
+            disabled={busy || (mode === 'register' && !hasAgreed)}
+          >
             {busy ? 'Working…' : copy.submit}
           </Button>
         )}
@@ -189,6 +227,19 @@ export function AuthPage(): ReactElement {
             </button>
           )}
         </div>
+
+        {/* Inside the card, under the swap line, per the canvas. It is here at
+            all so the policy is reachable from the one screen a stranger can
+            get to -- an app-store listing links to /privacy directly, but a
+            person who arrived at the product itself should not have to guess
+            the URL. */}
+        <p className="auth-terms">
+          By continuing you agree to our{' '}
+          <Link to={ROUTES.PRIVACY} className="consent-link">
+            Privacy policy
+          </Link>
+          .
+        </p>
       </form>
     </div>
   );

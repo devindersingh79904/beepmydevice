@@ -91,6 +91,22 @@ export function shortDate(iso: string): string {
   return date.toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: 'numeric'});
 }
 
+/**
+ * "31 August 2026" — the month spelled out, and always in that order.
+ *
+ * `shortDate` follows the reader's locale, which is right for a table of
+ * heartbeats and wrong for a document dated for legal effect: 04/09/2026 is
+ * two different days on two sides of an ocean. The locale is pinned here and
+ * the month is a word, so the date cannot be misread.
+ */
+export function longDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unknown';
+  }
+  return date.toLocaleDateString('en-GB', {day: 'numeric', month: 'long', year: 'numeric'});
+}
+
 /** The device's platform, spelled the way people write it. */
 export function deviceTypeLabel(type: DeviceType): string {
   return DEVICE_TYPE_LABEL[type] ?? type;

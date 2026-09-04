@@ -9,6 +9,7 @@ import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom';
 import type {ReactElement} from 'react';
 
 import {Layout} from '@/components/Layout';
+import {LegalShell} from '@/components/LegalShell';
 import {AuthProvider, useAuth} from '@/contexts/AuthContext';
 import {DeviceProvider} from '@/contexts/DeviceContext';
 import {ActivityPage} from '@/pages/ActivityPage';
@@ -16,6 +17,7 @@ import {AlertsPage} from '@/pages/AlertsPage';
 import {AuthPage} from '@/pages/AuthPage';
 import {DashboardPage} from '@/pages/DashboardPage';
 import {DevicesPage} from '@/pages/DevicesPage';
+import {PrivacyPage} from '@/pages/PrivacyPage';
 import {SettingsPage} from '@/pages/SettingsPage';
 import {ROUTES} from '@/utils/constants';
 
@@ -33,6 +35,12 @@ function Gate(): ReactElement {
     return (
       <Routes>
         <Route path={ROUTES.LOGIN} element={<AuthPage />} />
+        {/* The policy is public. An app-store listing links to it from outside
+            the product, and someone deciding whether to sign up has to be able
+            to read it before there is an account to read it with. */}
+        <Route element={<LegalShell />}>
+          <Route path={ROUTES.PRIVACY} element={<PrivacyPage />} />
+        </Route>
         {/* Anything else, signed out, is the sign-in screen. */}
         <Route path="*" element={<Navigate to={ROUTES.LOGIN} replace />} />
       </Routes>
@@ -48,6 +56,8 @@ function Gate(): ReactElement {
           <Route path={ROUTES.ACTIVITY} element={<ActivityPage />} />
           <Route path={ROUTES.ALERTS} element={<AlertsPage />} />
           <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
+          {/* Same document, this time in the dashboard chrome. */}
+          <Route path={ROUTES.PRIVACY} element={<PrivacyPage />} />
         </Route>
         {/* Signed in, /login is not a place to be. */}
         <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />

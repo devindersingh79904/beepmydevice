@@ -297,6 +297,16 @@ interface CheckboxProps {
   onChange: (next: boolean) => void;
   label: string;
   disabled?: boolean;
+  /**
+   * Which filled state the canvas draws.
+   *
+   * `ink` is selection — the device rows in the send-alert dialog, where a
+   * checked box means "included". `accent` is agreement, used once, on the
+   * register form's consent box. Same control either way; the canvas gives
+   * the two jobs different fills, and one prop is cheaper than a second
+   * component that would then drift.
+   */
+  tone?: 'ink' | 'accent';
 }
 
 /** The tick inside a checkbox is smaller than the icon scale's floor. */
@@ -308,7 +318,12 @@ export function Checkbox({
   onChange,
   label,
   disabled = false,
+  tone = 'ink',
 }: CheckboxProps): ReactElement {
+  const classes = ['check', checked ? 'is-on' : '', tone === 'accent' ? 'check-accent' : '']
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <button
       type="button"
@@ -316,7 +331,7 @@ export function Checkbox({
       aria-checked={checked}
       aria-label={label}
       disabled={disabled}
-      className={checked ? 'check is-on' : 'check'}
+      className={classes}
       onClick={() => onChange(!checked)}
     >
       {checked && <Icon name="check" size={CHECK_TICK_SIZE} />}

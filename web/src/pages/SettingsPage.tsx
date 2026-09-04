@@ -15,6 +15,8 @@
 import {useMemo, useState} from 'react';
 import type {FormEvent, ReactElement} from 'react';
 
+
+import {PolicyDates, PolicySections} from '@/components/PolicyDocument';
 import {
   Button,
   ErrorBanner,
@@ -32,7 +34,14 @@ import * as authService from '@/services/auth.service';
 import {NOT_YET_AVAILABLE} from '@/utils/constants';
 import {deviceLabel, relativeTime, shortDate} from '@/utils/format';
 
-type Section = 'profile' | 'password' | 'notifications' | 'guests' | 'network' | 'about';
+type Section =
+  | 'profile'
+  | 'password'
+  | 'notifications'
+  | 'guests'
+  | 'network'
+  | 'about'
+  | 'privacy';
 
 const SECTIONS: {id: Section; label: string}[] = [
   {id: 'profile', label: 'Profile'},
@@ -41,6 +50,7 @@ const SECTIONS: {id: Section; label: string}[] = [
   {id: 'guests', label: 'Manage guests'},
   {id: 'network', label: 'WiFi networks'},
   {id: 'about', label: 'About'},
+  {id: 'privacy', label: 'Privacy'},
 ];
 
 export function SettingsPage(): ReactElement {
@@ -68,7 +78,8 @@ export function SettingsPage(): ReactElement {
         {section === 'notifications' && <NotificationsSection />}
         {section === 'guests' && <GuestsSection />}
         {section === 'network' && <NetworkSection />}
-        {section === 'about' && <AboutSection />}
+        {section === 'about' && <AboutSection onOpenPrivacy={() => setSection('privacy')} />}
+        {section === 'privacy' && <PrivacySection />}
       </div>
     </div>
   );
@@ -364,9 +375,31 @@ function NetworkSection(): ReactElement {
   );
 }
 
+/* --- privacy ------------------------------------------------------------ */
+
+/**
+ * The policy, inside Settings.
+ *
+ * The canvas draws it as a 760px card with the date on the heading row rather
+ * than the two labelled cells the standalone page uses -- there is no room for
+ * those beside a title. The sections themselves are the same component, so the
+ * two renderings cannot say different things.
+ */
+function PrivacySection(): ReactElement {
+  return (
+    <section className="panel settings-section legal legal-panel">
+      <header className="legal-panel-head">
+        <h2>Privacy policy</h2>
+        <PolicyDates />
+      </header>
+      <PolicySections />
+    </section>
+  );
+}
+
 /* --- about -------------------------------------------------------------- */
 
-function AboutSection(): ReactElement {
+function AboutSection({onOpenPrivacy}: {onOpenPrivacy: () => void}): ReactElement {
   return (
     <section className="panel settings-section">
       <h2 className="panel-title">About</h2>
@@ -376,12 +409,21 @@ function AboutSection(): ReactElement {
         <span className="row-sub">Phase 1</span>
       </div>
       <div className="setting-row">
-        <span className="setting-name">Terms of service</span>
+        <span>
+          <span className="setting-name">Terms of service</span>
+          {/* Not `NOT_YET_AVAILABLE`: this one is not waiting on an endpoint,
+              it is waiting on somebody writing the document. */}
+          <span className="setting-note">Not written yet.</span>
+        </span>
         <Button disabled>View</Button>
       </div>
       <div className="setting-row">
         <span className="setting-name">Privacy policy</span>
-        <Button disabled>View</Button>
+        {/* The canvas keeps the reader inside Settings: "View" selects the
+            Privacy tab rather than leaving for /privacy. That route still
+            exists, and is what an app-store listing and the register form
+            link to -- it is the only way in for someone with no session. */}
+        <Button onClick={onOpenPrivacy}>View</Button>
       </div>
 
       <div className="hr" style={{margin: 'var(--space-4) 0 var(--space-2)'}} />

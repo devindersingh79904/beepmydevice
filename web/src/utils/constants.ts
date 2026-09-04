@@ -40,6 +40,36 @@ export const ROUTES = {
   ALERTS: '/alerts',
   SETTINGS: '/settings',
   LOGIN: '/login',
+  /* Public: reachable signed out, because an app store listing has to link to
+     it from outside the product. */
+  PRIVACY: '/privacy',
+} as const;
+
+/**
+ * The values the privacy policy states, kept out of the prose.
+ *
+ * A date or an address written into a paragraph is a date nobody finds again
+ * when it changes, and the same two dates appear in the document head and in
+ * its `<time>` elements. The third-party URLs are here for the ordinary
+ * reason: no component writes a URL string.
+ *
+ * `ADDRESS` is deliberately absent rather than filled with a placeholder --
+ * see the note in `PrivacyPage`.
+ */
+export const LEGAL = {
+  /** ISO. Rendered through `longDate`, so the reader's locale cannot reorder
+      the day and the month on a document that is dated for legal effect. */
+  LAST_UPDATED: '2026-09-04',
+  EFFECTIVE_FROM: '2026-09-04',
+  PRIVACY_EMAIL: 'privacy@beepmydevice.com',
+  WEBSITE: 'https://beepmydevice.com',
+  /** The push providers' own policies, which govern what they receive. */
+  GOOGLE_PRIVACY_URL: 'https://policies.google.com/privacy',
+  APPLE_PRIVACY_URL: 'https://www.apple.com/privacy/',
+  /** Below this age the service is not offered, and any data found is erased. */
+  MINIMUM_AGE: 13,
+  /** Days an alert row is kept before it is expected to be purged. */
+  ACTIVITY_RETENTION_DAYS: 90,
 } as const;
 
 // The API base URL and the socket path are NOT here: they are read and

@@ -134,7 +134,7 @@ quietly drops half its design reads as finished when it is not.
 | Rename WiFi network | No endpoint exposes the network record |
 | Delete account | No endpoint, and it needs a decision about the network and its guests first |
 | Custom alert message | `POST /alerts/send` accepts `device_ids` only |
-| Terms, privacy | No documents yet |
+| Terms of service | No document yet. The privacy policy is written and live at `/privacy` — this one is not |
 
 Two further gaps between the canvas and the server, handled rather than faked:
 
