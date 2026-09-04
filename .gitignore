@@ -131,6 +131,39 @@ secrets/
 frontend/android/.gradle/
 frontend/ios/build/
 
+# The Android SDK location, written by Android Studio or by hand before a
+# gradlew run. It is one absolute path from one machine ("C:\Users\...\Sdk"),
+# so committing it breaks the build for everybody else.
+#
+# The `android/local.properties` rule further up does NOT cover this: a pattern
+# with a slash in the middle is anchored to the directory holding .gitignore,
+# so it only ever matched a top-level android/ that this repo does not have.
+# Same for its `android/build/` and `android/app/build/` neighbours -- those
+# happen to be covered by the bare `build/` rule instead, which matches at any
+# depth.
+frontend/android/local.properties
+
+# Build outputs. `build/` above catches the Gradle and Xcode output trees
+# wherever they appear; these are the artefacts that land outside one.
+frontend/android/app/release/
+*.apk
+*.aab
+*.aar
+
 # Web builds
 web/dist/
 frontend/web/dist/
+
+# --- Design exports ---------------------------------------------------------
+# Raw drops from claude.ai/design, downloaded with the browser's own numbering
+# ("Design decision chat (2)"). They are an inbox, not a source: the canvas the
+# code is built against is the copy under frontend/docs/design/, which carries
+# stable filenames so a new export overwrites the old one and git holds the
+# previous version. Ignoring the drop is what stops a numbered duplicate
+# sitting beside the current design, which has pointed the docs at a stale
+# canvas before.
+#
+# Anchored with a leading slash: bare `design/` matches a directory of that
+# name at ANY depth, which silently swallows frontend/docs/design/ -- the
+# checked-in canvas the coding-style skill names as the authority.
+/design/
