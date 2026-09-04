@@ -18,7 +18,13 @@ import {
   View,
 } from 'react-native';
 
-import {Button, ErrorAlert, Screen, TextField} from '@components/index';
+import {
+  Button,
+  Checkbox,
+  ErrorAlert,
+  Screen,
+  TextField,
+} from '@components/index';
 import type {FieldHintTone} from '@components/TextField';
 import {useAuth} from '@hooks/useAuth';
 import {useErrors} from '@hooks/useErrors';
@@ -78,6 +84,7 @@ export function RegisterScreen(): React.JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [hasAgreed, setAgreed] = useState(false);
   // Local, for the same reason as LoginScreen: the context's isLoading
   // reports session restore, not this form's submission.
   const [isSubmitting, setSubmitting] = useState(false);
@@ -85,8 +92,13 @@ export function RegisterScreen(): React.JSX.Element {
   const emailValid = EMAIL_PATTERN.test(email.trim());
   const score = scorePassword(password);
   const matches = password === confirmation;
+  // Agreement is a submit condition like any other, so the button reports it
+  // the same way it reports a weak password. The canvas draws an error message
+  // for pressing without agreeing as well, but also draws the button disabled
+  // until the box is ticked -- and a disabled button cannot be pressed, so
+  // that message can never appear. The disabled state is the one that ships.
   const canSubmit =
-    emailValid && score >= PASSWORD_STRENGTH_LEVELS - 1 && matches;
+    emailValid && score >= PASSWORD_STRENGTH_LEVELS - 1 && matches && hasAgreed;
 
   const emailHint =
     email.length === 0
@@ -166,6 +178,23 @@ export function RegisterScreen(): React.JSX.Element {
             />
           </View>
 
+          <View style={styles.consent}>
+            <Checkbox
+              checked={hasAgreed}
+              onChange={setAgreed}
+              accessibilityLabel="I agree to the Privacy policy"
+            />
+            <Text style={styles.consentText}>
+              I agree to the{' '}
+              <Text
+                accessibilityRole="link"
+                style={styles.consentLink}
+                onPress={() => navigation.navigate('PrivacyPolicy')}>
+                Privacy policy
+              </Text>
+            </Text>
+          </View>
+
           <Button
             label="Create account"
             onPress={onSubmit}
@@ -218,6 +247,18 @@ const styles = StyleSheet.create({
   barOn: {backgroundColor: colors.primary},
   barOff: {backgroundColor: colors.neutral300},
   strengthLabel: {...typography.captionStrong, color: colors.textTertiary},
+  consent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.s12,
+    marginBottom: spacing.s20,
+  },
+  consentText: {...typography.body, color: colors.textPrimary, flex: 1},
+  consentLink: {
+    ...typography.body,
+    color: colors.primaryDarker,
+    textDecorationLine: 'underline',
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',

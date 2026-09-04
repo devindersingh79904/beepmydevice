@@ -88,6 +88,26 @@ export const MS_PER_SECOND = 1_000;
 /** Shown on the settings "Version" row. Keep in step with package.json. */
 export const APP_VERSION = '1.0.0';
 
+// --- Legal ------------------------------------------------------------------
+/**
+ * The values the privacy policy states, kept out of the prose.
+ *
+ * These are duplicated in `web/src/utils/constants.ts` as `LEGAL`, for the
+ * same reason the palette is duplicated: a React Native bundle and a Vite
+ * bundle cannot share a module. The two policies must say the same thing, so
+ * an edit here is an edit there. There is no postal address here because
+ * there is not one to state yet.
+ */
+export const LEGAL = {
+  /** ISO. Rendered spelled out, so no reader has to guess 04/09. */
+  LAST_UPDATED: '2026-09-04',
+  PRIVACY_EMAIL: 'privacy@beepmydevice.com',
+  /** Days an alert row is kept before it is expected to be purged. */
+  ACTIVITY_RETENTION_DAYS: 90,
+  /** Below this age the service is not offered. */
+  MINIMUM_AGE: 13,
+} as const;
+
 // --- Alert playback ---------------------------------------------------------
 /**
  * Bundled sound played when this device is alerted.

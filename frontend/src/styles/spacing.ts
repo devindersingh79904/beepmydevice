@@ -80,6 +80,9 @@ export const sizes = {
   settingsRow: 52,
   settingsRowTall: 56,
 
+  /** The agree-to-policy box on the register screen. Square, like everything. */
+  checkbox: 20,
+
   toggleWidth: 44,
   toggleHeight: 24,
   toggleKnob: 18,

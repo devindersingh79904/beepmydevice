@@ -75,6 +75,8 @@ const BADGE_TRACKING = 0.5;
 const LABEL_TRACKING = 1;
 const BODY_LINE_HEIGHT = 20;
 const LARGE_LINE_HEIGHT = 22;
+/** 1.6 on 15pt, per the canvas. Long-form reading wants the extra leading. */
+const PROSE_LINE_HEIGHT = 24;
 
 export const typography = {
   /** Splash wordmark. */
@@ -119,6 +121,18 @@ export const typography = {
     lineHeight: LARGE_LINE_HEIGHT,
   },
   body: {...body, fontSize: fontSize.body, lineHeight: BODY_LINE_HEIGHT},
+  /**
+   * Paragraphs meant to be read, not scanned -- the privacy policy.
+   *
+   * Same size as `bodyLarge` and deliberately not the same style: `bodyLarge`
+   * is leaded for one-line list values, and at that leading a screen of
+   * continuous prose sets too tight to read comfortably.
+   */
+  prose: {
+    ...body,
+    fontSize: fontSize.bodyLarge,
+    lineHeight: PROSE_LINE_HEIGHT,
+  },
   small: {...body, fontSize: fontSize.small},
   caption: {...body, fontSize: fontSize.caption},
   /** Smallest readable text -- the header's device count. */

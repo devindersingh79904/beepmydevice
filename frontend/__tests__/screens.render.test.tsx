@@ -6,13 +6,14 @@
  */
 
 import React from 'react';
-import {render, screen, waitFor} from '@testing-library/react-native';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react-native';
 
 import {AuthProvider} from '../src/context/AuthContext';
 import {DeviceProvider} from '../src/context/DeviceContext';
 import {ErrorProvider} from '../src/context/ErrorContext';
 import {DashboardScreen} from '../src/screens/AppStack/DashboardScreen';
 import {DeviceDetailScreen} from '../src/screens/AppStack/DeviceDetailScreen';
+import {PrivacyPolicyScreen} from '../src/screens/AppStack/PrivacyPolicyScreen';
 import {ProfileScreen} from '../src/screens/AppStack/ProfileScreen';
 import {SettingsScreen} from '../src/screens/AppStack/SettingsScreen';
 import {RegisterScreen} from '../src/screens/AuthStack/RegisterScreen';
@@ -129,6 +130,72 @@ describe('RegisterScreen', () => {
     );
 
     expect(screen.getByRole('button', {name: 'Create account'})).toBeDisabled();
+  });
+
+  it('keeps submit disabled until the policy is agreed to', () => {
+    render(
+      <Providers>
+        <RegisterScreen />
+      </Providers>,
+    );
+
+    fireEvent.changeText(screen.getByTestId('register-email'), 'a@b.com');
+    fireEvent.changeText(screen.getByTestId('register-password'), 'sup3rsecret');
+    fireEvent.changeText(
+      screen.getByTestId('register-confirmation'),
+      'sup3rsecret',
+    );
+
+    // Everything else is valid, so the box is the only thing holding it.
+    const submit = screen.getByRole('button', {name: 'Create account'});
+    expect(submit).toBeDisabled();
+
+    fireEvent.press(
+      screen.getByRole('checkbox', {name: 'I agree to the Privacy policy'}),
+    );
+    expect(submit).not.toBeDisabled();
+  });
+});
+
+describe('PrivacyPolicyScreen', () => {
+  it('renders the sections the canvas specifies', () => {
+    render(
+      <Providers>
+        <PrivacyPolicyScreen />
+      </Providers>,
+    );
+
+    expect(screen.getByText('Information we collect')).toBeTruthy();
+    expect(screen.getByText('How we use information')).toBeTruthy();
+    expect(screen.getByText('Data security')).toBeTruthy();
+    expect(screen.getByText('Contact us')).toBeTruthy();
+    expect(screen.getByText('privacy@beepmydevice.com')).toBeTruthy();
+  });
+
+  it('dates itself with the month spelled out', () => {
+    render(
+      <Providers>
+        <PrivacyPolicyScreen />
+      </Providers>,
+    );
+
+    // Not "04/09/2026", which is two different days depending on where it is
+    // read. The month is a word on purpose.
+    expect(screen.getByText('Last updated: 4 September 2026')).toBeTruthy();
+  });
+
+  it('names the router MAC rather than the SSID', () => {
+    render(
+      <Providers>
+        <PrivacyPolicyScreen />
+      </Providers>,
+    );
+
+    // The canvas says "WiFi network name (SSID)". The app reads the BSSID, and
+    // a policy that names the wrong field misstates what is held. This test is
+    // here so the canvas's wording cannot quietly come back.
+    expect(screen.queryByText(/SSID/)).toBeNull();
+    expect(screen.getByText(/MAC address/)).toBeTruthy();
   });
 });
 

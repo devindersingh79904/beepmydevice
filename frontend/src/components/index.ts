@@ -4,6 +4,7 @@ export {AlertModal} from './AlertModal';
 export {Avatar} from './Avatar';
 export {BatteryIndicator} from './BatteryIndicator';
 export {Button} from './Button';
+export {Checkbox} from './Checkbox';
 export {ConfirmDialog} from './ConfirmDialog';
 export {DeviceCard} from './DeviceCard';
 export {EmptyState} from './EmptyState';

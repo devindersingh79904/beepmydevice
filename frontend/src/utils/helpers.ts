@@ -72,6 +72,26 @@ export function formatDate(isoTimestamp: string | null): string {
   });
 }
 
+/**
+ * Format an ISO-8601 date with the month spelled out, e.g. "4 September 2026".
+ *
+ * `formatDate` follows the device's locale, which is right for a last-seen
+ * timestamp and wrong for a document dated for legal effect: 04/09/2026 is two
+ * different days on two sides of an ocean. The locale is pinned and the month
+ * is a word, so the date cannot be misread.
+ */
+export function formatLongDate(isoDate: string): string {
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Unknown';
+  }
+  return parsed.toLocaleDateString('en-GB', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 /** Return the icon name for a platform. Names are from the Feather set. */
 export function getDeviceIcon(deviceType: DeviceType): string {
   switch (deviceType) {

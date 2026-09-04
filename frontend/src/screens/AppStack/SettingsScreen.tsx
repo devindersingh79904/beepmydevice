@@ -190,7 +190,10 @@ export function SettingsScreen(): React.JSX.Element {
 
           <SettingsSectionHeader>ABOUT</SettingsSectionHeader>
           <SettingsRow label="Terms of service" onPress={() => undefined} />
-          <SettingsRow label="Privacy policy" onPress={() => undefined} />
+          <SettingsRow
+            label="Privacy policy"
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+          />
 
           <View style={styles.logout}>
             <Button
