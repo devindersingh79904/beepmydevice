@@ -15,6 +15,24 @@ project.ext.vectoricons = [
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
 
 /**
+ * Reads frontend/.env into BuildConfig, which is where `react-native-config`
+ * actually gets its values on Android.
+ *
+ * Autolinking wires up the *native module* but not this: without the line, the
+ * library links fine, `Config` resolves, and every field on it is undefined.
+ * The symptom is not a build error -- it is `baseURL: undefined` inside the
+ * axios instance, so a release APK sends every request to a relative path and
+ * fails against a server that was never contacted. Nothing in JS warns.
+ *
+ * Applied by file path rather than the `project(':react-native-config')` form
+ * the library's README gives: RN 0.73's autolinking does not register a Gradle
+ * subproject under that name, so the documented line fails evaluation with
+ * "Project with path ':react-native-config' could not be found". The path form
+ * is also what the vector-icons line above uses.
+ */
+apply from: file("../../node_modules/react-native-config/android/dotenv.gradle")
+
+/**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
