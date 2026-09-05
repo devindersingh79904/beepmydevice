@@ -13,6 +13,7 @@ from src.database import Base
 if TYPE_CHECKING:
     from src.models.user import User
     from src.models.device import Device
+    from src.models.discovered_device import DiscoveredDevice
 
 
 class WiFiNetwork(Base):
@@ -40,6 +41,9 @@ class WiFiNetwork(Base):
 
     user: Mapped["User"] = relationship(back_populates="wifi_networks")
     devices: Mapped[list["Device"]] = relationship(
+        back_populates="wifi_network", cascade="all, delete-orphan"
+    )
+    discovered_devices: Mapped[list["DiscoveredDevice"]] = relationship(
         back_populates="wifi_network", cascade="all, delete-orphan"
     )
 

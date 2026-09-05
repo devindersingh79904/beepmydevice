@@ -99,3 +99,38 @@ export interface DeviceStatusUpdate {
   battery: number | null;
   timestamp: string;
 }
+
+/**
+ * Something seen on the WiFi that is not a registered device.
+ *
+ * Not a `Device` and deliberately a separate type: it has no push token, no
+ * status and no battery, and can never be alerted. A discovered smart TV has
+ * no app on it to ring. Keeping the two apart is what stops a Send alert
+ * button appearing over a printer.
+ */
+export interface DiscoveredDevice {
+  discovered_id: string;
+  ip_address: string;
+  device_name: string | null;
+  device_type: string | null;
+  /** MDNS learned a name; SWEEP only learned that something answered. */
+  discovered_via: string;
+  first_seen: string;
+  last_seen: string;
+}
+
+/** Body of POST /devices/scan. */
+export interface ScanSubmission {
+  wifi_mac: string;
+  devices: {
+    ip_address: string;
+    device_name: string | null;
+    device_type: string | null;
+    discovered_via: string;
+  }[];
+}
+
+/** Reply to POST /devices/scan. */
+export interface ScanSubmissionResponse {
+  recorded: number;
+}

@@ -20,7 +20,9 @@ from src.schemas.device import (
     DeviceResponse,
     HeartbeatRequest,
 )
-from src.services.device_service import DeviceService, effective_status
+from src.schemas.discovery import DiscoveredDeviceResponse, ScanSubmission
+from src.services.device_service import DeviceService, effective_status, owned_network_id
+from src.services.discovery_service import DiscoveryService, UnknownScanNetworkError
 from src.utils.concurrency import run_blocking
 from src.utils.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_PAGE_NUMBER, ErrorCode
 from src.utils.logger import get_logger
@@ -41,6 +43,23 @@ def _serialize(device: Device) -> dict[str, Any]:
     payload = DeviceResponse.model_validate(device).model_dump(mode="json")
     payload["status"] = effective_status(device)
     return payload
+
+
+def _unknown_network(message: str) -> HTTPException:
+    """403 for a scan naming a network the caller does not administer.
+
+    403 rather than 404, and one code for both "no such network" and "not
+    yours": telling them apart would let a caller probe which router MACs are
+    registered by anyone at all.
+    """
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=single_error_response(
+            ErrorCode.UNKNOWN_SCAN_NETWORK,
+            status.HTTP_403_FORBIDDEN,
+            message=message,
+        ),
+    )
 
 
 def _not_found() -> HTTPException:
@@ -154,6 +173,89 @@ async def list_devices(
         message="Devices retrieved",
         pagination=build_pagination(total, page, limit),
     )
+
+
+# The three discovery routes are declared *before* /{device_id} on purpose.
+# FastAPI matches in declaration order, so "/devices/discovered" registered
+# after the path-parameter route is swallowed by it and answered with a 422
+# about "discovered" not being a UUID.
+
+
+@router.post("/scan")
+async def submit_scan(
+    payload: ScanSubmission,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Record what a client saw on its WiFi network.
+
+    The scan runs on the phone, not here. This API is a cloud relay -- a scan
+    executed in the datacenter enumerates the hosting provider's network, not
+    the user's home -- so a device that is actually on the network does the
+    looking and posts the result.
+
+    Everything in the body is a claim by that client. It is stored for display
+    only: a discovered device has no push token and can never be alerted. The
+    one thing verified is that the caller administers the network named.
+    """
+    service = DiscoveryService(db)
+    try:
+        recorded = await run_blocking(
+            service.record_scan, user_id, payload.wifi_mac, payload.devices
+        )
+    except UnknownScanNetworkError as exc:
+        raise _unknown_network(str(exc)) from exc
+
+    return success_response({"recorded": recorded}, message="Scan recorded")
+
+
+@router.get("/discovered")
+async def list_discovered(
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """List what has been seen on the caller current network.
+
+    These are *not* devices. They are observations of things on the network
+    that have no app installed, which is what lets the dashboard distinguish
+    "you have one device" from "you have one device and nine other things".
+
+    Empty for a network nobody has scanned yet, which is not an error.
+    """
+    wifi_id = await run_blocking(owned_network_id, db, user_id)
+    if wifi_id is None:
+        return success_response([], message="No devices discovered")
+
+    service = DiscoveryService(db)
+    try:
+        rows = await run_blocking(service.list_discovered, user_id, wifi_id)
+    except UnknownScanNetworkError as exc:
+        raise _unknown_network(str(exc)) from exc
+
+    return success_response(
+        [DiscoveredDeviceResponse.model_validate(row).model_dump(mode="json") for row in rows],
+        message="Discovered devices retrieved",
+    )
+
+
+@router.delete("/discovered/{discovered_id}")
+async def ignore_discovered(
+    discovered_id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Drop one observation from the list.
+
+    It reappears if a later scan sees it again. That is deliberate: this is a
+    record of what is on the network, not a list the admin curates.
+    """
+    service = DiscoveryService(db)
+    try:
+        await run_blocking(service.ignore, user_id, discovered_id)
+    except UnknownScanNetworkError as exc:
+        raise _unknown_network(str(exc)) from exc
+
+    return success_response({}, message="Discovered device ignored")
 
 
 @router.get("/{device_id}")

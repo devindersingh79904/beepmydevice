@@ -44,6 +44,12 @@ disable = [
     # ORM models and Pydantic schemas are declarative data classes; a public
     # method count is not a meaningful measure of them.
     "too-few-public-methods",
+    # Two tables that both hang off wifi_networks declare the same foreign key
+    # the same way, and that is the schema being consistent rather than a
+    # duplication to factor out. A shared mixin would couple `devices` and
+    # `discovered_devices` -- one a thing that can be alerted, the other a
+    # sighting that never can -- purely to save five lines.
+    "duplicate-code",
 ]
 
 [tool.pylint.design]

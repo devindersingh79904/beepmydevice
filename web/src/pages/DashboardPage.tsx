@@ -24,6 +24,7 @@ import {
 } from '@/components/primitives';
 import {useDevices} from '@/contexts/DeviceContext';
 import {useAlerts} from '@/hooks/useAlerts';
+import {useDiscovered} from '@/hooks/useDiscovered';
 import {usePreferences} from '@/hooks/usePreferences';
 import {isAlertable} from '@/services/device.service';
 import {sentToday} from '@/services/alert.service';
@@ -31,6 +32,7 @@ import {ACTIVITY_SAMPLE_SIZE, ROUTES} from '@/utils/constants';
 import {deviceTypeLabel, relativeTime} from '@/utils/format';
 
 const COLUMNS = 6;
+const WIFI_COLUMNS = 6;
 
 export function DashboardPage(): ReactElement {
   const {devices, loading, loaded, errors, live} = useDevices();
@@ -168,6 +170,8 @@ export function DashboardPage(): ReactElement {
         )}
       </section>
 
+      <WifiPanel />
+
       {alertTargets !== null && (
         <SendAlertDialog
           devices={devices}
@@ -178,5 +182,136 @@ export function DashboardPage(): ReactElement {
         />
       )}
     </>
+  );
+}
+
+/* --- devices on your WiFi ----------------------------------------------- */
+
+type RegistrationFilter = 'all' | 'registered' | 'unregistered';
+
+const FILTERS: readonly {key: RegistrationFilter; label: string}[] = [
+  {key: 'all', label: 'All'},
+  {key: 'registered', label: 'Registered'},
+  {key: 'unregistered', label: 'Unregistered'},
+];
+
+/**
+ * What else is on this network.
+ *
+ * Registered devices come from the device list; the rest are observations a
+ * phone submitted after scanning. They are two different things and the table
+ * says so rather than blending them: only the first can be alerted, and the
+ * second has no push token at all.
+ *
+ * There is no Scan button here on purpose. A browser has no WiFi BSSID and
+ * cannot open a socket to a local address, so it can neither scan nor prove
+ * which network it is on — the scan runs in the mobile app, and this list is
+ * as fresh as the last time somebody pressed it there.
+ */
+function WifiPanel(): ReactElement {
+  const {devices} = useDevices();
+  const {discovered, loading, loaded, errors, ignore} = useDiscovered();
+  const [filter, setFilter] = useState<RegistrationFilter>('all');
+
+  const showRegistered = filter !== 'unregistered';
+  const showUnregistered = filter !== 'registered';
+  const total = devices.length + discovered.length;
+
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2 className="panel-title">Devices on your WiFi</h2>
+        <div className="seg">
+          {FILTERS.map(option => (
+            <button
+              key={option.key}
+              type="button"
+              aria-pressed={filter === option.key}
+              onClick={() => setFilter(option.key)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <ErrorBanner errors={errors} />
+
+      <div className="table-scroll">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Device</th>
+              <th>Type</th>
+              <th>Address</th>
+              <th>Registration</th>
+              <th>Last seen</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          {loading && !loaded ? (
+            <SkeletonRows columns={WIFI_COLUMNS} />
+          ) : (
+            <tbody>
+              {showRegistered &&
+                devices.map(device => (
+                  <tr key={device.device_id}>
+                    <td>
+                      <DeviceCell device={device} />
+                    </td>
+                    <td>{deviceTypeLabel(device.device_type)}</td>
+                    {/* The registry stores no address: a device registers with
+                        a BSSID and a push token, never an IP. */}
+                    <td className="text-muted">—</td>
+                    <td>
+                      <span className="tag tag-accent">App installed</span>
+                    </td>
+                    <td>{relativeTime(device.last_heartbeat)}</td>
+                    <td />
+                  </tr>
+                ))}
+
+              {showUnregistered &&
+                discovered.map(item => (
+                  <tr key={item.discovered_id}>
+                    <td>{item.device_name ?? 'Unnamed device'}</td>
+                    <td>{item.device_type ?? 'Unknown'}</td>
+                    <td>{item.ip_address}</td>
+                    <td>
+                      <span className="tag tag-neutral">Unregistered</span>
+                    </td>
+                    <td>{relativeTime(item.last_seen)}</td>
+                    <td>
+                      <Button
+                        variant="ghost"
+                        small
+                        onClick={() => void ignore(item.discovered_id)}
+                      >
+                        Ignore
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          )}
+        </table>
+      </div>
+
+      {loaded && total === 0 && (
+        <EmptyState
+          title="Nothing scanned yet"
+          body="Open the mobile app and press Scan this WiFi to see what else is on your network."
+        />
+      )}
+
+      <p className="panel-note">
+        Discovered devices are found by asking the network who is advertising a
+        service and by probing each address in turn. That finds TVs, printers,
+        speakers and routers — it does not find phones or laptops, which
+        advertise nothing and answer nothing. This is what was discovered, not
+        everything that is connected.
+      </p>
+    </section>
   );
 }

@@ -27,6 +27,8 @@ export const API_ROUTES = {
   PREFERENCES: '/auth/preferences',
   DEVICE_LIST: '/devices/list',
   DEVICE_DETAIL: (id: string): string => `/devices/${id}`,
+  DEVICE_DISCOVERED: '/devices/discovered',
+  DEVICE_DISCOVERED_DETAIL: (id: string): string => `/devices/discovered/${id}`,
   ALERT_SEND: '/alerts/send',
   ALERT_LOGS: '/alerts/logs',
   ALERT_LOGS_FOR_DEVICE: (id: string): string => `/alerts/logs/device/${id}`,

@@ -56,6 +56,9 @@ export const API_ROUTES = {
   DEVICE_LIST: '/devices/list',
   DEVICE_DETAIL: (id: string): string => `/devices/${id}`,
   DEVICE_HEARTBEAT: (id: string): string => `/devices/${id}/heartbeat`,
+  DEVICE_SCAN: '/devices/scan',
+  DEVICE_DISCOVERED: '/devices/discovered',
+  DEVICE_DISCOVERED_DETAIL: (id: string): string => `/devices/discovered/${id}`,
   ALERT_SEND: '/alerts/send',
   ALERT_LOGS: '/alerts/logs',
   ALERT_LOGS_FOR_DEVICE: (id: string): string => `/alerts/logs/device/${id}`,
@@ -142,4 +145,48 @@ export const ALERT_VIBRATION_PATTERN = [
   VIBRATION_BUZZ_MS,
   VIBRATION_GAP_MS,
   VIBRATION_BUZZ_MS,
+];
+
+// --- WiFi discovery ---------------------------------------------------------
+/**
+ * How long to wait for one address to answer during a subnet sweep.
+ *
+ * Short on purpose. A device on the same LAN answers in single-digit
+ * milliseconds or not at all, so a longer wait buys nothing and multiplies the
+ * whole scan: 254 addresses at one second each is over four minutes.
+ */
+export const SWEEP_TIMEOUT_MS = 900;
+
+/**
+ * How many addresses to probe at once.
+ *
+ * The sweep is bounded rather than fired all at once: 254 simultaneous sockets
+ * is enough to have the OS start refusing them, and a phone on WiFi does not
+ * get faster for trying. At this width a /24 finishes in roughly eight seconds.
+ */
+export const SWEEP_CONCURRENCY = 24;
+
+/** Last address probed in a /24. `.0` is the network and `.255` the broadcast. */
+export const SWEEP_LAST_HOST = 254;
+
+/** How long to listen for mDNS announcements before giving up on stragglers. */
+export const MDNS_TIMEOUT_MS = 5_000;
+
+/**
+ * Bonjour service types worth asking about.
+ *
+ * mDNS is a question, not a broadcast: nothing answers a service type nobody
+ * advertises. These are the ones a home network actually carries -- printers,
+ * TVs, speakers, casting targets -- which is also the honest boundary of what
+ * this scan can find. A phone advertises none of them.
+ */
+export const MDNS_SERVICE_TYPES: readonly string[] = [
+  'http',
+  'ipp',
+  'printer',
+  'googlecast',
+  'airplay',
+  'raop',
+  'spotify-connect',
+  'workstation',
 ];

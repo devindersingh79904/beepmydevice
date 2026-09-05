@@ -164,6 +164,9 @@ class ErrorCode(str, Enum):
     DEVICE_OFFLINE = "DEVICE_002"
     INVALID_DEVICE_TYPE = "DEVICE_003"
     DEVICE_ALREADY_REGISTERED = "DEVICE_004"
+    # The submitted scan names a network this caller does not administer, or
+    # that no one has registered on. Appended, never renumbered.
+    UNKNOWN_SCAN_NETWORK = "DEVICE_005"
 
     # Alert
     DIFFERENT_WIFI_NETWORKS = "ALERT_001"
@@ -195,6 +198,7 @@ ERROR_MESSAGES: Final[dict[ErrorCode, str]] = {
     ErrorCode.DEVICE_OFFLINE: "Device is currently offline",
     ErrorCode.INVALID_DEVICE_TYPE: "Unsupported device type",
     ErrorCode.DEVICE_ALREADY_REGISTERED: "This device is already registered",
+    ErrorCode.UNKNOWN_SCAN_NETWORK: "You do not administer this WiFi network",
     ErrorCode.DIFFERENT_WIFI_NETWORKS: "All devices must be on the same WiFi network",
     ErrorCode.NO_TARGET_DEVICES: "No devices available to alert",
     ErrorCode.PERMISSION_DENIED: "You do not have permission to alert this device",
@@ -211,3 +215,30 @@ ERROR_MESSAGES: Final[dict[ErrorCode, str]] = {
     ErrorCode.PUSH_SERVICE_UNAVAILABLE: "Push notification service is unavailable",
     ErrorCode.INTERNAL_ERROR: "An unexpected error occurred",
 }
+
+
+# ---------------------------------------------------------------------------
+# WiFi discovery
+# ---------------------------------------------------------------------------
+# Ceiling on how many observations one scan may submit. A /24 holds 254
+# addresses and a scan reporting more than that is not describing a home
+# network, so the request is refused rather than trusted -- this is a body
+# written by a client, and the only thing standing between it and the table.
+MAX_DISCOVERED_PER_SCAN: Final[int] = 512
+
+# How long an observation stays interesting. A scan replaces what it saw, but
+# something unplugged a week ago is never seen again and would otherwise sit in
+# the dashboard forever, so anything older is dropped when a scan arrives.
+DISCOVERY_RETENTION_HOURS: Final[int] = 24
+
+
+class DiscoverySource(str, Enum):
+    """How a device on the network came to be seen.
+
+    Worth recording because the two are not equally trustworthy. An MDNS name
+    is what the device says it is called; a SWEEP result means only that
+    something answered on that address, so its name is a guess or absent.
+    """
+
+    MDNS = "MDNS"
+    SWEEP = "SWEEP"

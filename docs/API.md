@@ -278,6 +278,66 @@ guest registration acceptable.
 
 ---
 
+### POST /devices/scan
+
+```json
+{
+  "wifi_mac": "00:1A:2B:3C:4D:5E",
+  "devices": [
+    { "ip_address": "192.168.1.30", "device_name": "Living Room TV",
+      "device_type": "tv", "discovered_via": "MDNS" },
+    { "ip_address": "192.168.1.44", "device_name": null,
+      "device_type": null, "discovered_via": "SWEEP" }
+  ]
+}
+```
+
+Records what a client saw on its WiFi network. **The scan runs on the phone,
+not on the server.** This API is a cloud relay: an ARP or subnet scan executed
+here enumerates the hosting provider's network -- other tenants' machines --
+and never sees the caller's home at all. A client that is actually on the
+network is the only thing that can do the looking, so this endpoint is the only
+way these rows ever appear.
+
+Every field is a claim by that client and is stored for display only. A
+discovered device has no push token and can never be alerted. The one thing
+verified is `wifi_mac`: it must name a network the caller already administers.
+A scan never *creates* a network -- if it could, naming a MAC would be enough
+to claim the router it belongs to.
+
+`discovered_via` is `MDNS` or `SWEEP`, and the two are not equally trustworthy:
+an mDNS name is what the device says it is called, while a sweep result means
+only that something answered at that address. A sweep therefore sends
+`device_name: null` rather than inventing one.
+
+At most 512 observations per submission. Rows are keyed by
+`(wifi_id, ip_address)`, not by MAC: a MAC is not obtainable -- Android has
+blocked `/proc/net/arp` since API 29 and neither mDNS nor an HTTP probe reveals
+one -- so keying on it would collapse a whole network into a single row.
+
+Errors: `DEVICE_005` the caller does not administer this network (403) ·
+`VAL_002` a malformed address or an oversized list (422).
+
+### GET /devices/discovered
+
+Returns the observations for the caller's current network, most recently seen
+first. Empty for a network nobody has scanned, which is not an error.
+
+Observations older than 24 hours are dropped when the next scan arrives:
+something unplugged last week never appears in a scan again and would otherwise
+sit in the dashboard forever.
+
+### DELETE /devices/discovered/{discovered_id}
+
+Drops one observation. It reappears if a later scan sees the device again --
+this is a record of what is on the network, not a list the admin curates.
+
+Errors: `DEVICE_005` unknown id, or one on a network the caller does not
+administer (403). Both report the same code deliberately: telling them apart
+would let a caller probe which ids exist on networks they cannot see.
+
+---
+
 ## Alerts
 
 ### POST /alerts/send
@@ -382,6 +442,7 @@ user.
 | `DEVICE_002` | Device offline | Banner |
 | `DEVICE_003` | Invalid device type | Banner |
 | `DEVICE_004` | Device already registered | Banner |
+| `DEVICE_005` | Not this network's admin | Banner |
 | `ALERT_001` | Different WiFi networks | Banner |
 | `ALERT_002` | No target devices | Banner |
 | `ALERT_003` | Permission denied | Banner |

@@ -56,7 +56,23 @@ jest.mock('react-native-network-info', () => ({
   NetworkInfo: {
     getBSSID: jest.fn(async () => '00:1a:2b:3c:4d:5e'),
     getSSID: jest.fn(async () => 'Home-WiFi'),
+    // The address the subnet sweep derives its /24 from.
+    getIPV4Address: jest.fn(async () => '192.168.1.42'),
   },
+}));
+
+// The mDNS module is native and absent under Node. The scanner requires it
+// lazily and degrades to a sweep when it is missing, so the default here is a
+// Zeroconf that finds nothing: a test that wants announcements provides its
+// own listeners.
+jest.mock('react-native-zeroconf', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    on: jest.fn(),
+    scan: jest.fn(),
+    stop: jest.fn(),
+    removeDeviceListeners: jest.fn(),
+  })),
 }));
 
 jest.mock('@react-native-firebase/messaging', () => {

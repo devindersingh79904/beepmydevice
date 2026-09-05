@@ -282,6 +282,16 @@ textarea.input { min-height: 90px; resize: vertical; }
   font-weight: var(--font-heading-weight);
   font-size: 15px;
 }
+/* A caveat under a table, where what the rows do *not* say matters as much as
+   what they do. Padded like the panel body rather than like a settings row,
+   which is what .setting-note is shaped for. */
+.panel-note {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-neutral-300);
+  font-size: 12px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
 
 /* --- tags -------------------------------------------------------------- */
 
@@ -305,6 +315,40 @@ textarea.input { min-height: 90px; resize: vertical; }
   background: var(--color-neutral-300);
   color: var(--color-neutral-900);
   border: 1px solid var(--color-neutral-700);
+}
+
+/* --- segmented filter --------------------------------------------------- */
+/* From the canvas's "Devices on your WiFi" panel. Three mutually exclusive
+   options, always all visible, which is what distinguishes it from the select
+   used on the Devices page: there the filter is one of many controls in a
+   toolbar, here it is the only one and the choices are worth reading at a
+   glance. Square, like everything else in this system. */
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--color-neutral-400);
+}
+.seg button {
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+}
+.seg button + button {
+  border-left: 1px solid var(--color-neutral-400);
+}
+.seg button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-weight: 700;
+}
+.seg button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 
 /* --- tables ------------------------------------------------------------ */

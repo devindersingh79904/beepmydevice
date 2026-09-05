@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext policy.
+
+  The subnet sweep probes http:// on local addresses, and from Android 9
+  cleartext is blocked by default. Without this the probes fail with
+  "Cleartext HTTP not permitted" rather than a connection error, which looks
+  exactly like an empty network: the scan would return nothing, on every
+  device, with no visible reason.
+
+  Android's config cannot express "private ranges only" (a domain-config takes
+  hostnames, not CIDR), so cleartext is allowed as the base and the app's own
+  API is then pinned shut. That ordering matters: the one connection carrying
+  credentials can never silently downgrade to http, whatever a redirect or a
+  misconfigured base URL asks for.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">beepmydevice.com</domain>
+    </domain-config>
+</network-security-config>

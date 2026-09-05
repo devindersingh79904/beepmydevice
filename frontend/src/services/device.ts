@@ -10,8 +10,12 @@ import type {
   DeviceRegisterRequest,
   DeviceRegisterResponse,
   DeviceType,
+  DiscoveredDevice,
   HeartbeatRequest,
+  ScanSubmission,
+  ScanSubmissionResponse,
 } from '@/types/device';
+import type {Observation} from './discovery';
 import {API_ROUTES, STORAGE_KEYS} from '@utils/constants';
 import {normalizeMacAddress} from '@utils/helpers';
 import {getLogger} from '@utils/logger';
@@ -165,4 +169,34 @@ export async function getBatteryLevel(): Promise<number | null> {
     logger.error('Could not read the battery level', error);
     return null;
   }
+}
+
+/**
+ * Report what a scan of this network found.
+ *
+ * The server cannot perform this scan -- it is a cloud relay, and a scan there
+ * enumerates the datacenter -- so this call is the only way these rows ever
+ * appear. It is refused unless the caller administers the network named.
+ *
+ * @returns How many observations the server recorded.
+ */
+export async function submitScan(
+  wifiMac: string,
+  devices: Observation[],
+): Promise<number> {
+  const result = await post<ScanSubmission, ScanSubmissionResponse>(
+    API_ROUTES.DEVICE_SCAN,
+    {wifi_mac: wifiMac, devices},
+  );
+  return result.recorded;
+}
+
+/** List what has been seen on this network but has no app installed. */
+export async function listDiscovered(): Promise<DiscoveredDevice[]> {
+  return get<DiscoveredDevice[]>(API_ROUTES.DEVICE_DISCOVERED);
+}
+
+/** Drop one observation. It returns if a later scan sees it again. */
+export async function ignoreDiscovered(discoveredId: string): Promise<void> {
+  await remove(API_ROUTES.DEVICE_DISCOVERED_DETAIL(discoveredId));
 }

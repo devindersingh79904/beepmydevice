@@ -3,21 +3,26 @@
 Running hand-off list. Update it as items land; it is the file to read first
 when picking the project back up.
 
-Last updated: 2026-09-05, after alerts were made to reach a locked phone.
+Last updated: 2026-09-05, after WiFi discovery landed.
 
 ---
 
 ## Status
 
 ```
-backend   108 tests · mypy clean · pylint 10.00/10 · black
-frontend  180 tests · coverage thresholds met · tsc clean · 0 lint errors
+backend   129 tests · mypy clean · pylint 10.00/10 · black
+frontend  194 tests · coverage thresholds met · tsc clean · 0 lint errors
 web        41 tests · tsc clean · 0 lint errors · production build clean
 CI         off by design; workflows stay staged in .github/workflows.disabled/
 ```
 
-All three suites were run, not assumed, against real PostgreSQL. The app has
+All three suites were run, not assumed, against real PostgreSQL. Every
+migration has been applied *and reversed* against PostgreSQL 17. The app has
 been installed on an S24 Ultra and alerted end to end from the dashboard.
+
+**Deploy order matters.** The app sends fields an older API silently drops, so
+the backend goes out before an APK does. Outstanding migrations:
+`c4d9e2b71a05` (alert-on-silent) and `d51a8c3e6b72` (discovered devices).
 
 ---
 
@@ -27,33 +32,50 @@ been installed on an S24 Ultra and alerted end to end from the dashboard.
 |---|---|---|
 | 1 | `AlertStatus.RECEIVED` is never set | Nothing; parked until push delivers |
 | 2 | iOS on a real device | A Mac, and a paid Apple account for the APNs key |
-| 3 | WiFi device discovery | Nothing technical; see below. Not started |
+| 3 | Discovery on a real network | Nothing; built and tested, not yet run on real hardware |
 
 Nothing else. Everything below this table is either done, or explicitly out of
 Phase 1.
 
-### 3. WiFi device discovery
+### 3. WiFi device discovery — built, needs a real network
 
-The updated canvas adds a *Devices on your WiFi* table to the dashboard, with
-registered and unregistered rows and a DEVICES ON WIFI tile. Nothing implements
-it yet.
+Implemented across all three deployables:
 
-The one thing to get right before writing any of it: **the scan cannot run on
-the backend.** The API is a cloud relay in a datacenter, so an `arp-scan` there
-enumerates the hosting provider's network — other tenants' machines — and never
-sees the user's home at all. The scanner has to run on something already on the
-home network, which means the phone. The shape is: the app scans, `POST`s what
-it found keyed by `wifi_id`, and the dashboard reads it back. That also matches
-what the canvas already says the "Add to app" button does — it shows *"Install
-the mobile app on this device to register it"*, not a registration, because a
-row invented for a device that is not running the app has no push token and can
-never be beeped.
+* `frontend/src/services/discovery.ts` — mDNS via `react-native-zeroconf`
+  (pinned to `0.14.0`, no caret) plus a bounded subnet sweep.
+* `POST /devices/scan`, `GET /devices/discovered`,
+  `DELETE /devices/discovered/{id}` — see `docs/API.md`.
+* The *Devices on your WiFi* panel on the dashboard, with the canvas's
+  All / Registered / Unregistered filter.
 
-Expect partial coverage whatever is built. Android has blocked `/proc/net/arp`
-since API 29, so the practical options are mDNS (finds TVs, printers, speakers,
-Chromecasts — things that advertise) and a subnet sweep (finds whatever answers
-on a port). Neither sees a phone or a laptop that advertises nothing. The tile
-should therefore say what it counts, not claim to be the whole network.
+**The scan runs on the phone, and this is not an implementation detail.** The
+API is a cloud relay in a datacenter: an `arp-scan` there enumerates the
+hosting provider's network — other tenants' machines — and never sees the
+user's home. Any future task that describes scanning from the backend is
+describing something that cannot work.
+
+The canvas's "Add to app" button is a toast, not a registration
+(*"Install the mobile app on this device to register it"*), and the
+implementation agrees: a row invented for a device with no app has no push
+token and can never be beeped. What is offered instead is **Ignore**.
+
+**Coverage is partial and the UI says so.** mDNS finds only what advertises;
+the sweep finds only what answers on a port. Neither sees a phone or a laptop.
+The panel note says "this is what was discovered, not everything that is
+connected" for that reason — do not replace it with a total.
+
+Two things that will bite anyone changing this:
+
+* Rows are keyed by `(wifi_id, ip_address)`, **not** MAC. A MAC is not
+  obtainable — Android has blocked `/proc/net/arp` since API 29, and neither
+  mDNS nor an HTTP probe reveals one — so the obvious MAC key would be null for
+  every row and collapse the network into one entry.
+* `fetch` has no `timeout` option and **ignores one silently**. The sweep
+  bounds each probe with an `AbortController`; without it a dead address holds
+  for the platform's TCP timeout, 254 times over.
+
+Still to do: run it on a real home network and see what it actually finds. The
+counts and names in the panel have only ever been exercised against fixtures.
 
 ### The web dashboard
 

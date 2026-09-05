@@ -143,3 +143,27 @@ export interface Session {
   email: string;
   expires_at: string;
 }
+
+/**
+ * Something seen on the WiFi that has no app installed.
+ *
+ * Deliberately not a `Device`. It has no push token, no status and no battery,
+ * and can never be alerted — a discovered smart TV has nothing on it to ring.
+ * Keeping the two types apart is what stops a Send alert button appearing over
+ * a printer.
+ *
+ * The scan that produces these runs on the phone, never on the server: the API
+ * is a cloud relay, and a scan there enumerates the datacenter rather than the
+ * user's home. So this list is only ever as fresh as the last time someone
+ * pressed Scan in the mobile app.
+ */
+export interface DiscoveredDevice {
+  discovered_id: string;
+  ip_address: string;
+  device_name: string | null;
+  device_type: string | null;
+  /** MDNS learned a name; SWEEP only learned that something answered. */
+  discovered_via: string;
+  first_seen: string;
+  last_seen: string;
+}

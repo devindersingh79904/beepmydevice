@@ -97,12 +97,30 @@ domain exceptions (`LookupError`, `PermissionError`, `ValueError`) that routes
 translate into error codes — that is what keeps the domain reusable and
 testable without an HTTP client. On the frontend, a screen never imports axios.
 
-Four tables, UUID PKs: `users` → `wifi_networks` → `devices`, plus `alert_logs`.
-`wifi_networks.mac_address` is unique, so one router maps to one alert group.
+Five tables, UUID PKs: `users` → `wifi_networks` → `devices`, plus `alert_logs`
+and `discovered_devices`. `wifi_networks.mac_address` is unique, so one router
+maps to one alert group.
+
+**A `discovered_device` is not a `Device`.** It is something a phone reported
+seeing on the network — a TV, a printer, a router — with no push token, no
+status, and no way to be alerted. The two are separate tables so that a Send
+alert button can never appear over a printer.
 
 Alerts go **out through FCM/APNs**, not over the local network. The server is a
 cloud relay; there is no hub in the home. WiFi is an identity check, never a
 transport.
+
+**The server cannot see the home network, and this catches people out.** WiFi
+discovery therefore runs on the *phone* — `frontend/src/services/discovery.ts`
+— which posts what it found to `POST /devices/scan`. An `arp-scan` or subnet
+sweep written into the backend enumerates the hosting provider's datacenter,
+returns other tenants' machines, and never sees a single device of the user's.
+If a task describes scanning from the backend, that is the thing to fix in it
+before anything else.
+
+Discovery is also partial by nature, and the UI must not claim otherwise: mDNS
+finds only what advertises (TVs, printers, speakers, cast targets) and the
+sweep finds only what answers on a port. Neither sees a phone or a laptop.
 
 ## The rules that are easy to break
 

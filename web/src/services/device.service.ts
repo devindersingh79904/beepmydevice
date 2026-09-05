@@ -7,7 +7,7 @@
  * the app rather than offering an "add device" button.
  */
 
-import type {Device} from '@/types/models';
+import type {Device, DiscoveredDevice} from '@/types/models';
 import type {Paged} from '@/types/api';
 import {API_ROUTES, DEFAULT_PAGE_SIZE, FIRST_PAGE} from '@/utils/constants';
 import {del, get, getPaged} from '@/utils/api-client';
@@ -58,4 +58,25 @@ export async function removeDevice(deviceId: string): Promise<void> {
  */
 export function isAlertable(device: Device): boolean {
   return device.status !== 'UNKNOWN';
+}
+
+/**
+ * List what has been seen on this network but has no app installed.
+ *
+ * Read-only from here. A browser cannot scan a WiFi network — it has no BSSID
+ * and no way to open a socket to a local address — so the dashboard displays
+ * what the mobile app submitted and offers no Scan button of its own.
+ */
+export async function listDiscovered(): Promise<DiscoveredDevice[]> {
+  return get<DiscoveredDevice[]>(API_ROUTES.DEVICE_DISCOVERED);
+}
+
+/**
+ * Drop one observation from the list.
+ *
+ * It comes back if a later scan sees it again, which is right: this records
+ * what is on the network, not a list the admin curates.
+ */
+export async function ignoreDiscovered(discoveredId: string): Promise<void> {
+  await del(API_ROUTES.DEVICE_DISCOVERED_DETAIL(discoveredId));
 }

@@ -20,6 +20,7 @@ import {
 import {
   AlertModal,
   Avatar,
+  Button,
   DeviceCard,
   EmptyState,
   ErrorAlert,
@@ -33,6 +34,7 @@ import {useAlerts} from '@hooks/useAlerts';
 import {useAuth} from '@hooks/useAuth';
 import {useDevices} from '@hooks/useDevices';
 import {useErrors} from '@hooks/useErrors';
+import {useNetworkScan} from '@hooks/useNetworkScan';
 import {useToast} from '@hooks/useToast';
 import {useWebSocket} from '@hooks/useWebSocket';
 import type {AppStackParamList} from '@/navigation/AppNavigator';
@@ -85,6 +87,19 @@ export function DashboardScreen(): React.JSX.Element {
   const {isConnected} = useWebSocket(true);
 
   const [target, setTarget] = useState<Device | null>(null);
+  const {isScanning, scan} = useNetworkScan();
+
+  const onScan = async (): Promise<void> => {
+    const found = await scan();
+    if (found === null) {
+      showToast('error', 'Could not scan this network');
+      return;
+    }
+    showToast(
+      'success',
+      found === 1 ? 'Found 1 device' : `Found ${found} devices`,
+    );
+  };
 
   const onlineCount = devices.filter(
     device => device.status === 'ONLINE',
@@ -170,6 +185,21 @@ export function DashboardScreen(): React.JSX.Element {
                 onSendAlert={onSendAlert}
               />
             )}
+            ListFooterComponent={
+              <View style={styles.scan}>
+                <Button
+                  label={isScanning ? 'Scanning…' : 'Scan this WiFi'}
+                  variant="secondary"
+                  disabled={isScanning}
+                  onPress={() => void onScan()}
+                />
+                <Text style={styles.scanNote}>
+                  Finds TVs, printers and speakers on this network. Phones and
+                  laptops usually stay hidden, so this is not everything that is
+                  connected. Results appear on the web dashboard.
+                </Text>
+              </View>
+            }
           />
         )}
         <Toast toast={toast} onDismiss={dismissToast} />
@@ -193,4 +223,6 @@ const styles = StyleSheet.create({
   body: {flex: 1},
   list: {padding: spacing.s16, gap: spacing.s12},
   emptyList: {flexGrow: 1},
+  scan: {paddingTop: spacing.s12, gap: spacing.s8},
+  scanNote: {...typography.caption, color: colors.textSecondary},
 });
