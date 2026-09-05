@@ -143,6 +143,11 @@ frontend/ios/build/
 # depth.
 frontend/android/local.properties
 
+# Build and run logs from scripts/androidrun.sh / scripts/applerun.sh. They are
+# written beside the scripts that produce them. One file per invocation, named
+# by timestamp, so the directory only grows.
+frontend/scripts/logs/
+
 # Build outputs. `build/` above catches the Gradle and Xcode output trees
 # wherever they appear; these are the artefacts that land outside one.
 frontend/android/app/release/
