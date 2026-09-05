@@ -27,10 +27,15 @@ import {colors} from '@styles/theme';
  */
 function DeviceSession(): React.JSX.Element {
   const {pushToken, isReady} = usePushNotifications();
-  const {user} = useAuth();
+  const {user, isLoading: isAuthLoading} = useAuth();
   // Registration is per account: signing in as someone else must produce a
   // device row for them, not leave this phone attached to the previous session.
-  useDeviceRegistration(pushToken, isReady, user?.user_id ?? null);
+  useDeviceRegistration(
+    pushToken,
+    isReady,
+    user?.user_id ?? null,
+    !isAuthLoading,
+  );
   return <RootNavigator />;
 }
 

@@ -42,11 +42,17 @@ export interface UseDeviceRegistrationResult {
  * @param userId - The signed-in user, or null while signed out. Registration
  *   redoes itself whenever this changes: a device row belongs to one account,
  *   so the row created before signing in is not this user's.
+ * @param isAuthReady - False while the stored session is still being restored.
+ *   Required, and not merely an optimisation: during the restore `userId` is
+ *   null for a signed-in user, which is indistinguishable from being signed
+ *   out. Acting on that reads a returning user as a fresh sign-in and retires
+ *   the device row they already had.
  */
 export function useDeviceRegistration(
   pushToken: string | null,
   isPushReady: boolean,
   userId: string | null,
+  isAuthReady: boolean,
 ): UseDeviceRegistrationResult {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [needsLocationPermission, setNeedsLocationPermission] = useState(false);
@@ -93,90 +99,72 @@ export function useDeviceRegistration(
     }
   }, [pushToken]);
 
-  /**
-   * Drop the previous session's device when the account changes.
-   *
-   * The stored ID belongs to whoever was signed in when it was written. Left
-   * in place across a sign-in, the heartbeat keeps addressing it every 30
-   * seconds and the server answers AUTH_004 -- the caller does not administer
-   * that device's network -- for as long as the app is open.
-   *
-   * Skipped on the first run: there is no previous account to leave, and
-   * clearing here would throw away the ID the effect below is about to
-   * restore.
-   */
-  useEffect(() => {
-    if (previousUserId.current === userId) {
-      return;
-    }
-    const wasSignedOut = previousUserId.current === null;
-    const isFirstRun = previousUserId.current === UNSET_USER;
-    previousUserId.current = userId;
-    if (isFirstRun) {
-      return;
-    }
-
-    const abandonPreviousDevice = async (): Promise<void> => {
-      const stored = await getItem<string>(STORAGE_KEYS.DEVICE_ID);
-      await removeItem(STORAGE_KEYS.DEVICE_ID);
-
-      /**
-       * Signing in retires the guest row this install just created.
-       *
-       * Sitting on the login screen registers this phone as a guest, and
-       * signing in registers it again as owned -- the backend keys a device on
-       * its push token *and* its ownership, so the two are different rows and
-       * the phone appears twice in its own owner's list. Only the guest row is
-       * removed, and only on the signed-out-to-signed-in transition: signing
-       * *out* abandons the owned row, which is the user's real device and must
-       * survive.
-       *
-       * Best effort. A failure here leaves a stale row the admin can delete,
-       * which is better than blocking the sign-in that triggered it.
-       */
-      if (stored !== null && wasSignedOut && userId !== null) {
-        try {
-          await deviceService.removeDevice(stored);
-        } catch (error) {
-          logger.warn('Could not retire the guest device row');
-        }
-      }
-    };
-
-    setDeviceId(null);
-    abandonPreviousDevice().catch(error =>
-      logger.error('Could not clear the stored device ID', error),
-    );
-  }, [userId]);
-
   useEffect(() => {
     /**
-     * Nothing registers until the push token has settled.
+     * Nothing happens until both the push token and the session have settled.
      *
      * The backend identifies an app install by its push token, so registering
      * on mount with an empty one and again when the real token arrives creates
-     * two rows for one phone -- the phone appears twice in the dashboard, and
-     * the first row, holding no token, fails every alert sent to it with
-     * ALERT_004. Waiting costs one permission round-trip at startup and is the
-     * difference between one alertable device and two half-broken ones.
+     * two rows for one phone -- the phone appears twice, and the first row,
+     * holding no token, fails every alert sent to it with ALERT_004.
+     *
+     * `isAuthReady` matters just as much: while the stored session is being
+     * restored, `userId` is null for a user who is in fact signed in.
      */
-    if (!isPushReady) {
+    if (!isPushReady || !isAuthReady) {
       return;
     }
 
-    const restoreAndRegister = async (): Promise<void> => {
-      // A previous launch already registered; reuse that ID rather than
-      // creating a second row for the same phone.
+    /**
+     * One sequential pass, deliberately not two effects.
+     *
+     * Retiring the old row and registering the new one both key on `userId`,
+     * and as separate effects they raced: registration would store the new
+     * device ID before the retire step read storage, so the retire deleted the
+     * row it had just created and the phone vanished from the dashboard.
+     */
+    const settle = async (): Promise<void> => {
       const stored = await getItem<string>(STORAGE_KEYS.DEVICE_ID);
-      if (stored !== null) {
+      const previous = previousUserId.current;
+      const isFirstRun = previous === UNSET_USER;
+      const hasChanged = !isFirstRun && previous !== userId;
+      previousUserId.current = userId;
+
+      if (hasChanged) {
+        setDeviceId(null);
+        await removeItem(STORAGE_KEYS.DEVICE_ID);
+
+        /**
+         * Signing in retires the guest row this install just created.
+         *
+         * Sitting on the login screen registers this phone as a guest, and
+         * signing in registers it again as owned -- the backend keys a device
+         * on its push token *and* its ownership, so the two are different rows
+         * and the phone appears twice in its own owner's list.
+         *
+         * Only on the signed-out-to-signed-in transition, and only once auth
+         * has settled: signing *out* abandons the owned row, which is the
+         * user's real device and must survive. Best effort -- a failure leaves
+         * a stale row the admin can delete, which beats blocking the sign-in.
+         */
+        if (stored !== null && previous === null && userId !== null) {
+          try {
+            await deviceService.removeDevice(stored);
+          } catch (error) {
+            logger.warn('Could not retire the guest device row');
+          }
+        }
+      } else if (stored !== null) {
+        // A previous launch already registered; reuse that ID rather than
+        // creating a second row for the same phone.
         setDeviceId(stored);
       }
+
       await register();
     };
-    restoreAndRegister().catch(error =>
-      logger.error('Device registration failed', error),
-    );
-  }, [register, isPushReady, userId]);
+
+    settle().catch(error => logger.error('Device registration failed', error));
+  }, [register, isPushReady, isAuthReady, userId]);
 
   useEffect(() => {
     if (deviceId === null) {

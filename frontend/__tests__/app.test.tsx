@@ -113,7 +113,7 @@ describe('useDeviceRegistration', () => {
   it('registers this device and starts heartbeating', async () => {
     jest.useFakeTimers();
 
-    const {result} = renderHook(() => useDeviceRegistration('push-token', true, 'user-1'));
+    const {result} = renderHook(() => useDeviceRegistration('push-token', true, 'user-1', true));
 
     await waitFor(() => expect(result.current.deviceId).toBe('device-1'));
     expect(deviceService.registerDevice).toHaveBeenCalledWith(
@@ -134,7 +134,7 @@ describe('useDeviceRegistration', () => {
   it('asks for location permission when the BSSID cannot be read', async () => {
     deviceService.getWifiMacAddress.mockResolvedValue(null);
 
-    const {result} = renderHook(() => useDeviceRegistration('push-token', true, 'user-1'));
+    const {result} = renderHook(() => useDeviceRegistration('push-token', true, 'user-1', true));
 
     await waitFor(() =>
       expect(result.current.needsLocationPermission).toBe(true),
@@ -149,7 +149,7 @@ describe('useDeviceRegistration', () => {
     // left two rows for one phone, the first of which no alert could reach.
     const {rerender} = renderHook(
       ({ready}: {ready: boolean}) =>
-        useDeviceRegistration('push-token', ready, 'user-1'),
+        useDeviceRegistration('push-token', ready, 'user-1', true),
       {initialProps: {ready: false}},
     );
 
@@ -167,7 +167,7 @@ describe('useDeviceRegistration', () => {
     // dashboard would show them no device at all.
     const {rerender} = renderHook(
       ({uid}: {uid: string | null}) =>
-        useDeviceRegistration('push-token', true, uid),
+        useDeviceRegistration('push-token', true, uid, true),
       {initialProps: {uid: null as string | null}},
     );
 
@@ -190,7 +190,7 @@ describe('useDeviceRegistration', () => {
 
     const {rerender} = renderHook(
       ({uid}: {uid: string | null}) =>
-        useDeviceRegistration('push-token', true, uid),
+        useDeviceRegistration('push-token', true, uid, true),
       {initialProps: {uid: null as string | null}},
     );
     await waitFor(() => expect(deviceService.registerDevice).toHaveBeenCalled());
@@ -213,7 +213,7 @@ describe('useDeviceRegistration', () => {
 
     const {rerender} = renderHook(
       ({uid}: {uid: string | null}) =>
-        useDeviceRegistration('push-token', true, uid),
+        useDeviceRegistration('push-token', true, uid, true),
       {initialProps: {uid: 'user-1' as string | null},
     });
     await waitFor(() => expect(deviceService.registerDevice).toHaveBeenCalled());
@@ -224,12 +224,35 @@ describe('useDeviceRegistration', () => {
     expect(deviceService.removeDevice).not.toHaveBeenCalled();
   });
 
+  it('does not retire the device while the session is still restoring', async () => {
+    // During restore, userId is null for a user who IS signed in. Reading that
+    // as a fresh sign-in retired the row the returning user already had, and
+    // their phone vanished from the dashboard.
+    const AsyncStorage =
+      require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.DEVICE_ID,
+      JSON.stringify('owned-row'),
+    );
+
+    const {rerender} = renderHook(
+      ({uid, ready}: {uid: string | null; ready: boolean}) =>
+        useDeviceRegistration('push-token', true, uid, ready),
+      {initialProps: {uid: null as string | null, ready: false}},
+    );
+
+    // Session restores: auth becomes ready and the user appears together.
+    rerender({uid: 'user-1', ready: true});
+    await waitFor(() => expect(deviceService.registerDevice).toHaveBeenCalled());
+    expect(deviceService.removeDevice).not.toHaveBeenCalled();
+  });
+
   it('reuses the device ID a previous launch stored', async () => {
     const AsyncStorage =
       require('@react-native-async-storage/async-storage').default;
     await AsyncStorage.setItem(STORAGE_KEYS.DEVICE_ID, JSON.stringify('old-id'));
 
-    const {result} = renderHook(() => useDeviceRegistration(null, true, 'user-1'));
+    const {result} = renderHook(() => useDeviceRegistration(null, true, 'user-1', true));
 
     await waitFor(() => expect(result.current.deviceId).toBeTruthy());
   });
