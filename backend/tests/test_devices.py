@@ -93,6 +93,104 @@ class TestDeviceRegistration:
 
         assert second["device_id"] == first["device_id"]
 
+    def test_roaming_to_the_other_radio_moves_the_row(
+        self, client: TestClient, auth_headers: dict[str, str], db: Session
+    ) -> None:
+        """One phone stays one row when it changes BSSID.
+
+        A dual-band router advertises a different BSSID per radio, as do the
+        nodes of a mesh, so this is not an exotic case -- it is what happens
+        walking upstairs. Each new BSSID used to mean a new network and a new
+        device, which is how one phone came to fill a dashboard.
+        """
+        first = register_device(client, auth_headers, install_id="android-id-1")
+        second = register_device(
+            client, auth_headers, install_id="android-id-1", wifi_mac=OTHER_MAC
+        )
+
+        assert second["device_id"] == first["device_id"]
+        moved = db.get(Device, uuid.UUID(first["device_id"]))
+        network = db.execute(
+            select(WiFiNetwork).where(WiFiNetwork.mac_address == OTHER_MAC)
+        ).scalar_one()
+        assert moved.wifi_id == network.wifi_id
+
+    def test_the_moved_row_is_the_only_one_listed(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        """The dashboard shows the phone once, on the network it is on."""
+        register_device(client, auth_headers, install_id="android-id-1")
+        register_device(
+            client, auth_headers, install_id="android-id-1", wifi_mac=OTHER_MAC
+        )
+
+        response = client.get("/devices/list", headers=auth_headers)
+
+        assert len(_content(response)) == 1
+
+    def test_rejoining_clears_an_unknown_status(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Registering here is evidence of being here.
+
+        Without this the row a roaming phone left behind stayed UNKNOWN, and
+        therefore unalertable, until a heartbeat happened to clear it.
+        """
+        device = register_device(client, auth_headers, install_id="android-id-1")
+        client.put(
+            f"/devices/{device['device_id']}/heartbeat",
+            json={"battery_level": 50, "wifi_mac": OTHER_MAC},
+            headers=auth_headers,
+        )
+
+        register_device(
+            client, auth_headers, install_id="android-id-1", wifi_mac=OTHER_MAC
+        )
+
+        response = client.get("/devices/list", headers=auth_headers)
+        assert _content(response)[0]["status"] == DeviceStatus.ONLINE.value
+
+    def test_a_row_written_before_install_ids_is_adopted(
+        self, client: TestClient, auth_headers: dict[str, str], db: Session
+    ) -> None:
+        """Upgrading the app must not double the phone.
+
+        The row an older build wrote carries no install id, so a client that
+        had started sending one matched nothing and registered beside its own
+        row. The push token it still holds is what links the two.
+        """
+        old = register_device(client, auth_headers, push_token="stable-token")
+        upgraded = register_device(
+            client, auth_headers, push_token="stable-token", install_id="android-id-1"
+        )
+
+        assert upgraded["device_id"] == old["device_id"]
+        adopted = db.get(Device, uuid.UUID(old["device_id"]))
+        assert adopted.install_id == "android-id-1"
+
+    def test_a_guest_row_cannot_be_claimed_from_another_network(
+        self, client: TestClient, db: Session
+    ) -> None:
+        """A guest's install id is its only credential, so it is network-scoped.
+
+        An owned device is anchored by the account that registered it. A guest
+        has no account, so matching on the install id alone across networks
+        would hand its row -- and the device token returned with it -- to
+        anyone who could guess one.
+        """
+        owner = register_user(client, "owner@example.com")
+        register_device(client, owner, wifi_mac=VALID_MAC, install_id="owner-install")
+        neighbour = register_user(client, "neighbour@example.com")
+        register_device(
+            client, neighbour, wifi_mac=OTHER_MAC, install_id="neighbour-install"
+        )
+
+        here = register_device(client, wifi_mac=VALID_MAC, install_id="guest-install")
+        there = register_device(client, wifi_mac=OTHER_MAC, install_id="guest-install")
+
+        assert there["device_id"] != here["device_id"]
+        assert db.get(Device, uuid.UUID(there["device_id"])).user_id is None
+
     def test_registers_device_and_returns_id(
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:

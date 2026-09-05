@@ -134,6 +134,49 @@ describe('useDeviceRegistration', () => {
     jest.useRealTimers();
   });
 
+  it('re-registers when the WiFi underneath it changes', async () => {
+    jest.useFakeTimers();
+
+    const {result} = renderHook(() => useDeviceRegistration('push-token', true, 'user-1', true));
+    await waitFor(() => expect(result.current.deviceId).toBe('device-1'));
+    expect(deviceService.registerDevice).toHaveBeenCalledTimes(1);
+
+    // The other radio of the same router, which advertises its own BSSID.
+    deviceService.getWifiMacAddress.mockResolvedValue('00:1A:2B:3C:4D:5F');
+
+    await act(async () => {
+      jest.advanceTimersByTime(HEARTBEAT_INTERVAL_MS);
+    });
+
+    // Registering is the only thing that moves a device between networks: a
+    // heartbeat from an unrecognised MAC means UNKNOWN, and a device left on
+    // the network it walked out of cannot be alerted from either one.
+    expect(deviceService.registerDevice).toHaveBeenCalledTimes(2);
+    expect(deviceService.registerDevice).toHaveBeenLastCalledWith(
+      expect.objectContaining({wifi_mac: '00:1A:2B:3C:4D:5F'}),
+    );
+
+    jest.useRealTimers();
+  });
+
+  it('keeps heartbeating while the WiFi stays the same', async () => {
+    jest.useFakeTimers();
+
+    const {result} = renderHook(() => useDeviceRegistration('push-token', true, 'user-1', true));
+    await waitFor(() => expect(result.current.deviceId).toBe('device-1'));
+
+    await act(async () => {
+      jest.advanceTimersByTime(HEARTBEAT_INTERVAL_MS * 2);
+    });
+
+    // One registration, not one per beat: re-registering every 30 seconds
+    // would rewrite the row and reset its status for no reason.
+    expect(deviceService.registerDevice).toHaveBeenCalledTimes(1);
+    expect(deviceService.sendHeartbeat).toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
   it('asks for location permission when the BSSID cannot be read', async () => {
     deviceService.getWifiMacAddress.mockResolvedValue(null);
 

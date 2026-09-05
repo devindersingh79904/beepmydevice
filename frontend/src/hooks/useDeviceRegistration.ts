@@ -67,6 +67,16 @@ export function useDeviceRegistration(
   const isRegistering = useRef(false);
   /** Previous value of `userId`, to tell a sign-in from the first render. */
   const previousUserId = useRef<string | null | typeof UNSET_USER>(UNSET_USER);
+  /**
+   * The BSSID this device's row currently belongs to.
+   *
+   * A router's two radios advertise different BSSIDs, and so does every node
+   * of a mesh, so walking upstairs changes this without anything changing
+   * about where the phone is. The row has to follow, or it sits in the
+   * dashboard as "off network" -- unalertable -- for a phone that is right
+   * there.
+   */
+  const registeredMac = useRef<string | null>(null);
 
   const register = useCallback(async (): Promise<void> => {
     if (isRegistering.current) {
@@ -94,6 +104,7 @@ export function useDeviceRegistration(
         network_name: (await deviceService.getWifiNetworkName()) ?? undefined,
       });
       setDeviceId(registeredId);
+      registeredMac.current = wifiMac;
     } catch (error) {
       // A failed registration is not fatal to the session: the user can still
       // see the network, they are simply not on it yet.
@@ -170,6 +181,17 @@ export function useDeviceRegistration(
     settle().catch(error => logger.error('Device registration failed', error));
   }, [register, isPushReady, isAuthReady, userId]);
 
+  /**
+   * Held in a ref rather than named as a dependency of the heartbeat effect:
+   * `register` is rebuilt whenever the push token changes, and depending on it
+   * would tear down and restart the interval each time, resetting the gap
+   * between beats.
+   */
+  const registerRef = useRef(register);
+  useEffect(() => {
+    registerRef.current = register;
+  }, [register]);
+
   useEffect(() => {
     if (deviceId === null) {
       return;
@@ -179,6 +201,20 @@ export function useDeviceRegistration(
       const wifiMac = await deviceService.getWifiMacAddress();
       if (wifiMac === null) {
         setNeedsLocationPermission(true);
+        return;
+      }
+      /**
+       * A changed BSSID is a re-registration, not a heartbeat.
+       *
+       * Registering is the only thing that moves a device between networks --
+       * a heartbeat from an unrecognised MAC means UNKNOWN by design, and a
+       * device left on the wrong network cannot be alerted from either one.
+       * Waiting for the next launch to fix that is what put the same phone in
+       * the list once per band it had been on.
+       */
+      if (registeredMac.current !== null && registeredMac.current !== wifiMac) {
+        logger.info('WiFi changed; re-registering this device');
+        await registerRef.current();
         return;
       }
       try {

@@ -7,6 +7,7 @@ from typing import Any
 from jose import ExpiredSignatureError, JWTError, jwt
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from src.config import settings
 from src.models.device import Device
@@ -144,6 +145,7 @@ class DeviceService:
         )
         if existing is not None:
             self._apply_device_info(existing, device_info)
+            self._rejoin(existing, network)
             self._db.flush()
             logger.info(f"Device {existing.device_id} re-registered")
             return existing.device_id, self._issue_token_if_guest(existing)
@@ -214,6 +216,19 @@ class DeviceService:
         had been reinstalled three times appeared three times in its owner's
         dashboard, two of them permanently offline.
 
+        An owned device is searched for across *every* network, not just the
+        one it is registering from. A router's two radios advertise different
+        BSSIDs -- as do the nodes of a mesh -- so a phone that roamed from
+        5GHz to 2.4GHz was a new device on a new network, and the row it left
+        behind stayed in the list as "off network" for a phone that had not
+        left the house. The caller moves the row it gets back.
+
+        A guest is searched for within its network only. Its owner cannot
+        anchor it, because it has none: the install id is its whole identity,
+        and matching on that alone across networks would let anyone holding
+        one claim that guest's row -- and the device token returned with it --
+        from any network they please.
+
         The push-token path stays for clients that predate ``install_id``, but
         only when the token is non-empty -- matching on "" would collide every
         device whose owner declined notifications into one row.
@@ -226,25 +241,74 @@ class DeviceService:
         side by side. Filtering in Python meant fetching both and failing the
         next registration with MultipleResultsFound -- a 500 out of the one
         endpoint that has to work before a client can do anything else.
-
-        Newest first, so a client that somehow holds two matching rows keeps
-        updating the one it most recently created rather than an older ghost.
         """
         ownership = Device.user_id.is_(None) if user_id is None else Device.user_id == user_id
 
         if install_id:
-            match = Device.install_id == install_id
-        elif push_token:
-            match = Device.push_token == push_token
-        else:
-            return None
+            return self._find_by_install(wifi_id, push_token, ownership, install_id, user_id)
+        if push_token:
+            return self._newest(
+                Device.wifi_id == wifi_id, Device.push_token == push_token, ownership
+            )
+        return None
 
+    def _find_by_install(
+        self,
+        wifi_id: uuid.UUID,
+        push_token: str,
+        ownership: ColumnElement[bool],
+        install_id: str,
+        user_id: uuid.UUID | None,
+    ) -> Device | None:
+        """Find this install's row, adopting one left by an older client.
+
+        The adoption clause is the second half of the same bug. Rows written
+        before ``install_id`` existed carry none, so a client that had begun
+        sending one matched nothing and registered *beside* its own row rather
+        than onto it -- which is how one phone came to hold three rows on one
+        network. Such a row is claimed by the push token it still holds, and
+        stamped with the identity it never had.
+        """
+        network_scope = [] if user_id is not None else [Device.wifi_id == wifi_id]
+        found = self._newest(Device.install_id == install_id, ownership, *network_scope)
+        if found is not None or not push_token:
+            return found
+        return self._newest(
+            Device.wifi_id == wifi_id,
+            Device.push_token == push_token,
+            Device.install_id.is_(None),
+            ownership,
+        )
+
+    def _newest(self, *conditions: ColumnElement[bool]) -> Device | None:
+        """The most recently created device row matching every condition.
+
+        Newest first, so a client that somehow holds two matching rows keeps
+        updating the one it most recently created rather than an older ghost.
+        """
         return self._db.execute(
-            select(Device)
-            .where(Device.wifi_id == wifi_id, match, ownership)
-            .order_by(Device.created_at.desc())
-            .limit(1)
+            select(Device).where(*conditions).order_by(Device.created_at.desc()).limit(1)
         ).scalar_one_or_none()
+
+    @staticmethod
+    def _rejoin(device: Device, network: WiFiNetwork) -> None:
+        """Put a returning device on the network it has just registered from.
+
+        Registration is the act of joining a network, and it is authenticated,
+        so it is the place a device is allowed to move. A heartbeat is not: it
+        answers "is this device alive", and one arriving from a MAC the row
+        does not know still means UNKNOWN rather than a silent change of alert
+        group.
+
+        Status is reset with the move because registering *is* evidence of
+        being on this network -- otherwise a row that had gone UNKNOWN
+        elsewhere would sit unalertable until the next heartbeat cleared it.
+        """
+        if device.wifi_id != network.wifi_id:
+            logger.info(f"Device {device.device_id} rejoined on network {network.wifi_id}")
+            device.wifi_id = network.wifi_id
+        device.status = DeviceStatus.ONLINE.value
+        device.last_heartbeat = datetime.now(timezone.utc)
 
     @staticmethod
     def _apply_device_info(device: Device, device_info: dict[str, Any]) -> None:
