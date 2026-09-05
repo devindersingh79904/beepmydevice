@@ -3,24 +3,21 @@
 Running hand-off list. Update it as items land; it is the file to read first
 when picking the project back up.
 
-Last updated: 2026-08-31, after the backend service-account key landed.
+Last updated: 2026-09-05, after alerts were made to reach a locked phone.
 
 ---
 
 ## Status
 
 ```
-backend    98 tests · 81.6% coverage · mypy clean · pylint 10.00/10 · black
-frontend  161 tests · coverage thresholds met · tsc clean · 0 lint errors
-web        34 tests · tsc clean · 0 lint errors · production build clean
+backend   108 tests · mypy clean · pylint 10.00/10 · black
+frontend  180 tests · coverage thresholds met · tsc clean · 0 lint errors
+web        41 tests · tsc clean · 0 lint errors · production build clean
 CI         off by design; workflows stay staged in .github/workflows.disabled/
 ```
 
-Both suites were run, not assumed. The API was booted and served real requests.
-
-**Android is ready to build and test**, push included: `settings.firebase_enabled`
-reports `True`. iOS is staged but cannot be built from Windows. One defect
-remains, below.
+All three suites were run, not assumed, against real PostgreSQL. The app has
+been installed on an S24 Ultra and alerted end to end from the dashboard.
 
 ---
 
@@ -29,10 +26,34 @@ remains, below.
 | # | Item | Blocked on |
 |---|---|---|
 | 1 | `AlertStatus.RECEIVED` is never set | Nothing; parked until push delivers |
-| 2 | Run it on a real device | A phone, and for iOS a Mac |
+| 2 | iOS on a real device | A Mac, and a paid Apple account for the APNs key |
+| 3 | WiFi device discovery | Nothing technical; see below. Not started |
 
 Nothing else. Everything below this table is either done, or explicitly out of
 Phase 1.
+
+### 3. WiFi device discovery
+
+The updated canvas adds a *Devices on your WiFi* table to the dashboard, with
+registered and unregistered rows and a DEVICES ON WIFI tile. Nothing implements
+it yet.
+
+The one thing to get right before writing any of it: **the scan cannot run on
+the backend.** The API is a cloud relay in a datacenter, so an `arp-scan` there
+enumerates the hosting provider's network — other tenants' machines — and never
+sees the user's home at all. The scanner has to run on something already on the
+home network, which means the phone. The shape is: the app scans, `POST`s what
+it found keyed by `wifi_id`, and the dashboard reads it back. That also matches
+what the canvas already says the "Add to app" button does — it shows *"Install
+the mobile app on this device to register it"*, not a registration, because a
+row invented for a device that is not running the app has no push token and can
+never be beeped.
+
+Expect partial coverage whatever is built. Android has blocked `/proc/net/arp`
+since API 29, so the practical options are mDNS (finds TVs, printers, speakers,
+Chromecasts — things that advertise) and a subnet sweep (finds whatever answers
+on a port). Neither sees a phone or a laptop that advertises nothing. The tile
+should therefore say what it counts, not claim to be the whole network.
 
 ### The web dashboard
 
