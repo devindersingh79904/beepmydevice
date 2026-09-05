@@ -40,6 +40,14 @@ export interface DeviceRegisterRequest {
   push_token: string;
   wifi_mac: string;
   network_name?: string;
+  /**
+   * Stable across reinstalls and push-token rotations.
+   *
+   * The backend matches a re-registration on this rather than on the push
+   * token, which the platform reissues on every reinstall -- that is what left
+   * one phone showing up in the dashboard once per install it had ever had.
+   */
+  install_id?: string;
 }
 
 /**

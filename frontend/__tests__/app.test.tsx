@@ -120,6 +120,9 @@ describe('useDeviceRegistration', () => {
       expect.objectContaining({
         device_type: 'android',
         wifi_mac: '00:1A:2B:3C:4D:5E',
+        // Without it the backend falls back to the push token, which the
+        // platform reissues on every reinstall -- one row per install.
+        install_id: 'test-install-id',
       }),
     );
 

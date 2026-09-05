@@ -119,7 +119,12 @@ class DeviceService:
         mac_address = normalize_mac_address(device_info["wifi_mac"])
         network = self._get_or_create_network(user_id, mac_address, device_info.get("network_name"))
 
-        existing = self._find_reregistration(network.wifi_id, device_info["push_token"], user_id)
+        existing = self._find_reregistration(
+            network.wifi_id,
+            device_info["push_token"],
+            user_id,
+            device_info.get("install_id"),
+        )
         if existing is not None:
             self._apply_device_info(existing, device_info)
             self._db.flush()
@@ -179,13 +184,22 @@ class DeviceService:
         wifi_id: uuid.UUID,
         push_token: str,
         user_id: uuid.UUID | None,
+        install_id: str | None = None,
     ) -> Device | None:
         """Return the existing row this registration should update, if any.
 
-        A push token identifies one app install, so a client that registers
-        again -- after a reinstall, or because it lost its stored device ID --
-        must update its row rather than leave a duplicate behind that the admin
-        then sees twice in the dashboard.
+        Matched on ``install_id`` when the client sends one, and on the push
+        token otherwise.
+
+        The push token was the only identifier available, and it is a poor one:
+        the platform reissues it on every reinstall, so each reinstall looked
+        like a brand-new device and left the previous row behind. A phone that
+        had been reinstalled three times appeared three times in its owner's
+        dashboard, two of them permanently offline.
+
+        The push-token path stays for clients that predate ``install_id``, but
+        only when the token is non-empty -- matching on "" would collide every
+        device whose owner declined notifications into one row.
 
         Ownership must match: a re-registration never converts an owned device
         into a guest or vice versa, since ownership is what authorises sending.
@@ -200,13 +214,17 @@ class DeviceService:
         updating the one it most recently created rather than an older ghost.
         """
         ownership = Device.user_id.is_(None) if user_id is None else Device.user_id == user_id
+
+        if install_id:
+            match = Device.install_id == install_id
+        elif push_token:
+            match = Device.push_token == push_token
+        else:
+            return None
+
         return self._db.execute(
             select(Device)
-            .where(
-                Device.wifi_id == wifi_id,
-                Device.push_token == push_token,
-                ownership,
-            )
+            .where(Device.wifi_id == wifi_id, match, ownership)
             .order_by(Device.created_at.desc())
             .limit(1)
         ).scalar_one_or_none()
@@ -218,6 +236,10 @@ class DeviceService:
         device.device_type = device_info["device_type"]
         device.device_os_version = device_info.get("device_os_version")
         device.push_token = device_info["push_token"]
+        # Only when sent: an older client omits it, and overwriting a stored
+        # value with None would lose the identity on the next re-registration.
+        if device_info.get("install_id"):
+            device.install_id = device_info["install_id"]
 
     def _issue_token_if_guest(self, device: Device) -> str | None:
         """Return a device token for a guest, or None for an owned device."""

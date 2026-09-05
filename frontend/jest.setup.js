@@ -46,6 +46,9 @@ jest.mock('react-native-device-info', () => ({
     getDeviceName: jest.fn(async () => 'Test Device'),
     getSystemVersion: jest.fn(() => '17.0'),
     getBatteryLevel: jest.fn(async () => 0.85),
+    // ANDROID_ID / identifierForVendor: the stable identity the backend
+    // matches a re-registration on.
+    getUniqueId: jest.fn(async () => 'test-install-id'),
   },
 }));
 

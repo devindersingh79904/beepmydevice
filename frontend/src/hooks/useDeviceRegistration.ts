@@ -85,6 +85,10 @@ export function useDeviceRegistration(
         device_name: await DeviceInfo.getDeviceName(),
         device_type: deviceService.detectDeviceType(),
         device_os_version: DeviceInfo.getSystemVersion(),
+        // ANDROID_ID on Android, identifierForVendor on iOS: it survives a
+        // reinstall, which the push token does not, so reinstalling updates
+        // this phone's row instead of adding another one beside it.
+        install_id: await DeviceInfo.getUniqueId(),
         push_token: pushToken ?? '',
         wifi_mac: wifiMac,
         network_name: (await deviceService.getWifiNetworkName()) ?? undefined,

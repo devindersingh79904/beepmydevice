@@ -23,6 +23,14 @@ class Device(Base):
     deliver the beep. It is refreshed by the client whenever the platform
     rotates it, so it must never be treated as a stable identifier.
 
+    ``install_id`` is that stable identifier: a value the platform keeps for
+    one app on one device across reinstalls and token rotations. It is what
+    lets a phone that reinstalls the app update its existing row instead of
+    appearing in the dashboard twice. Nullable, because a client older than
+    this column does not send one -- and because it is a claim by the client,
+    it never grants anything on its own: ownership and network membership are
+    still decided separately.
+
     ``user_id`` is nullable, and that is what distinguishes the two kinds of
     device:
 
@@ -58,6 +66,7 @@ class Device(Base):
     device_type: Mapped[str] = mapped_column(String(50), nullable=False)
     device_os_version: Mapped[str | None] = mapped_column(String(50))
     push_token: Mapped[str | None] = mapped_column(String(500))
+    install_id: Mapped[str | None] = mapped_column(String(255), index=True)
     battery_level: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(50), default=DeviceStatus.OFFLINE.value)
     last_heartbeat: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

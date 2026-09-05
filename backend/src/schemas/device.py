@@ -40,6 +40,10 @@ class DeviceRegisterRequest(BaseModel):
     push_token: str = Field(max_length=500)
     wifi_mac: str
     network_name: str | None = Field(default=None, max_length=255)
+    # Stable across reinstalls and token rotations, which the push token is
+    # not. Optional: a client older than this field still registers through
+    # the push-token path, it simply leaves a row behind when it reinstalls.
+    install_id: str | None = Field(default=None, max_length=255)
 
     _check_mac = field_validator("wifi_mac")(_validate_mac)
 

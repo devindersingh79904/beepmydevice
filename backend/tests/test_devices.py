@@ -40,6 +40,59 @@ def _content(response: object) -> object:
 class TestDeviceRegistration:
     """POST /devices/register."""
 
+    def test_reinstall_updates_the_same_row(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        """A reinstall keeps one row, even though the push token changed.
+
+        This is what put one phone in the dashboard once per install it had
+        ever had: the push token is reissued on every reinstall, so without a
+        stable identifier each one looked like a new device.
+        """
+        first = register_device(client, auth_headers, install_id="android-id-1")
+        second = register_device(
+            client,
+            auth_headers,
+            install_id="android-id-1",
+            push_token="a-freshly-issued-token",
+        )
+
+        assert second["device_id"] == first["device_id"]
+
+    def test_a_different_install_is_a_different_device(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Two phones on one network stay two rows."""
+        first = register_device(client, auth_headers, install_id="android-id-1")
+        second = register_device(client, auth_headers, install_id="android-id-2")
+
+        assert second["device_id"] != first["device_id"]
+
+    def test_devices_without_a_push_token_do_not_collide(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Declining notifications must not merge every such phone into one row.
+
+        Matching on an empty push token did exactly that.
+        """
+        first = register_device(
+            client, auth_headers, push_token="", install_id="android-id-1"
+        )
+        second = register_device(
+            client, auth_headers, push_token="", install_id="android-id-2"
+        )
+
+        assert second["device_id"] != first["device_id"]
+
+    def test_older_client_without_install_id_still_reregisters(
+        self, client: TestClient, auth_headers: dict[str, str]
+    ) -> None:
+        """The push-token path stays for clients that predate install_id."""
+        first = register_device(client, auth_headers, push_token="stable-token")
+        second = register_device(client, auth_headers, push_token="stable-token")
+
+        assert second["device_id"] == first["device_id"]
+
     def test_registers_device_and_returns_id(
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
