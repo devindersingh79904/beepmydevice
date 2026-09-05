@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -26,10 +27,18 @@
            does not create channels, so without this an alert arriving before
            MainApplication has run goes to the fallback channel, which has no
            sound: the phone stays silent and the failure looks exactly like a
-           push that was never sent. -->
+           push that was never sent.
+
+           tools:replace is required, not optional. The messaging library
+           declares this same meta-data from its own manifest, taking the value
+           from firebase.json; with no firebase.json present that substitution
+           resolves to the empty string. The merger refuses to choose between
+           the two, and without this override the library's empty value is what
+           a build would ship: exactly the silent fallback described above. -->
       <meta-data
         android:name="com.google.firebase.messaging.default_notification_channel_id"
-        android:value="@string/alert_channel_id" />
+        android:value="@string/alert_channel_id"
+        tools:replace="android:value" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
