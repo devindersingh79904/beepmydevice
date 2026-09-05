@@ -104,9 +104,21 @@ export function SendAlertDialog({
   };
 
   if (result !== null) {
+    /**
+     * Titled by what actually happened, not by the request succeeding.
+     *
+     * The endpoint answers 200 with `success: true` even when every push
+     * failed -- delivery is per device, in `delivery_status`. "Alert sent"
+     * sat directly above a row reading FAILED (ALERT_004), which is the one
+     * place the dashboard must not be reassuring.
+     */
+    const reached = result.delivery_status.filter(
+      item => item.status !== 'FAILED',
+    ).length;
+
     return (
       <Dialog
-        title="Alert sent"
+        title={reached > 0 ? 'Alert sent' : 'Alert could not be delivered'}
         onClose={onClose}
         actions={
           <Button variant="primary" onClick={onClose}>
@@ -119,7 +131,9 @@ export function SendAlertDialog({
           {result.delivery_status.length === 1
             ? '1 device'
             : `${result.delivery_status.length} devices`}
-          .
+          {reached === result.delivery_status.length
+            ? '.'
+            : `, reaching ${reached} of ${result.delivery_status.length}.`}
         </p>
         <table className="table">
           <thead>

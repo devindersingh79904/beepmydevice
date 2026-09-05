@@ -6,6 +6,7 @@ import {act, fireEvent, render, renderHook, screen, waitFor} from '@testing-libr
 import {AuthProvider} from '../src/context/AuthContext';
 import {DeviceProvider} from '../src/context/DeviceContext';
 import {ErrorProvider} from '../src/context/ErrorContext';
+import {useAlerts} from '../src/hooks/useAlerts';
 import {useDeviceAlertHistory} from '../src/hooks/useDeviceAlertHistory';
 import {usePreferences} from '../src/hooks/usePreferences';
 import {ForgotPasswordScreen} from '../src/screens/AuthStack/ForgotPasswordScreen';
@@ -308,5 +309,61 @@ describe('ForgotPasswordScreen', () => {
 
     expect(screen.getByText('✗ Enter a valid email address')).toBeTruthy();
     expect(authService.forgotPassword).not.toHaveBeenCalled();
+  });
+});
+
+describe('sendAlert delivery reporting', () => {
+  it('reports failure when no device was reached', async () => {
+    // The endpoint answers 200 with success:true even when every push fails,
+    // so the request succeeding says nothing about the phone ringing. This is
+    // what made the app show "Device alert sent!" over a FAILED delivery.
+    alertService.sendAlert.mockResolvedValue({
+      alert_id: 'alert-1',
+      delivery_status: [
+        {
+          device_id: 'device-1',
+          device_name: 'Phone',
+          status: 'FAILED',
+          error_code: 'ALERT_004',
+        },
+      ],
+    });
+
+    const {result} = renderHook(() => useAlerts(), {wrapper: Providers});
+
+    let sent: boolean | undefined;
+    await act(async () => {
+      sent = await result.current.sendAlert(['device-1']);
+    });
+    expect(sent).toBe(false);
+  });
+
+  it('reports success when at least one device was reached', async () => {
+    alertService.sendAlert.mockResolvedValue({
+      alert_id: 'alert-2',
+      delivery_status: [
+        {
+          device_id: 'device-1',
+          device_name: 'Phone',
+          status: 'SENT',
+          error_code: null,
+        },
+        {
+          device_id: 'device-2',
+          device_name: 'Tablet',
+          status: 'FAILED',
+          error_code: 'ALERT_004',
+        },
+      ],
+    });
+
+    const {result} = renderHook(() => useAlerts(), {wrapper: Providers});
+
+    let sent: boolean | undefined;
+    await act(async () => {
+      sent = await result.current.sendAlert(['device-1', 'device-2']);
+    });
+    // Matches the server's rule: one failure is not a failed alert.
+    expect(sent).toBe(true);
   });
 });

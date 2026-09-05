@@ -187,10 +187,28 @@ export function DeviceProvider({
       try {
         const result = await alertService.sendAlert({device_ids: deviceIds});
         setLastDelivery(result.delivery_status);
-        logger.info(
-          `Alert ${result.alert_id} sent to ${deviceIds.length} device(s)`,
+
+        /**
+         * Whether any device was actually reached, not whether the request
+         * was accepted.
+         *
+         * The endpoint answers 200 with `success: true` even when every push
+         * failed -- delivery is reported per device, in `delivery_status`, and
+         * a push that never reaches the phone is not an HTTP error. Returning
+         * true for the request alone told the user "Device alert sent!" while
+         * the server was recording FAILED / ALERT_004 for the only target.
+         *
+         * Matching the server's own rule: one device failing is not a failed
+         * alert, every device failing is.
+         */
+        const delivered = result.delivery_status.some(
+          item => item.status !== 'FAILED',
         );
-        return true;
+        logger.info(
+          `Alert ${result.alert_id} to ${deviceIds.length} device(s): ` +
+            `${delivered ? 'delivered' : 'no device reached'}`,
+        );
+        return delivered;
       } catch (error) {
         report(error);
         return false;
