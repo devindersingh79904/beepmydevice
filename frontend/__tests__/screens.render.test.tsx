@@ -93,6 +93,7 @@ beforeEach(() => {
     notifications_enabled: true,
     sound_enabled: true,
     vibration_enabled: true,
+    alert_on_silent: false,
   });
   mockList([]);
   websocketService.onStatusUpdate.mockReturnValue(jest.fn());

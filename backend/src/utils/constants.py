@@ -63,6 +63,29 @@ PUSH_MAX_CONCURRENT_SENDS: Final[int] = 10
 ALERT_NOTIFICATION_TITLE: Final[str] = "BeepMyDevice"
 ALERT_NOTIFICATION_BODY: Final[str] = "Someone is looking for this device!"
 
+# Android notification channels. These ids must match the ones the app creates
+# in MainApplication.kt exactly -- posting to an id the app never declared
+# leaves the notification on the low-importance fallback channel, which is the
+# difference between a phone that rings and a phone that shows a silent line in
+# the shade. They are a wire contract, so treat them like the error codes:
+# append, never rename.
+#
+# Two channels rather than one flag, because Android freezes a channel's
+# importance and audio attributes when it is created and ignores every later
+# change. The silent-override channel plays on the alarm stream, which the
+# ringer switch does not mute.
+ANDROID_CHANNEL_ALERT: Final[str] = "beepmydevice.alerts.v1"
+ANDROID_CHANNEL_ALERT_SILENT_OVERRIDE: Final[str] = "beepmydevice.alerts.critical.v1"
+
+# Base name of res/raw/alert.wav, which is how both the channel and the pre-Oreo
+# notification payload name a bundled sound: no path, no extension.
+ALERT_SOUND_RESOURCE: Final[str] = "alert"
+
+# Vibration pattern in milliseconds, alternating wait and buzz. Matches the
+# channels declared in AlertChannels.kt and ALERT_VIBRATION_PATTERN in the app,
+# so an alert feels the same however it arrives.
+ALERT_VIBRATION_PATTERN_MS: Final[list[int]] = [0, 500, 200, 500, 200, 500]
+
 # ---------------------------------------------------------------------------
 # WebSocket
 # ---------------------------------------------------------------------------

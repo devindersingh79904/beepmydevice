@@ -10,7 +10,6 @@ from src.models.device import Device
 from src.models.wifi_network import WiFiNetwork
 from src.services.device_service import (
     effective_status,
-    heartbeat_cutoff,
     is_alertable,
     owned_network_id,
 )
@@ -47,7 +46,8 @@ class AlertService:
 
     1. Every target is on the sender's WiFi network.
     2. The sender owns that network (is its admin).
-    3. Every target is reachable.
+    3. Every target is still attached to that network -- which is not the same
+       as being awake; see device_service.is_alertable.
 
     Note what check 1 is *not*. Targets need not be owned by the sender --
     guest devices belong to no user at all, and alerting them is the point of
@@ -115,11 +115,11 @@ class AlertService:
         # Check 2 -- the sender administers that network.
         self._require_admin(admin_user_id, wifi_id)
 
-        # Check 3 -- every *named* target is reachable. Naming an offline device
-        # is a mistake worth reporting, not something to silently drop, and
-        # dropping it would be the partial delivery this service does not do.
-        # is_alertable, not the status column: a device that stopped speaking
-        # still has ONLINE stored, and pushing at it would go nowhere.
+        # Check 3 -- every *named* target is still part of this network.
+        # Naming a device that has moved elsewhere is a mistake worth
+        # reporting, not something to silently drop, and dropping it would be
+        # the partial delivery this service does not do. A merely quiet device
+        # is not a mistake: see is_alertable.
         unreachable = [target for target in targets if not is_alertable(target)]
         if unreachable:
             names = ", ".join(
@@ -132,21 +132,20 @@ class AlertService:
     def _resolve_network_targets(self, admin_user_id: uuid.UUID) -> tuple[uuid.UUID, list[Device]]:
         """Authorize a whole-network alert.
 
-        The caller named nobody, so the reachable subset is the intent and only
-        an empty result is an error.
+        The caller named nobody, so every device still attached to this network
+        is the intent and only an empty result is an error.
+
+        Devices that last answered from a different WiFi MAC are excluded in
+        SQL. Quiet ones are not: a push reaches a sleeping phone, and the whole
+        point of alerting the network is to find the device nobody is holding.
         """
         wifi_id = self._current_network(admin_user_id)
         self._require_admin(admin_user_id, wifi_id)
-        # The heartbeat bound is applied in SQL as well as the status column:
-        # a device that stopped speaking still has ONLINE stored, and alerting
-        # it would attempt a push that cannot land.
         targets = list(
             self._db.execute(
                 select(Device).where(
                     Device.wifi_id == wifi_id,
-                    Device.status == DeviceStatus.ONLINE.value,
-                    Device.last_heartbeat.is_not(None),
-                    Device.last_heartbeat >= heartbeat_cutoff(),
+                    Device.status != DeviceStatus.UNKNOWN.value,
                 )
             ).scalars()
         )

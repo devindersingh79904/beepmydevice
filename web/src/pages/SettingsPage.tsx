@@ -31,6 +31,7 @@ import {useDevices} from '@/contexts/DeviceContext';
 import {useApiErrors} from '@/hooks/useApiErrors';
 import {usePreferences} from '@/hooks/usePreferences';
 import * as authService from '@/services/auth.service';
+import type {NotificationPreferences} from '@/types/models';
 import {NOT_YET_AVAILABLE} from '@/utils/constants';
 import {deviceLabel, relativeTime, shortDate} from '@/utils/format';
 
@@ -246,13 +247,22 @@ function NotificationsSection(): ReactElement {
     }
   };
 
-  const rows: {key: 'notifications_enabled' | 'sound_enabled' | 'vibration_enabled'; name: string; note: string}[] = [
+  const rows: {
+    key: keyof NotificationPreferences;
+    name: string;
+    note: string;
+  }[] = [
     {
       key: 'notifications_enabled',
       name: 'Notifications',
       note: 'When off, your devices are not pushed to at all.',
     },
-    {key: 'sound_enabled', name: 'Sound', note: 'Ring at full volume, overriding the silent switch.'},
+    {
+      key: 'alert_on_silent',
+      name: 'Alert even on silent mode',
+      note: 'Play the alert sound even if the device is muted.',
+    },
+    {key: 'sound_enabled', name: 'Sound', note: 'Ring when the app is open.'},
     {key: 'vibration_enabled', name: 'Vibration', note: 'Vibrate as well as ring.'},
   ];
 
@@ -282,7 +292,9 @@ function NotificationsSection(): ReactElement {
 
       <p className="setting-note">
         These are enforced on the server. A device whose owner has notifications
-        off is not pushed to, whatever any sender's screen shows.
+        off is not pushed to, whatever any sender's screen shows. Sound and
+        Vibration apply while the app is open; when it is not, Android plays the
+        alert itself and only its own notification settings can silence it.
       </p>
     </section>
   );

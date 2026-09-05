@@ -53,8 +53,25 @@ def effective_status(device: Device) -> str:
 
 
 def is_alertable(device: Device) -> bool:
-    """True when this device can actually receive an alert right now."""
-    return effective_status(device) == DeviceStatus.ONLINE.value
+    """True when this device may be sent an alert.
+
+    Any status but UNKNOWN qualifies -- including OFFLINE. That is deliberate,
+    and it is the difference between this product working and not.
+
+    Alerts travel through FCM and APNs, which deliver to a phone that is
+    asleep, locked, or has not opened the app in a week. The heartbeat proves
+    something else entirely: *which network* the device last reported from.
+    Requiring ONLINE conflated the two and meant a phone could only be beeped
+    while its owner was holding it with the app open -- precisely the case
+    where nobody needs to find it. A phone lost down the back of the sofa stops
+    heartbeating within ninety seconds and became permanently un-beepable.
+
+    UNKNOWN stays excluded, because that is the trust boundary rather than a
+    liveness signal: it means the device answered from a *different* WiFi MAC,
+    so the proximity guarantee this app sells no longer holds for it. Only a
+    heartbeat from the registered network clears it.
+    """
+    return effective_status(device) != DeviceStatus.UNKNOWN.value
 
 
 def owned_network_id(db: Session, user_id: uuid.UUID) -> uuid.UUID | None:

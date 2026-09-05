@@ -42,7 +42,11 @@ export function DeviceCard({
   // A greyed control with no reason reads as a bug, so an unreachable device
   // says why on the button itself rather than leaving it blank and disabled.
   // Guests are not a case here: a guest is alertable like anything else.
-  const alertLabel = canAlert ? 'Send alert' : 'Device is not reachable';
+  // "Not reachable" was accurate when the button needed a live heartbeat. It
+  // no longer is: the only device that cannot be alerted is one that answered
+  // from a different WiFi network, which is a statement about the group, not
+  // about whether the phone is awake.
+  const alertLabel = canAlert ? 'Send alert' : 'Device is on another network';
 
   return (
     <View style={styles.card}>

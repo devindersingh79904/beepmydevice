@@ -93,6 +93,15 @@ export interface NotificationPreferences {
   notifications_enabled: boolean | null;
   sound_enabled: boolean | null;
   vibration_enabled: boolean | null;
+  /**
+   * Whether an alert stays audible on a phone whose ringer is silenced.
+   *
+   * Enforced entirely on the phone's side of the wire: the server uses it to
+   * choose which Android notification channel the push is posted to, and that
+   * channel is what the operating system reads when the app is not running.
+   * Nothing in this dashboard can override it per alert.
+   */
+  alert_on_silent: boolean | null;
 }
 
 /**

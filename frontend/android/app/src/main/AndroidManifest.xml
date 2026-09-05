@@ -21,6 +21,15 @@
       android:roundIcon="@mipmap/ic_launcher_round"
       android:allowBackup="false"
       android:theme="@style/AppTheme">
+
+      <!-- Where a push lands when it names no channel of its own. Firebase
+           does not create channels, so without this an alert arriving before
+           MainApplication has run goes to the fallback channel, which has no
+           sound: the phone stays silent and the failure looks exactly like a
+           push that was never sent. -->
+      <meta-data
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+        android:value="@string/alert_channel_id" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

@@ -10,6 +10,7 @@ import {useAlerts} from '../src/hooks/useAlerts';
 import {useDeviceAlertHistory} from '../src/hooks/useDeviceAlertHistory';
 import {usePreferences} from '../src/hooks/usePreferences';
 import {ForgotPasswordScreen} from '../src/screens/AuthStack/ForgotPasswordScreen';
+import {NotificationSettingsScreen} from '../src/screens/AppStack/NotificationSettingsScreen';
 import {ProfileScreen} from '../src/screens/AppStack/ProfileScreen';
 import {SettingsScreen} from '../src/screens/AppStack/SettingsScreen';
 
@@ -41,6 +42,7 @@ const ALL_ON = {
   notifications_enabled: true,
   sound_enabled: true,
   vibration_enabled: true,
+  alert_on_silent: false,
 };
 
 function Providers({children}: {children: React.ReactNode}): React.JSX.Element {
@@ -365,5 +367,77 @@ describe('sendAlert delivery reporting', () => {
     });
     // Matches the server's rule: one failure is not a failed alert.
     expect(sent).toBe(true);
+  });
+});
+
+describe('NotificationSettingsScreen', () => {
+  it('starts from the stored value rather than a guess', async () => {
+    authService.getPreferences.mockResolvedValue({
+      ...ALL_ON,
+      alert_on_silent: true,
+    });
+
+    render(
+      <Providers>
+        <NotificationSettingsScreen />
+      </Providers>,
+    );
+
+    const box = await screen.findByLabelText('Alert even on silent mode');
+    await waitFor(() =>
+      expect(box.props.accessibilityState.checked).toBe(true),
+    );
+  });
+
+  it('saves nothing until the user asks', async () => {
+    render(
+      <Providers>
+        <NotificationSettingsScreen />
+      </Providers>,
+    );
+    const box = await screen.findByLabelText('Alert even on silent mode');
+
+    await act(async () => {
+      fireEvent.press(box);
+    });
+
+    // The point of the Save button: overriding the ringer is a deliberate
+    // choice, so a brushed checkbox must not already have changed it.
+    expect(authService.updatePreferences).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.press(screen.getByText('Save'));
+    });
+
+    expect(authService.updatePreferences).toHaveBeenCalledWith({
+      alert_on_silent: true,
+    });
+  });
+
+  it('does not let a slow load undo an edit made in the meantime', async () => {
+    // The stored value arrives after the first render. If it were adopted
+    // unconditionally it would silently revert whatever the user just ticked.
+    let resolveLoad: (value: typeof ALL_ON) => void = () => undefined;
+    authService.getPreferences.mockReturnValue(
+      new Promise<typeof ALL_ON>(resolve => {
+        resolveLoad = resolve;
+      }),
+    );
+
+    render(
+      <Providers>
+        <NotificationSettingsScreen />
+      </Providers>,
+    );
+    const box = await screen.findByLabelText('Alert even on silent mode');
+
+    await act(async () => {
+      fireEvent.press(box);
+    });
+    await act(async () => {
+      resolveLoad({...ALL_ON, alert_on_silent: false});
+    });
+
+    expect(box.props.accessibilityState.checked).toBe(true);
   });
 });

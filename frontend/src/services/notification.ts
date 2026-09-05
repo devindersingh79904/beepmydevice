@@ -86,9 +86,26 @@ export async function requestPermissionAndGetToken(): Promise<string | null> {
   }
 }
 
-/** Play the alert at full volume and vibrate. */
-function ring(): void {
-  Vibration.vibrate(ALERT_VIBRATION_PATTERN);
+/**
+ * Play the alert at full volume and vibrate.
+ *
+ * This is the *foreground* path only, and it is the rarer one: it runs when
+ * the app happens to be open, in which case Android draws no notification and
+ * hands the message straight to JavaScript. Every other case -- backgrounded,
+ * killed, screen locked, which is to say every case where somebody is actually
+ * looking for the phone -- is played by the system from the notification
+ * channel, with no JavaScript involved at all. See AlertChannels.kt.
+ *
+ * @param style Presentation flags from the push payload. Sent by the server
+ *   because the phone is usually not running to consult its own settings.
+ */
+function ring(style: AlertStyle): void {
+  if (style.vibration) {
+    Vibration.vibrate(ALERT_VIBRATION_PATTERN);
+  }
+  if (!style.sound) {
+    return;
+  }
 
   // Ducking and the silent switch are both overridden: an alert the owner
   // cannot hear defeats the entire purpose of the app.
@@ -106,6 +123,28 @@ function ring(): void {
   });
 }
 
+/** How the server asked this alert to present itself. */
+interface AlertStyle {
+  sound: boolean;
+  vibration: boolean;
+}
+
+/**
+ * Read the presentation flags out of a push payload.
+ *
+ * FCM data values are strings, so a JSON boolean does not survive the trip;
+ * anything missing or unrecognised falls back to on, because an alert that
+ * arrives silently by accident is the failure this app cannot afford.
+ */
+function styleOf(
+  data: FirebaseMessagingTypes.RemoteMessage['data'],
+): AlertStyle {
+  return {
+    sound: data?.sound !== 'false',
+    vibration: data?.vibration !== 'false',
+  };
+}
+
 /**
  * Start listening for incoming alerts.
  *
@@ -120,13 +159,16 @@ export function startListening(): void {
     async (message: FirebaseMessagingTypes.RemoteMessage) => {
       if (message.data?.type === 'alert') {
         logger.info('Alert received');
-        ring();
+        ring(styleOf(message.data));
       }
     },
   );
 
-  // A background alert is delivered by the OS notification; this handler exists
-  // so the payload is acknowledged rather than dropped.
+  // A background alert is played by Android itself, from the notification
+  // channel named in the payload. This handler must NOT ring as well: it would
+  // double up the sound against the system's, and it cannot run at all once
+  // the app is killed -- which is exactly when an alert matters most. It
+  // exists only so the message is acknowledged rather than dropped.
   messaging().setBackgroundMessageHandler(async () => undefined);
 }
 

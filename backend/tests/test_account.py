@@ -227,6 +227,9 @@ class TestNotificationPreferences:
             "notifications_enabled": True,
             "sound_enabled": True,
             "vibration_enabled": True,
+            # Off, unlike the rest. Overriding the phone's silent switch is
+            # something a user opts into, never a default.
+            "alert_on_silent": False,
         }
 
     def test_updates_only_the_fields_supplied(
@@ -274,6 +277,57 @@ class TestNotificationPreferences:
         # The toggle has to mean something: no push is attempted at all.
         assert response.status_code == 200
         assert mock_push.all_tokens == []
+
+    def test_alert_on_silent_reaches_the_push_provider(
+        self, client: TestClient, mock_push: PushRecorder
+    ) -> None:
+        headers = register_user(client)
+        device = register_device(client, headers, push_token="loud-token")
+        client.put("/auth/preferences", json={"alert_on_silent": True}, headers=headers)
+
+        client.post(
+            "/alerts/send",
+            json={"device_ids": [device["device_id"]]},
+            headers=headers,
+        )
+
+        # Asserted at the provider boundary because that is the only place the
+        # flag is observable: it is carried in the payload, never stored on the
+        # alert. A preference that stops here is a toggle that does nothing.
+        assert mock_push.silent_override["loud-token"] is True
+
+    def test_alert_on_silent_defaults_to_leaving_the_ringer_alone(
+        self, client: TestClient, mock_push: PushRecorder
+    ) -> None:
+        headers = register_user(client)
+        device = register_device(client, headers, push_token="quiet-token")
+
+        client.post(
+            "/alerts/send",
+            json={"device_ids": [device["device_id"]]},
+            headers=headers,
+        )
+
+        assert mock_push.silent_override["quiet-token"] is False
+
+    def test_a_guest_never_gets_the_silent_override(
+        self, client: TestClient, mock_push: PushRecorder
+    ) -> None:
+        headers = register_user(client)
+        client.put("/auth/preferences", json={"alert_on_silent": True}, headers=headers)
+        register_device(client, headers, push_token="owner-token")
+        guest = register_device(client, headers=None, push_token="guest-token")
+
+        client.post(
+            "/alerts/send",
+            json={"device_ids": [guest["device_id"]]},
+            headers=headers,
+        )
+
+        # The guest has no owner, so there is no preference to read -- and the
+        # admin does not get to decide that a stranger's phone should override
+        # its own silent switch.
+        assert mock_push.silent_override["guest-token"] is False
 
     def test_a_guest_is_unaffected_by_anyones_preferences(
         self, client: TestClient, mock_push: PushRecorder

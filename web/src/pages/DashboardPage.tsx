@@ -38,7 +38,7 @@ export function DashboardPage(): ReactElement {
   const {preferences, setPreferences} = usePreferences();
   const [alertTargets, setAlertTargets] = useState<string[] | null>(null);
 
-  const online = useMemo(() => devices.filter(isAlertable).length, [devices]);
+  const alertable = useMemo(() => devices.filter(isAlertable).length, [devices]);
   const today = useMemo(() => sentToday(alerts), [alerts]);
 
   return (
@@ -46,13 +46,21 @@ export function DashboardPage(): ReactElement {
       <ErrorBanner errors={errors} />
 
       <section className="stat-grid">
+        {/*
+          The canvas calls this ACTIVE DEVICES / "Online now", which is not
+          what the number means and was the more misleading of the two. A phone
+          stops heartbeating within a minute of being put down, so "online"
+          counted almost nothing while every one of those devices could still
+          be beeped. What the tile is for is knowing whether the button will
+          work, so it counts that instead.
+        */}
         <Stat
-          label="Active devices"
-          value={String(online)}
+          label="Can be alerted"
+          value={String(alertable)}
           note={
-            devices.length === online
-              ? 'All devices online'
-              : `${devices.length - online} not reachable`
+            devices.length === alertable
+              ? 'Every device on this network'
+              : `${devices.length - alertable} on another network`
           }
           icon="smartphone"
         />
@@ -90,7 +98,7 @@ export function DashboardPage(): ReactElement {
               variant="primary"
               small
               icon="bell"
-              disabled={online === 0}
+              disabled={alertable === 0}
               onClick={() => setAlertTargets([])}
             >
               Send alert

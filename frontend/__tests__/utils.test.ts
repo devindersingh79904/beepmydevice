@@ -117,11 +117,14 @@ describe('getBatteryColor', () => {
 });
 
 describe('alert eligibility', () => {
-  it('only ONLINE devices can receive an alert', () => {
+  it('excludes only devices that moved to another network', () => {
     expect(canReceiveAlert('ONLINE')).toBe(true);
-    expect(canReceiveAlert('OFFLINE')).toBe(false);
-    // UNKNOWN means the device moved off this network, so it is outside the
-    // alert group even though it is reachable.
+    // OFFLINE only means the phone stopped heartbeating, which every phone
+    // does within a minute of being put down. A push still reaches it, and a
+    // phone nobody is holding is the whole reason this product exists.
+    expect(canReceiveAlert('OFFLINE')).toBe(true);
+    // UNKNOWN is the trust boundary: the device answered from a different
+    // WiFi MAC, so the proximity guarantee no longer covers it.
     expect(canReceiveAlert('UNKNOWN')).toBe(false);
   });
 
@@ -137,8 +140,12 @@ describe('alert eligibility', () => {
     expect(canSendAlertTo(guest)).toBe(true);
   });
 
-  it('an OFFLINE guest is not alertable, for the usual reason', () => {
-    expect(canSendAlertTo(buildDevice({is_guest: true, status: 'OFFLINE'}))).toBe(false);
+  it('an OFFLINE guest is still alertable, for the usual reason', () => {
+    expect(canSendAlertTo(buildDevice({is_guest: true, status: 'OFFLINE'}))).toBe(true);
+  });
+
+  it('a guest that moved to another network is not', () => {
+    expect(canSendAlertTo(buildDevice({is_guest: true, status: 'UNKNOWN'}))).toBe(false);
   });
 
   it('an owned ONLINE device can be alerted', () => {

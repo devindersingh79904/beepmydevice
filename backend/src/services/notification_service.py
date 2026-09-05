@@ -16,6 +16,7 @@ This module deliberately trips four pylint checks, disabled below:
 
 import time
 import uuid
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
@@ -25,9 +26,14 @@ from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.models.device import Device
+from src.models.user import User
 from src.utils.constants import (
     ALERT_NOTIFICATION_BODY,
     ALERT_NOTIFICATION_TITLE,
+    ALERT_SOUND_RESOURCE,
+    ALERT_VIBRATION_PATTERN_MS,
+    ANDROID_CHANNEL_ALERT,
+    ANDROID_CHANNEL_ALERT_SILENT_OVERRIDE,
     PUSH_MAX_RETRIES,
     PUSH_RETRY_BACKOFF_SECONDS,
     PUSH_TIMEOUT_SECONDS,
@@ -51,6 +57,10 @@ APNS_SANDBOX_HOST = "https://api.sandbox.push.apple.com"
 # once per 20 minutes, so one token is reused for most of its life.
 APNS_TOKEN_LIFETIME_SECONDS = 45 * 60
 APNS_PRIORITY_IMMEDIATE = "10"
+
+# Bundled sound for a critical alert. Named without a path; the file must be in
+# the app bundle, and `alert.wav` is the same asset Android plays from res/raw.
+APNS_CRITICAL_SOUND = "alert.wav"
 HTTP_OK = 200
 
 # Cached (token, minted_at) for the process.
@@ -59,6 +69,56 @@ _apns_token: tuple[str, float] | None = None
 # APNs replies that mean the token will never work again.
 APNS_GONE = 410
 APNS_DEAD_TOKEN_REASONS = {"BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic"}
+
+
+@dataclass(frozen=True)
+class AlertStyle:
+    """How one alert should present itself on the receiving device.
+
+    Carried in the payload rather than read on the phone, because for the case
+    this product exists for -- a phone nobody is holding -- the app is not
+    running when the alert lands and has no opportunity to consult anything.
+
+    Note the asymmetry, which is Android's and not ours. ``on_silent`` selects
+    a notification channel and therefore governs every delivery. ``sound`` and
+    ``vibration`` only reach the foreground path, where the app rings for
+    itself: a channel's sound is frozen at creation and adjustable afterwards
+    only by the user, in Android's own settings. An in-app toggle cannot mute
+    a channel, so this one does not pretend to.
+    """
+
+    sound: bool = True
+    vibration: bool = True
+    on_silent: bool = False
+
+    def as_data(self) -> dict[str, str]:
+        """Render for an FCM data block, whose values must be strings."""
+        return {
+            "sound": _flag(self.sound),
+            "vibration": _flag(self.vibration),
+            "alert_on_silent": _flag(self.on_silent),
+        }
+
+    @classmethod
+    def for_owner(cls, owner: User | None) -> "AlertStyle":
+        """Read the preferences of the device's owner, if it has one.
+
+        A guest belongs to nobody, so there is no preference to read -- and the
+        network admin does not get to decide that a stranger's phone should
+        override its own silent switch.
+        """
+        if owner is None:
+            return cls()
+        return cls(
+            sound=owner.sound_enabled,
+            vibration=owner.vibration_enabled,
+            on_silent=owner.alert_on_silent,
+        )
+
+
+def _flag(value: bool) -> str:
+    """FCM data values are strings; a JSON boolean does not survive the trip."""
+    return "true" if value else "false"
 
 
 class PushOutcome(str, Enum):
@@ -102,7 +162,14 @@ class NotificationService:
         """
         self._db = db
 
-    def send(self, device_type: str, push_token: str, title: str, body: str) -> PushOutcome:
+    def send(
+        self,
+        device_type: str,
+        push_token: str,
+        title: str,
+        body: str,
+        style: "AlertStyle | None" = None,
+    ) -> PushOutcome:
         """Dispatch to the provider matching the device type.
 
         Args:
@@ -110,6 +177,10 @@ class NotificationService:
             push_token: Provider token stored at registration.
             title: Notification title.
             body: Notification body.
+            style: How the alert should present itself. Decided *here*, at send
+                time, because it is carried in the payload -- the receiving app
+                cannot upgrade a notification after the fact, and usually is
+                not running to try. Defaults to the plain presentation.
 
         Returns:
             Whether the message landed, and if not, whether retrying could help.
@@ -120,7 +191,7 @@ class NotificationService:
             return PushOutcome.TOKEN_INVALID
 
         if device_type == DeviceType.IOS.value:
-            return self.send_apns_message(push_token, title, body)
+            return self.send_apns_message(push_token, title, body, style)
         if device_type in {
             DeviceType.ANDROID.value,
             DeviceType.WINDOWS.value,
@@ -128,16 +199,32 @@ class NotificationService:
         }:
             # Desktop clients register through Firebase as well; APNs is only
             # for iOS bundles.
-            return self.send_firebase_message(push_token, title, body)
+            return self.send_firebase_message(push_token, title, body, style)
 
         logger.error(f"No push provider for device type {device_type}")
         return PushOutcome.TOKEN_INVALID
 
-    def send_firebase_message(self, push_token: str, title: str, body: str) -> PushOutcome:
+    def send_firebase_message(
+        self,
+        push_token: str,
+        title: str,
+        body: str,
+        style: "AlertStyle | None" = None,
+    ) -> PushOutcome:
         """Send an Android notification through Firebase Cloud Messaging.
 
-        Uses a high-priority data message so the app wakes and plays the alert
-        sound even when backgrounded.
+        The notification block matters more than it looks. When the app is
+        backgrounded or dead -- which is the whole point of this product, since
+        nobody is holding the phone they have lost -- the app never runs and
+        *Android* draws the notification and plays the sound. What it plays is
+        decided entirely by the channel named here, so an alert posted without
+        a channel id lands on Firebase's fallback channel, which has no sound
+        and no vibration. That failure looks exactly like a push that was never
+        sent.
+
+        The data block is kept as well, for the case where the app *is* in the
+        foreground: then no system notification is drawn at all and the JS
+        handler does the ringing itself.
         """
         if not settings.firebase_enabled:
             logger.warning("Firebase is not configured; dropping Android push")
@@ -145,16 +232,34 @@ class NotificationService:
 
         from firebase_admin import messaging
 
+        style = style or AlertStyle()
+        channel = (
+            ANDROID_CHANNEL_ALERT_SILENT_OVERRIDE if style.on_silent else ANDROID_CHANNEL_ALERT
+        )
         try:
             message = messaging.Message(
                 token=push_token,
                 notification=messaging.Notification(title=title, body=body),
-                # Data payload as well as the notification: the app needs to
-                # ring at full volume, which requires it to actually run.
-                data={"type": "alert", "title": title, "body": body},
+                # The foreground handler rings by itself and reads its
+                # instructions from here; the channel above governs every other
+                # case, where no JavaScript runs at all.
+                data={"type": "alert", "title": title, "body": body, **style.as_data()},
                 android=messaging.AndroidConfig(
                     priority="high",
                     ttl=PUSH_TIMEOUT_SECONDS,
+                    notification=messaging.AndroidNotification(
+                        channel_id=channel,
+                        # Honoured only below Android 8; from Oreo on, the
+                        # channel owns the sound and this is ignored. Both are
+                        # set so one build covers the whole supported range.
+                        sound=ALERT_SOUND_RESOURCE,
+                        default_vibrate_timings=False,
+                        vibrate_timings_millis=ALERT_VIBRATION_PATTERN_MS,
+                        priority="max",
+                        # Readable on the lock screen: the person looking for
+                        # the phone is the one who will see it there.
+                        visibility="public",
+                    ),
                 ),
             )
             messaging.send(message, app=self._firebase())
@@ -168,8 +273,21 @@ class NotificationService:
             log_exception(logger, "Firebase push failed", token=push_token[:12])
             return PushOutcome.TRANSIENT_FAILURE
 
-    def send_apns_message(self, push_token: str, title: str, body: str) -> PushOutcome:
-        """Send an iOS notification through APNs using .p8 token authentication."""
+    def send_apns_message(
+        self,
+        push_token: str,
+        title: str,
+        body: str,
+        style: "AlertStyle | None" = None,
+    ) -> PushOutcome:
+        """Send an iOS notification through APNs using .p8 token authentication.
+
+        The silent-override path uses a critical alert, which is the only way
+        iOS will make a sound through the ring/silent switch and Focus. Apple
+        gates that behind an entitlement granted by request, so an app without
+        it gets an ordinary alert and no error; the caller therefore cannot
+        treat a DELIVERED here as proof the phone was audible.
+        """
         if not settings.apns_enabled:
             logger.warning("APNs is not configured; dropping iOS push")
             return PushOutcome.TRANSIENT_FAILURE
@@ -181,13 +299,21 @@ class NotificationService:
             log_exception(logger, "Could not mint APNs provider token")
             return PushOutcome.TRANSIENT_FAILURE
 
-        payload = {
+        style = style or AlertStyle()
+        sound: dict[str, object] | str = "default"
+        if style.on_silent:
+            # `critical: 1` is what bypasses the silent switch; the volume is
+            # the app's, not the system's, so it is set explicitly at full.
+            sound = {"critical": 1, "name": APNS_CRITICAL_SOUND, "volume": 1.0}
+
+        payload: dict[str, object] = {
             "aps": {
                 "alert": {"title": title, "body": body},
-                "sound": "default",
+                "sound": sound,
                 # The app must actually run to ring at full volume, so the
                 # notification carries content-available alongside the alert.
                 "content-available": 1,
+                "interruption-level": "critical" if style.on_silent else "time-sensitive",
             },
             "type": "alert",
         }
@@ -256,10 +382,11 @@ class NotificationService:
     def send_alert_to(self, device: Device) -> PushOutcome:
         """Send the standard alert notification to one device, with retries.
 
-        Honours the owner's notification preference: a user who switched alerts
+        Honours the owner's notification preferences: a user who switched alerts
         off is not pushed to, which is what makes the settings toggle mean
-        something rather than only greying itself out. A guest device has no
-        owner and so is unaffected by anyone's preferences.
+        something rather than only greying itself out, and a user who asked for
+        alerts on silent gets the channel that overrides the ringer switch. A
+        guest device has no owner and so is unaffected by anyone's preferences.
 
         A transient failure is retried with a widening gap, because the usual
         cause is the provider being briefly unavailable. A rejected *token* is
@@ -270,6 +397,8 @@ class NotificationService:
             logger.info(f"Skipping push to {device.device_id}: owner has notifications off")
             return PushOutcome.SUPPRESSED
 
+        style = AlertStyle.for_owner(owner)
+
         outcome = PushOutcome.TRANSIENT_FAILURE
         for attempt in range(PUSH_MAX_RETRIES):
             outcome = self.send(
@@ -277,6 +406,7 @@ class NotificationService:
                 device.push_token or "",
                 ALERT_NOTIFICATION_TITLE,
                 ALERT_NOTIFICATION_BODY,
+                style,
             )
             if outcome is not PushOutcome.TRANSIENT_FAILURE:
                 return outcome

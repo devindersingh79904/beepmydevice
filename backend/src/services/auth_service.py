@@ -345,6 +345,7 @@ class AuthService:
         notifications_enabled: bool | None = None,
         sound_enabled: bool | None = None,
         vibration_enabled: bool | None = None,
+        alert_on_silent: bool | None = None,
     ) -> User:
         """Apply the preferences a client sent.
 
@@ -362,6 +363,8 @@ class AuthService:
             user.sound_enabled = sound_enabled
         if vibration_enabled is not None:
             user.vibration_enabled = vibration_enabled
+        if alert_on_silent is not None:
+            user.alert_on_silent = alert_on_silent
         self._db.flush()
         logger.info(f"Preferences updated for {user_id}")
         return user

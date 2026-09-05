@@ -16,6 +16,9 @@ const DEFAULTS: NotificationPreferences = {
   notifications_enabled: true,
   sound_enabled: true,
   vibration_enabled: true,
+  // Off, unlike the rest: overriding the phone's silent switch is something
+  // the user asks for, never something the app assumes.
+  alert_on_silent: false,
 };
 
 export interface UsePreferencesResult {

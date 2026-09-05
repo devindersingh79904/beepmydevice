@@ -287,7 +287,10 @@ class TestSendAlert:
         self, client: TestClient, auth_headers: dict[str, str], db: Session
     ) -> None:
         device = register_device(client, auth_headers)
-        _set_status(db, device["device_id"], DeviceStatus.OFFLINE)
+        # UNKNOWN, not OFFLINE: a quiet device is still a target, because a
+        # push reaches a sleeping phone. Only a device that answered from
+        # another network drops out of the group.
+        _set_status(db, device["device_id"], DeviceStatus.UNKNOWN)
 
         response = client.post("/alerts/send", json={"device_ids": []}, headers=auth_headers)
 
@@ -454,12 +457,18 @@ class TestAlertLogs:
         assert _content(response) == []
 
 
-class TestStaleDevicesAreNotTargets:
-    """A device that stopped speaking cannot be alerted.
+class TestQuietDevicesAreStillTargets:
+    """A device that stopped heartbeating can still be alerted.
 
-    The stored status column still says ONLINE -- nothing rewrites it when a
-    phone is simply switched off -- so authorization has to bound it by the
-    heartbeat window or it will happily push at something unreachable.
+    This is the case the product exists for. Nobody is holding the phone they
+    have lost, so it is backgrounded or asleep within seconds and stops
+    heartbeating within the offline window -- and FCM and APNs deliver to it
+    anyway. Gating the send on a recent heartbeat meant a phone could only be
+    beeped while its owner was already looking at it.
+
+    The trust boundary is unaffected and tested separately: UNKNOWN means the
+    device answered from a *different* network, and that is still refused. See
+    TestAlertAuthorization.test_rejects_device_marked_unknown_after_network_change.
     """
 
     @staticmethod
@@ -469,14 +478,14 @@ class TestStaleDevicesAreNotTargets:
         device.last_heartbeat = datetime.now(timezone.utc) - timedelta(seconds=seconds)
         db.flush()
 
-    def test_naming_a_stale_device_is_rejected(
+    def test_naming_a_quiet_device_is_allowed(
         self,
         client: TestClient,
         auth_headers: dict[str, str],
         db: Session,
         mock_push: PushRecorder,
     ) -> None:
-        device = register_device(client, auth_headers)
+        device = register_device(client, auth_headers, push_token="quiet")
         self._age(db, device["device_id"], OFFLINE_THRESHOLD_SECONDS + 1)
 
         response = client.post(
@@ -485,41 +494,40 @@ class TestStaleDevicesAreNotTargets:
             headers=auth_headers,
         )
 
-        assert response.status_code == 400
-        assert _codes(response) == [ErrorCode.NO_TARGET_DEVICES.value]
-        assert mock_push.all_tokens == []
+        assert response.status_code == 200
+        assert mock_push.all_tokens == ["quiet"]
 
-    def test_a_whole_network_alert_skips_stale_devices(
+    def test_a_whole_network_alert_includes_quiet_devices(
         self,
         client: TestClient,
         auth_headers: dict[str, str],
         db: Session,
         mock_push: PushRecorder,
     ) -> None:
-        fresh = register_device(client, auth_headers, device_name="Fresh", push_token="fresh")
+        register_device(client, auth_headers, device_name="Fresh", push_token="fresh")
         stale = register_device(client, auth_headers, device_name="Stale", push_token="stale")
         self._age(db, stale["device_id"], OFFLINE_THRESHOLD_SECONDS + 1)
 
         response = client.post("/alerts/send", json={"device_ids": []}, headers=auth_headers)
 
         assert response.status_code == 200
-        assert mock_push.all_tokens == ["fresh"]
-        assert fresh["device_id"] != stale["device_id"]
+        assert sorted(mock_push.all_tokens) == ["fresh", "stale"]
 
-    def test_all_stale_means_no_targets(
+    def test_a_whole_network_alert_still_skips_another_network(
         self,
         client: TestClient,
         auth_headers: dict[str, str],
         db: Session,
         mock_push: PushRecorder,
     ) -> None:
-        device = register_device(client, auth_headers)
-        self._age(db, device["device_id"], OFFLINE_THRESHOLD_SECONDS + 1)
+        register_device(client, auth_headers, device_name="Home", push_token="home")
+        away = register_device(client, auth_headers, device_name="Away", push_token="away")
+        _set_status(db, away["device_id"], DeviceStatus.UNKNOWN)
 
         response = client.post("/alerts/send", json={"device_ids": []}, headers=auth_headers)
 
-        assert response.status_code == 400
-        assert _codes(response) == [ErrorCode.NO_TARGET_DEVICES.value]
+        assert response.status_code == 200
+        assert mock_push.all_tokens == ["home"]
 
 
 class TestPushFailureHandling:

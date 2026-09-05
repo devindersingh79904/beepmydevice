@@ -169,14 +169,17 @@ export function getBatteryColor(batteryLevel: number | null): string {
 /**
  * Whether a device can currently be alerted.
  *
- * Only ONLINE qualifies: OFFLINE devices cannot receive the push, and UNKNOWN
- * devices have moved off the network and are outside the alert group.
+ * Everything but UNKNOWN qualifies. UNKNOWN means the device answered from a
+ * different WiFi network and has left this alert group. OFFLINE only means it
+ * has stopped heartbeating -- which every phone does within a minute of being
+ * put down -- and a push still reaches it, so excluding it made a lost phone
+ * the one thing that could not be beeped. Mirrors is_alertable on the server.
  *
  * Guest status is deliberately not consulted here -- a guest receives alerts
  * exactly like any other device. What a guest cannot do is *send* them.
  */
 export function canReceiveAlert(status: DeviceStatus): boolean {
-  return status === 'ONLINE';
+  return status !== 'UNKNOWN';
 }
 
 /**

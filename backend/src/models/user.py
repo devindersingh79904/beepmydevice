@@ -44,6 +44,16 @@ class User(Base):
         Boolean, nullable=False, default=True, server_default="true"
     )
 
+    # Whether an alert should be audible on a phone whose ringer is silenced.
+    # This is not a cosmetic toggle: it selects which Android notification
+    # channel the push is posted to, and a channel's audio behaviour is fixed
+    # at creation, so the two cases cannot be one channel with a flag. Defaults
+    # to off because overriding the silent switch is a thing a user should ask
+    # for, not something an app assumes.
+    alert_on_silent: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+
     # Password reset. The token is stored as a SHA-256 hash for the same reason
     # the password is hashed: a leaked database must not hand out working reset
     # links. Cleared as soon as it is used, so a link works exactly once.

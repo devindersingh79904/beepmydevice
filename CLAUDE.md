@@ -108,10 +108,21 @@ transport.
 
 **The WiFi MAC is the trust boundary.** `AlertService.send_alert` runs three
 checks in order — all targets share one `wifi_id`, the sender is that network's
-admin, targets are reachable. Any failure aborts the whole request; there is no
-partial delivery. A heartbeat reporting a different MAC sets status `UNKNOWN`,
-not `ONLINE`, and `UNKNOWN` devices must not be alertable. Changes near this
-path need matching cases in `tests/test_alerts.py::TestAlertAuthorization`.
+admin, no target has left the network. Any failure aborts the whole request;
+there is no partial delivery. A heartbeat reporting a different MAC sets status
+`UNKNOWN`, not `ONLINE`, and `UNKNOWN` devices must not be alertable. Changes
+near this path need matching cases in
+`tests/test_alerts.py::TestAlertAuthorization`.
+
+`UNKNOWN` is the *only* status that blocks an alert. `OFFLINE` does not:
+alerts travel through FCM and APNs, which deliver to a phone that is asleep,
+locked, or has not opened the app in a week, and every phone stops heartbeating
+within `OFFLINE_THRESHOLD_SECONDS` of being put down. Requiring `ONLINE` meant
+a device could only be beeped while somebody was already holding it — the one
+case where nobody needs to. Liveness and membership are different questions and
+only membership is a security one. `is_alertable` is mirrored in
+`web/src/services/device.service.ts` and `frontend/src/utils/helpers.ts`; all
+three change together.
 
 Note the check that is deliberately absent: targets need **not** be owned by
 the sender. Guest devices have no owner at all, so shared network membership

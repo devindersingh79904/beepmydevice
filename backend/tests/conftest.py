@@ -28,7 +28,7 @@ from src.config import settings
 from src.database import Base, get_db
 from src.main import app
 from src.models import Device, User, WiFiNetwork  # noqa: F401  (registers tables)
-from src.services.notification_service import NotificationService, PushOutcome
+from src.services.notification_service import AlertStyle, NotificationService, PushOutcome
 
 SKIP_REASON = (
     "PostgreSQL is not reachable. Start it with: "
@@ -172,6 +172,11 @@ class PushRecorder:
         self.apns: list[str] = []
         self.failing_tokens: set[str] = set()
         self.dead_tokens: set[str] = set()
+        # Whether each push asked to override the phone's silent switch,
+        # keyed by token. The flag is only visible at the provider boundary --
+        # it is not stored anywhere -- so this is the one place a test can
+        # assert that the preference actually reached the wire.
+        self.silent_override: dict[str, bool] = {}
 
     @property
     def all_tokens(self) -> list[str]:
@@ -201,15 +206,25 @@ def mock_push(monkeypatch: pytest.MonkeyPatch) -> PushRecorder:
     recorder = PushRecorder()
 
     def fake_firebase(
-        _self: NotificationService, push_token: str, _title: str, _body: str
+        _self: NotificationService,
+        push_token: str,
+        _title: str,
+        _body: str,
+        style: AlertStyle | None = None,
     ) -> PushOutcome:
         recorder.firebase.append(push_token)
+        recorder.silent_override[push_token] = (style or AlertStyle()).on_silent
         return recorder.outcome_for(push_token)
 
     def fake_apns(
-        _self: NotificationService, push_token: str, _title: str, _body: str
+        _self: NotificationService,
+        push_token: str,
+        _title: str,
+        _body: str,
+        style: AlertStyle | None = None,
     ) -> PushOutcome:
         recorder.apns.append(push_token)
+        recorder.silent_override[push_token] = (style or AlertStyle()).on_silent
         return recorder.outcome_for(push_token)
 
     monkeypatch.setattr(NotificationService, "send_firebase_message", fake_firebase)

@@ -150,7 +150,12 @@ Errors: `AUTH_003` token unknown, already used, or expired.
 ### GET /auth/preferences · PUT /auth/preferences
 
 ```json
-{ "notifications_enabled": true, "sound_enabled": true, "vibration_enabled": false }
+{
+  "notifications_enabled": true,
+  "sound_enabled": true,
+  "vibration_enabled": false,
+  "alert_on_silent": false
+}
 ```
 
 On `PUT` every field is optional; only what is sent is written, so a client can
@@ -160,6 +165,19 @@ another device.
 `notifications_enabled` is enforced server-side: an alert is not pushed to a
 device whose owner has switched it off. Guest devices have no owner and so are
 unaffected by anyone's preferences.
+
+`alert_on_silent` decides whether an alert stays audible on a phone whose
+ringer is silenced. It is read at push time to choose an Android notification
+channel (`ANDROID_CHANNEL_ALERT` vs `ANDROID_CHANNEL_ALERT_SILENT_OVERRIDE`)
+and, on iOS, whether to send a critical alert. The choice has to be made here
+because the receiving app is usually not running when the alert lands — the
+system draws the notification, and only the channel says how loud. A channel's
+audio behaviour is frozen when Android creates it, which is why this is two
+channels rather than one with a flag, and why their ids are versioned.
+
+`sound_enabled` and `vibration_enabled` reach only the foreground path, where
+the app rings for itself. They cannot mute a notification channel: past the
+first install that is the user's decision to make in Android's own settings.
 
 ---
 
@@ -287,8 +305,8 @@ Status is reported per device, so one failed push does not fail the others.
 An empty `device_ids` targets every device on the network, **guests included**.
 
 Authorization runs three checks before anything is sent — all targets share one
-network, the sender is that network's admin, and the targets are reachable. Any
-failure aborts the whole request; there is no partial delivery.
+network, the sender is that network's admin, and no target has left that
+network. Any failure aborts the whole request; there is no partial delivery.
 
 Note that targets need not be *owned* by the sender: guest devices belong to no
 account at all, and alerting them is the point of guest access. Shared network
@@ -307,9 +325,15 @@ code rather than as `AUTH_003` — an `AUTH_*` code tells the client to clear th
 session and show the login screen, which is the wrong response to "you are a
 guest".
 
-Naming an offline or `UNKNOWN` device explicitly is `ALERT_002` and sends
-nothing at all. An empty `device_ids` instead targets the reachable subset,
-since the caller named nobody in particular.
+Naming an `UNKNOWN` device explicitly is `ALERT_002` and sends nothing at all.
+An empty `device_ids` instead targets every device still attached to the
+network, since the caller named nobody in particular.
+
+`OFFLINE` is **not** a bar to being alerted. It means only that the device has
+not heartbeated recently, which every phone stops doing within ninety seconds
+of being put down, while FCM and APNs deliver to a phone that is asleep or
+locked. `UNKNOWN` is the bar, and it is a different claim: the device answered
+from a *different* WiFi MAC, so the proximity guarantee no longer covers it.
 
 ### GET /alerts/logs
 

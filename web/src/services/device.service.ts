@@ -49,10 +49,13 @@ export async function removeDevice(deviceId: string): Promise<void> {
  * fails. Greying the button here is a courtesy so the user does not fire a
  * request that was always going to be rejected; it is not the control.
  *
- * OFFLINE and UNKNOWN are both excluded. UNKNOWN means the device answered
- * from a different WiFi network: reachable, but no longer part of this alert
- * group.
+ * Only UNKNOWN is excluded — the device answered from a *different* WiFi
+ * network, so it is no longer part of this alert group. OFFLINE is not
+ * excluded: it only means the phone has stopped heartbeating, which every
+ * phone does within a minute of being put down, and a push still reaches it.
+ * Requiring ONLINE meant a device could only be beeped while somebody was
+ * already holding it. Mirrors device_service.is_alertable on the server.
  */
 export function isAlertable(device: Device): boolean {
-  return device.status === 'ONLINE';
+  return device.status !== 'UNKNOWN';
 }

@@ -73,3 +73,4 @@ class NotificationPreferences(BaseModel):
     notifications_enabled: bool | None = None
     sound_enabled: bool | None = None
     vibration_enabled: bool | None = None
+    alert_on_silent: bool | None = None

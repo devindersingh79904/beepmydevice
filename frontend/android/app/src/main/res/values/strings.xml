@@ -1,3 +1,15 @@
 <resources>
     <string name="app_name">BeepMyDevice</string>
+
+    <!-- Notification channel ids. These are a wire contract: the backend names
+         one of them on every push (ANDROID_CHANNEL_ALERT in
+         backend/src/utils/constants.py) and AndroidManifest.xml names the
+         first as Firebase's fallback. They live here so the manifest, which
+         cannot read a Kotlin constant, and AlertChannels.kt agree by
+         construction rather than by someone remembering to edit both.
+
+         Versioned because Android freezes a channel's sound and importance
+         when it creates it: changing how an alert sounds means a new id. -->
+    <string name="alert_channel_id" translatable="false">beepmydevice.alerts.v1</string>
+    <string name="alert_channel_id_silent_override" translatable="false">beepmydevice.alerts.critical.v1</string>
 </resources>

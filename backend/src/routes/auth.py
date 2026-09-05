@@ -225,6 +225,7 @@ async def update_preferences(
         payload.notifications_enabled,
         payload.sound_enabled,
         payload.vibration_enabled,
+        payload.alert_on_silent,
     )
     return success_response(
         NotificationPreferences.model_validate(user).model_dump(mode="json"),

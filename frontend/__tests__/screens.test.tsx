@@ -72,6 +72,7 @@ beforeEach(() => {
     notifications_enabled: true,
     sound_enabled: true,
     vibration_enabled: true,
+    alert_on_silent: false,
   });
   deviceService.listDevices.mockResolvedValue({
     items: [],
@@ -89,7 +90,9 @@ beforeEach(() => {
 });
 
 describe('DeviceCard', () => {
-  it('disables the alert button for an OFFLINE device', () => {
+  it('keeps the alert button live for an OFFLINE device', () => {
+    // A phone that has stopped heartbeating is exactly the one somebody is
+    // looking for, and a push still reaches it.
     render(
       <DeviceCard
         device={buildDevice({status: 'OFFLINE'})}
@@ -98,8 +101,20 @@ describe('DeviceCard', () => {
       />,
     );
 
+    expect(screen.getByRole('button', {name: 'Send alert'})).toBeEnabled();
+  });
+
+  it('disables the alert button for a device on another network', () => {
+    render(
+      <DeviceCard
+        device={buildDevice({status: 'UNKNOWN'})}
+        onPress={jest.fn()}
+        onSendAlert={jest.fn()}
+      />,
+    );
+
     expect(
-      screen.getByRole('button', {name: 'Device is not reachable'}),
+      screen.getByRole('button', {name: 'Device is on another network'}),
     ).toBeDisabled();
   });
 
@@ -113,7 +128,7 @@ describe('DeviceCard', () => {
     );
 
     expect(
-      screen.getByRole('button', {name: 'Device is not reachable'}),
+      screen.getByRole('button', {name: 'Device is on another network'}),
     ).toBeDisabled();
   });
 
@@ -180,17 +195,17 @@ describe('DeviceCard', () => {
     expect(onSendAlert).toHaveBeenCalledWith('device-1');
   });
 
-  it('still refuses to alert an OFFLINE guest', () => {
+  it('refuses to alert a guest that moved to another network', () => {
     render(
       <DeviceCard
-        device={buildDevice({is_guest: true, status: 'OFFLINE'})}
+        device={buildDevice({is_guest: true, status: 'UNKNOWN'})}
         onPress={jest.fn()}
         onSendAlert={jest.fn()}
       />,
     );
 
     expect(
-      screen.getByRole('button', {name: 'Device is not reachable'}),
+      screen.getByRole('button', {name: 'Device is on another network'}),
     ).toBeDisabled();
   });
 });

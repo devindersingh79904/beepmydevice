@@ -238,7 +238,7 @@ export function DeviceDetailScreen(): React.JSX.Element {
           />
         ) : null}
         <Button
-          label={canAlert ? 'Send alert' : 'Device is not reachable'}
+          label={canAlert ? 'Send alert' : 'Device is on another network'}
           disabled={!canAlert}
           onPress={() => setAlertOpen(true)}
         />

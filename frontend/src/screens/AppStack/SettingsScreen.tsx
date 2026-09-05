@@ -137,6 +137,12 @@ export function SettingsScreen(): React.JSX.Element {
 
           <SettingsSectionHeader>NOTIFICATIONS</SettingsSectionHeader>
           <SettingsRow
+            label="Alert behavior"
+            subLabel="Whether alerts sound through silent mode"
+            icon="volume-2"
+            onPress={() => navigation.navigate('NotificationSettings')}
+          />
+          <SettingsRow
             label="Push notifications"
             subLabel="Receive alerts when devices are found"
             icon="bell"
