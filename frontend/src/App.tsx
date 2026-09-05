@@ -13,6 +13,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {AuthProvider} from '@context/AuthContext';
 import {DeviceProvider} from '@context/DeviceContext';
 import {ErrorProvider} from '@context/ErrorContext';
+import {useAuth} from '@hooks/useAuth';
 import {useDeviceRegistration} from '@hooks/useDeviceRegistration';
 import {usePushNotifications} from '@hooks/usePushNotifications';
 import {RootNavigator} from '@/navigation/RootNavigator';
@@ -25,8 +26,11 @@ import {colors} from '@styles/theme';
  * providers whose context they read.
  */
 function DeviceSession(): React.JSX.Element {
-  const {pushToken} = usePushNotifications();
-  useDeviceRegistration(pushToken);
+  const {pushToken, isReady} = usePushNotifications();
+  const {user} = useAuth();
+  // Registration is per account: signing in as someone else must produce a
+  // device row for them, not leave this phone attached to the previous session.
+  useDeviceRegistration(pushToken, isReady, user?.user_id ?? null);
   return <RootNavigator />;
 }
 

@@ -84,6 +84,15 @@ export const MINUTES_PER_HOUR = 60;
 export const HOURS_PER_DAY = 24;
 export const MS_PER_SECOND = 1_000;
 
+// --- Platform ---------------------------------------------------------------
+/**
+ * Android 13 (API 33), the release that introduced POST_NOTIFICATIONS.
+ *
+ * Below it, notifications are granted at install time and the permission
+ * string does not exist -- asking for it there is an error, not a no-op.
+ */
+export const ANDROID_NOTIFICATION_PERMISSION_SDK = 33;
+
 // --- App metadata -----------------------------------------------------------
 /** Shown on the settings "Version" row. Keep in step with package.json. */
 export const APP_VERSION = '1.0.0';

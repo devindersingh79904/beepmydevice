@@ -113,7 +113,7 @@ describe('useDeviceRegistration', () => {
   it('registers this device and starts heartbeating', async () => {
     jest.useFakeTimers();
 
-    const {result} = renderHook(() => useDeviceRegistration('push-token'));
+    const {result} = renderHook(() => useDeviceRegistration('push-token', true, 'user-1'));
 
     await waitFor(() => expect(result.current.deviceId).toBe('device-1'));
     expect(deviceService.registerDevice).toHaveBeenCalledWith(
@@ -134,7 +134,7 @@ describe('useDeviceRegistration', () => {
   it('asks for location permission when the BSSID cannot be read', async () => {
     deviceService.getWifiMacAddress.mockResolvedValue(null);
 
-    const {result} = renderHook(() => useDeviceRegistration('push-token'));
+    const {result} = renderHook(() => useDeviceRegistration('push-token', true, 'user-1'));
 
     await waitFor(() =>
       expect(result.current.needsLocationPermission).toBe(true),
@@ -144,12 +144,92 @@ describe('useDeviceRegistration', () => {
     expect(deviceService.registerDevice).not.toHaveBeenCalled();
   });
 
+  it('does not register until the push token has settled', async () => {
+    // Registering with an empty token and again with the real one is what
+    // left two rows for one phone, the first of which no alert could reach.
+    const {rerender} = renderHook(
+      ({ready}: {ready: boolean}) =>
+        useDeviceRegistration('push-token', ready, 'user-1'),
+      {initialProps: {ready: false}},
+    );
+
+    await waitFor(() =>
+      expect(deviceService.registerDevice).not.toHaveBeenCalled(),
+    );
+
+    rerender({ready: true});
+    await waitFor(() => expect(deviceService.registerDevice).toHaveBeenCalled());
+    expect(deviceService.registerDevice).toHaveBeenCalledTimes(1);
+  });
+
+  it('registers again when a different account signs in', async () => {
+    // The row created for the previous account is not this user's, so the
+    // dashboard would show them no device at all.
+    const {rerender} = renderHook(
+      ({uid}: {uid: string | null}) =>
+        useDeviceRegistration('push-token', true, uid),
+      {initialProps: {uid: null as string | null}},
+    );
+
+    await waitFor(() => expect(deviceService.registerDevice).toHaveBeenCalled());
+    expect(deviceService.registerDevice).toHaveBeenCalledTimes(1);
+
+    rerender({uid: 'user-1'});
+    await waitFor(() =>
+      expect(deviceService.registerDevice).toHaveBeenCalledTimes(2),
+    );
+  });
+
+  it('retires the guest row when the user signs in', async () => {
+    const AsyncStorage =
+      require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.DEVICE_ID,
+      JSON.stringify('guest-row'),
+    );
+
+    const {rerender} = renderHook(
+      ({uid}: {uid: string | null}) =>
+        useDeviceRegistration('push-token', true, uid),
+      {initialProps: {uid: null as string | null}},
+    );
+    await waitFor(() => expect(deviceService.registerDevice).toHaveBeenCalled());
+
+    rerender({uid: 'user-1'});
+    // Otherwise the phone shows up twice in its own owner's list: once as the
+    // guest it registered as, once as the device it became.
+    await waitFor(() =>
+      expect(deviceService.removeDevice).toHaveBeenCalledWith('guest-row'),
+    );
+  });
+
+  it('keeps the owned row when the user signs out', async () => {
+    const AsyncStorage =
+      require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.DEVICE_ID,
+      JSON.stringify('owned-row'),
+    );
+
+    const {rerender} = renderHook(
+      ({uid}: {uid: string | null}) =>
+        useDeviceRegistration('push-token', true, uid),
+      {initialProps: {uid: 'user-1' as string | null},
+    });
+    await waitFor(() => expect(deviceService.registerDevice).toHaveBeenCalled());
+
+    rerender({uid: null});
+    await waitFor(() => expect(deviceService.registerDevice).toHaveBeenCalled());
+    // Signing out must never delete the user's real device.
+    expect(deviceService.removeDevice).not.toHaveBeenCalled();
+  });
+
   it('reuses the device ID a previous launch stored', async () => {
     const AsyncStorage =
       require('@react-native-async-storage/async-storage').default;
     await AsyncStorage.setItem(STORAGE_KEYS.DEVICE_ID, JSON.stringify('old-id'));
 
-    const {result} = renderHook(() => useDeviceRegistration(null));
+    const {result} = renderHook(() => useDeviceRegistration(null, true, 'user-1'));
 
     await waitFor(() => expect(result.current.deviceId).toBeTruthy());
   });

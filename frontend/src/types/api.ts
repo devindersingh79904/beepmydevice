@@ -54,8 +54,9 @@ export interface PaginationParams {
 /**
  * Error code prefixes the UI branches on.
  *
- * `AUTH_*` forces a logout, `VAL_*` highlights form fields, everything else
- * shows a dismissible banner.
+ * `VAL_*` highlights form fields, everything else shows a dismissible banner.
+ * Logging out is decided by {@link SESSION_ENDED_CODES}, not by the `AUTH_`
+ * prefix -- see the note there.
  */
 export const ERROR_PREFIX = {
   AUTH: 'AUTH_',
@@ -63,3 +64,17 @@ export const ERROR_PREFIX = {
   ALERT: 'ALERT_',
   VALIDATION: 'VAL_',
 } as const;
+
+/**
+ * The codes that mean this token will never work again.
+ *
+ * Not the whole `AUTH_` prefix. AUTH_004 is *authorisation* -- "you may not do
+ * that" -- and arrives with a 403 from a perfectly valid session: asking for a
+ * network someone else administers returns it, which happens the moment a
+ * second account joins a WiFi the first one claimed. Treating it as an expired
+ * session logged the user out mid-use and sent them back to sign in, where
+ * signing in worked, because nothing was ever wrong with the token.
+ *
+ * AUTH_001 is a failed sign-in attempt; there is no session to end.
+ */
+export const SESSION_ENDED_CODES: readonly string[] = ['AUTH_002', 'AUTH_003'];

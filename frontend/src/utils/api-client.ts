@@ -15,7 +15,7 @@ import type {AxiosInstance, AxiosResponse} from 'axios';
 import Config from 'react-native-config';
 
 import type {ApiData, ApiError, ApiResponse} from '@/types/api';
-import {ERROR_PREFIX} from '@/types/api';
+import {SESSION_ENDED_CODES} from '@/types/api';
 
 import {
   API_TIMEOUT_MS,
@@ -81,10 +81,11 @@ export function createApiClient(): AxiosInstance {
               'Could not reach the server. Check your connection and try again.',
             );
 
-      // Any AUTH_* code means this token will never work again, so the session
-      // is torn down here rather than leaving screens to discover it one
-      // failed request at a time.
-      if (errors.some(item => item.code.startsWith(ERROR_PREFIX.AUTH))) {
+      // Only a token that will never work again tears the session down here,
+      // rather than leaving screens to discover it one failed request at a
+      // time. A permission denial is not that: it is a banner, and the session
+      // survives it.
+      if (errors.some(item => SESSION_ENDED_CODES.includes(item.code))) {
         logger.warn('Session rejected; clearing stored credentials');
         await removeItem(STORAGE_KEYS.AUTH_TOKEN);
         await removeItem(STORAGE_KEYS.USER);

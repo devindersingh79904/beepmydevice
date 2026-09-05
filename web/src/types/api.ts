@@ -64,9 +64,10 @@ export interface Paged<T> {
 /**
  * Error code prefixes the UI branches on.
  *
- * `AUTH_*` forces a logout, `VAL_*` highlights the named field, everything
- * else shows a banner that closes itself. Every entry in the array is
- * rendered, not just the first.
+ * `VAL_*` highlights the named field, everything else shows a banner that
+ * closes itself. Every entry in the array is rendered, not just the first.
+ * Ending the session is decided by {@link isAuthError} below, which is
+ * narrower than the `AUTH_` prefix.
  */
 export const ERROR_PREFIX = {
   AUTH: 'AUTH_',
@@ -75,9 +76,25 @@ export const ERROR_PREFIX = {
   VALIDATION: 'VAL_',
 } as const;
 
+/**
+ * The codes that mean this token will never work again.
+ *
+ * Not the whole `AUTH_` prefix. AUTH_004 is *authorisation* -- "you may not do
+ * that" -- and arrives with a 403 from a perfectly valid session: asking for a
+ * network someone else administers returns it, which happens the moment a
+ * second account joins a WiFi the first one claimed. Treating it as an expired
+ * session signed the user out mid-use and sent them back to the login screen,
+ * where signing in worked, because nothing was ever wrong with the token.
+ *
+ * AUTH_001 is a failed sign-in attempt; there is no session to end.
+ *
+ * Mirrored in `frontend/src/types/api.ts` as SESSION_ENDED_CODES.
+ */
+const SESSION_ENDED_CODES: readonly string[] = ['AUTH_002', 'AUTH_003'];
+
 /** True when this error should end the session. */
 export function isAuthError(error: ApiError): boolean {
-  return error.code.startsWith(ERROR_PREFIX.AUTH);
+  return SESSION_ENDED_CODES.includes(error.code);
 }
 
 /** True when this error names a form field the user can correct. */

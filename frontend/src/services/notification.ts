@@ -5,12 +5,16 @@
  * but both funnel into one push token that the backend stores per device.
  */
 
-import {Vibration} from 'react-native';
+import {PermissionsAndroid, Platform, Vibration} from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import type {FirebaseMessagingTypes} from '@react-native-firebase/messaging';
 import Sound from 'react-native-sound';
 
-import {ALERT_SOUND_FILE, ALERT_VIBRATION_PATTERN} from '@utils/constants';
+import {
+  ALERT_SOUND_FILE,
+  ALERT_VIBRATION_PATTERN,
+  ANDROID_NOTIFICATION_PERMISSION_SDK,
+} from '@utils/constants';
 import {getLogger} from '@utils/logger';
 
 const logger = getLogger('notification-service');
@@ -20,6 +24,33 @@ let foregroundUnsubscribe: (() => void) | null = null;
 let alertSound: Sound | null = null;
 
 /**
+ * Ask for the notification permission Android 13+ requires.
+ *
+ * `messaging().requestPermission()` cannot do this: on Android the library
+ * returns AUTHORIZED without asking anything, so the app would hold a valid
+ * FCM token, believe it could be alerted, and have every notification dropped
+ * by the OS -- the one failure this app cannot afford, and one that is
+ * invisible until an alert does not arrive.
+ *
+ * @returns True when the permission is granted.
+ */
+async function ensureAndroidNotificationPermission(): Promise<boolean> {
+  if (Platform.OS !== 'android') {
+    // iOS raises its own prompt through messaging().requestPermission().
+    return true;
+  }
+  if (Number(Platform.Version) < ANDROID_NOTIFICATION_PERMISSION_SDK) {
+    // Granted at install time before Android 13; the permission string does
+    // not exist there, and asking for it fails rather than passing.
+    return true;
+  }
+  const result = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+  );
+  return result === PermissionsAndroid.RESULTS.GRANTED;
+}
+
+/**
  * Request notification permission and return the push token.
  *
  * Returns null when the user declines -- the device is still registered and
@@ -27,6 +58,13 @@ let alertSound: Sound | null = null;
  */
 export async function requestPermissionAndGetToken(): Promise<string | null> {
   try {
+    if (!(await ensureAndroidNotificationPermission())) {
+      logger.warn(
+        'Notification permission denied; this device cannot be alerted',
+      );
+      return null;
+    }
+
     const status = await messaging().requestPermission();
     const granted =
       status === messaging.AuthorizationStatus.AUTHORIZED ||

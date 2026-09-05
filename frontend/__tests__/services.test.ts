@@ -138,7 +138,39 @@ describe('api client', () => {
     ]);
   });
 
-  it('clears the stored token when any AUTH_ code is returned', async () => {
+  it('keeps the session when the server denies permission', async () => {
+    // AUTH_004 is a 403 from a valid token -- asking for a network another
+    // account administers. Logging out here signed the user out mid-use.
+    await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, JSON.stringify('jwt-123'));
+    const client = createApiClient();
+    const failure: ApiResponse<null> = {
+      success: false,
+      status_code: 403,
+      data: null,
+      errors: [
+        {code: 'AUTH_004', message: 'You are not authorized to perform this action'},
+      ],
+      correlation_id: 'test-correlation-id',
+      timestamp: new Date().toISOString(),
+    };
+    client.defaults.adapter = async config => {
+      throw new AxiosError('Forbidden', 'ERR_BAD_REQUEST', config, null, {
+        data: failure,
+        status: 403,
+        statusText: 'Forbidden',
+        headers: {},
+        config,
+      } as AxiosResponse);
+    };
+
+    await expect(client.get('/devices/list')).rejects.toBeTruthy();
+
+    await expect(
+      AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN),
+    ).resolves.toContain('jwt-123');
+  });
+
+  it('clears the stored token when the session has genuinely ended', async () => {
     await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, JSON.stringify('jwt-123'));
     const client = createApiClient();
     const failure: ApiResponse<null> = {
