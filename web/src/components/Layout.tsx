@@ -89,7 +89,11 @@ export function Layout(): ReactElement {
               </span>
             </span>
           </div>
-          <Button icon="log-out" onClick={() => void signOut()} className="btn-block">
+          <Button
+            icon="log-out"
+            onClick={() => void signOut()}
+            className="btn-block btn-logout"
+          >
             Log out
           </Button>
         </div>

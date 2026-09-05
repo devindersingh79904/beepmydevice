@@ -134,6 +134,21 @@
   color: color-mix(in srgb, var(--color-text) 60%, transparent);
 }
 
+/* Sign out reads as a row across the foot of the sidebar rather than as a
+   labelled button: the word sits centred under the identity block, and the
+   arrow marks the exit at the right edge, pointing the way the action goes.
+   The icon is taken out of flow so that centring the label centres it against
+   the button, not against whatever is left over beside the icon. */
+.btn.btn-logout {
+  position: relative;
+  justify-content: center;
+  text-align: center;
+}
+.btn.btn-logout svg {
+  position: absolute;
+  right: calc(var(--space-3) * 1.2);
+}
+
 /* --- main column ------------------------------------------------------- */
 
 .main {
