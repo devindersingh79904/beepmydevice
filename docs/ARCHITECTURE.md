@@ -93,7 +93,7 @@ users --+--< wifi_networks --< devices
         +--< alert_logs
 ```
 
-Four tables, UUID primary keys throughout, all timestamps UTC.
+Five tables, UUID primary keys throughout, all timestamps UTC.
 
 `wifi_networks.mac_address` is unique, so one physical router maps to exactly
 one row and every device reporting that MAC lands in the same alert group.
@@ -101,6 +101,13 @@ Devices carry a foreign key to both the user and the network -- the user for
 ownership, the network for the alert-group check. `alert_logs.target_devices` is
 a text array rather than a join table: rows are written once and never queried
 by individual target.
+
+**`discovered_devices` is the fifth table, and it is not a device table.** It
+holds what a phone reported seeing on the network -- a TV, a printer, a router
+-- with no push token, no status, and no way to be alerted. It hangs off
+`wifi_networks`, keyed by `(wifi_id, ip_address)` rather than by MAC, because a
+MAC is not obtainable from a modern phone. Keeping it separate from `devices`
+is what stops a Send alert button appearing over a printer.
 
 **`devices.user_id` is nullable**, and that is the whole guest mechanism:
 

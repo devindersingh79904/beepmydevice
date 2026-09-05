@@ -9,20 +9,21 @@ it is signed in to. Apple Find My and Google Find My Device group devices by
 **account**; this groups them by **network**. That one substitution is both the
 product differentiator and the security model.
 
-**Phase 1 is all but complete.** The backend serves sixteen HTTP endpoints plus
+**Phase 1 is all but complete.** The backend serves nineteen HTTP endpoints plus
 the status WebSocket; the frontend has every screen from the design canvas
 wired to real services, contexts and hooks, with both native projects generated
-and configured. Backend: 98 tests, ~81% coverage, `mypy` clean, `pylint` 10.00.
-Frontend: 161 tests, coverage thresholds met, `tsc` and `eslint` clean.
+and configured. Backend: 129 tests, `mypy` clean, `pylint` 10.00. Frontend: 194
+tests, coverage thresholds met, `tsc` and `eslint` clean. Web: 41 tests.
 
-Two things remain, both tracked in [`PENDING.md`](PENDING.md): the backend
-Firebase **service-account key**, without which `NotificationService` only logs
-what it would have sent (see [`docs/PUSH_SETUP.md`](docs/PUSH_SETUP.md)); and
+Two things remain, both tracked in [`PENDING.md`](PENDING.md): **iOS**, which
+cannot be built from Windows and has no APNs key yet; and
 `AlertStatus.RECEIVED`, which is never set because there is no acknowledgement
 endpoint yet.
 
-Nothing here has been run on a phone. Both suites pass and the API serves HTTP,
-which is not the same claim.
+Android has been run on real hardware. The app registers, heartbeats, and
+receives an alert sent from the web dashboard against the live API; Firebase is
+configured and push works. iOS has never been run at all, and a passing suite
+is not the same claim.
 
 Docstrings are still the specification — where one describes behaviour, the
 code is expected to match it, and a change to either should change both.
@@ -80,8 +81,8 @@ web/        pages/ → hooks+contexts/ → services/ → api-client   React 18 +
 ```
 
 `web/` is the admin dashboard, built from
-`frontend/docs/design/web/Web Dashboard.dc.html`. It speaks the same sixteen
-endpoints and reuses none of the mobile code: a React Native bundle and a Vite
+`frontend/docs/design/web/Web Dashboard.dc.html`. It speaks the same endpoints
+and reuses none of the mobile code: a React Native bundle and a Vite
 bundle cannot share modules without dragging Metro's resolution into the web
 build. What must not diverge is guarded instead — `web/src/styles/tokens.test.ts`
 fails if the palette drifts from `frontend/src/styles/colors.ts`.

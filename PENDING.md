@@ -77,11 +77,67 @@ Two things that will bite anyone changing this:
 Still to do: run it on a real home network and see what it actually finds. The
 counts and names in the panel have only ever been exercised against fixtures.
 
+### Alerts on a locked or silenced phone — done, worth knowing about
+
+Three defects with one shape, fixed in `c76d8d2` and `3c67d63`: the app only
+worked while somebody was already holding the phone.
+
+**A device stopped being alertable ninety seconds after it was put down.**
+`is_alertable` required status `ONLINE`, which the heartbeat sets and the
+offline window clears — so a phone down the back of the sofa, the exact thing
+this product is for, could not be beeped. Only `UNKNOWN` (answered from a
+*different* WiFi MAC) blocks a send now. That is the trust boundary; `OFFLINE`
+is a liveness signal and was never a security one. Mirrored in
+`web/src/services/device.service.ts` and `frontend/src/utils/helpers.ts` — all
+three change together.
+
+**Nothing rang unless the app was in the foreground.** Android draws the
+notification itself otherwise, reading only the notification channel, and the
+app declared none. `AlertChannels.kt` now declares two.
+
+**Their ids are a wire contract** shared with `ANDROID_CHANNEL_ALERT` in
+`backend/src/utils/constants.py`, and they are versioned (`…v1`) because
+Android freezes a channel's importance and audio behaviour when it creates it
+and silently ignores every later change. Changing how an alert sounds means
+publishing a *new id*, not editing the file.
+
+**`tools:replace` on the manifest meta-data is required, not advisory.**
+`@react-native-firebase/messaging` declares
+`default_notification_channel_id` from its own manifest, substituting from
+`firebase.json`; there is no `firebase.json` here, so that resolves to the
+empty string and the merger prefers it. Remove the override and every
+backgrounded push silently returns to the soundless fallback channel.
+
+The silent-mode override is the second channel, playing through `USAGE_ALARM`
+— the alarm stream is not muted by the ringer switch — with an iOS critical
+alert as the equivalent. Stored as `users.alert_on_silent`, reachable from the
+Notifications screen on mobile and Settings on web.
+
+One asymmetry, which is Android's and not ours: `sound_enabled` and
+`vibration_enabled` reach only the foreground ring. An in-app toggle cannot
+mute a channel — past the first install that is the user's decision, in
+Android's own settings — and the UI says so rather than pretending.
+
+### Build environment
+
+Builds need **JDK 17**. The machine's default is Temurin 25, which Gradle
+8.3's Kotlin compiler cannot even parse (`IllegalArgumentException: 25.0.3`),
+and JDK 21 fails differently at AGP's `jlink` transform. Gradle has already
+provisioned a working one:
+
+```bash
+export JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-17-amd64-windows.2"
+```
+
+OneDrive's reparse points also break Gradle's snapshotting at random
+(`not a regular file`, `AccessDeniedException`). Deleting
+`android/app/build/intermediates` before a release build clears it.
+
 ### The web dashboard
 
 `web/` implements every screen of `frontend/docs/design/web/Web Dashboard.dc.html`
 — Auth, Dashboard, Devices, Activity, Alerts, Settings — against the same
-sixteen endpoints, with live status over the WebSocket. It has its own
+endpoints, with live status over the WebSocket. It has its own
 Dockerfile, nginx config and `.env`, and its own README listing the controls
 that are drawn but disabled because no endpoint backs them yet (profile edit,
 avatar, network rename, account deletion, custom alert message).
@@ -140,13 +196,18 @@ row — which is exactly why 82 green tests had missed all of them.
 ### Fixed: devices now go OFFLINE
 
 Status is derived on every read from `last_heartbeat`, in one place
-(`device_service.effective_status`), and applied to the list, the detail
-endpoint and alert targeting. A whole-network alert bounds the heartbeat window
-in SQL, so a device that stopped speaking is not a target. `UNKNOWN` is left
-alone -- it describes *which network* a device is on, not how recently it spoke.
+(`device_service.effective_status`), and applied to the list and the detail
+endpoint. `UNKNOWN` is left alone -- it describes *which network* a device is
+on, not how recently it spoke.
 
 Tested by ageing a device past `OFFLINE_THRESHOLD_SECONDS`, which is exactly
 what the old suite never did.
+
+**Superseded in part.** This originally also gated *alert targeting* on the
+heartbeat window, which turned out to be the bug described under "Alerts on a
+locked or silenced phone" above: a device that stopped speaking is still a
+perfectly good target, because a push reaches a sleeping phone. Deriving the
+status is still right; refusing to alert on it was not.
 
 ### Fixed: dead push tokens are cleared, transient failures retried
 
@@ -262,15 +323,15 @@ endpoints instead of local state and placeholders.
 
 ## Not done, and not Phase 1
 
-### Never run on a device or simulator
+### iOS has never run on a device or simulator
 
-Everything is verified by test suite and by the API serving HTTP. **No screen
-has been rendered on real hardware.** Android can be built now; expect ordinary
-first-run friction on a freshly generated project — Gradle sync, SDK versions,
-runtime permission prompts.
+**Android has.** The app is installed on an S24 Ultra, registers, heartbeats,
+and receives an alert sent from the web dashboard against the live API. Push
+works; Firebase is configured.
 
-Push does not work on an emulator without Google Play services, so the alert
-path needs two real phones on one WiFi to exercise properly.
+iOS remains unexercised and cannot be built from Windows — see below. Note also
+that push does not work on an Android emulator without Google Play services, so
+the alert path needs real hardware to exercise honestly.
 
 ### iOS needs a Mac
 

@@ -37,7 +37,7 @@ origin also works -- see **Dashboard** below.
 - A server with Docker and Docker Compose
 - A DNS A record for `beepmydevice.com` pointing at it
 - PostgreSQL 12+, either containerised or managed. **17 is what the suite
-  is run against** (98 tests, both migrations) and what compose and CI
+  is run against** (129 tests, every migration) and what compose and CI
   pin; anything from 12 up should work, but 17 is the verified one
 - Firebase service-account credentials
 - An APNs `.p8` key, its key ID and your team ID

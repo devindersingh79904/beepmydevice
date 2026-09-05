@@ -39,7 +39,7 @@ npm run ios                        # or: npm run android
 - Backend: <http://localhost:8000/docs> renders Swagger
 - Health: `curl http://localhost:8000/health`
 - Frontend: app launches on the simulator
-- Database: `psql -d beepmydevice_dev -c "\dt"` lists four tables
+- Database: `psql -d beepmydevice_dev -c "\dt"` lists five tables
 
 ---
 
